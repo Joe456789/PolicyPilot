@@ -6,7 +6,7 @@
   "description": "保險大富翁 — 財務人生模擬遊戲 (Cardif InsurHack 2026, 題目 1-1)",
   "scripts": {
     "dev": "vite",
-    "server": "node server/index.js",
+    "server": "node --env-file-if-exists=.env server/index.js",
     "build": "vite build",
     "start": "node server/index.js",
     "test": "node --test test/*.test.js"

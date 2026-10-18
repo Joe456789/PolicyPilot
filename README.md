@@ -14,8 +14,7 @@ npm run server              # 後端 http://localhost:8080(讀取環境變數)
 npm run dev                 # 前端 http://localhost:5173(/api 會代理到後端)
 npm test                    # 規則引擎測試
 ```
-後端不會自動讀 `.env`,請用 `set -a; . ./.env; set +a` 或直接 `GEMINI_API_KEY=... npm run server`。
-沒有金鑰也能玩(離線備援);想測試 AI 管線可加 `GEMINI_MOCK=1`。
+`npm run server` 會自動讀取專案根目錄的 `.env`。沒有金鑰也能玩(離線備援);想測試 AI 管線可在 `.env` 加 `GEMINI_MOCK=1`。
 
 網址參數(錄影/除錯用):`?seed=11` 固定同一局、`?char=parents` 直接選角(rookie / newlywed / parents / single_mom / freelancer / sandwich / pre_retire)。
 
