@@ -1,73 +1,233 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Board3D from './components/Board3D.jsx'
 import Board from './components/Board.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import PlanModal from './components/PlanModal.jsx'
 import SceneModal, { YearModal, StageModal } from './components/SceneModal.jsx'
 import CharacterCreator from './components/CharacterCreator.jsx'
+import PrologueScreen from './components/PrologueScreen.jsx'
 import ResultScreen from './components/ResultScreen.jsx'
+import RecordsScreen from './components/RecordsScreen.jsx'
 import Avatar from './components/Avatar.jsx'
+import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedia } from './components/HUD.jsx'
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
   createGame, roll, choose, endYear, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
+  computeScore, evalQuests,
 } from './game/engine.js'
+import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup } from './game/prologue.js'
+import { PERSONAS, botPlan, botChoose } from './game/bots.js'
+import { createMatch, rank, finishMatch } from './game/match.js'
+import { recordGame } from './game/records.js'
 import { advisorFallback, stageFallback } from './game/fallback.js'
+import { wan } from './game/format.js'
+import { sfx } from './sfx.js'
 import { ai, aiHealth } from './ai.js'
 
 const params = new URLSearchParams(location.search)
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+let uid = 0
 
 export default function App() {
   const [screen, setScreen] = useState('title')
-  const [g, setG] = useState(null)
   const [aiInfo, setAiInfo] = useState({ ai: false })
+  // 成長篇
+  const [life, setLife] = useState(null)
+  const [lifeAi, setLifeAi] = useState(null)
+  const [lifeLoading, setLifeLoading] = useState(false)
+  const [length, setLength] = useState('standard')
+  const [opponents, setOpponents] = useState(2)
+  // 對局
+  const [players, setPlayers] = useState([])
+  const playersRef = useRef([])
+  const boardRef = useRef(null)
+  const [gameKey, setGameKey] = useState(0)
+  const [activeIdx, setActiveIdx] = useState(0)
+  // 介面
   const [planOpen, setPlanOpen] = useState(false)
-  const [rolling, setRolling] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
   const [yearOpen, setYearOpen] = useState(false)
   const [coach, setCoach] = useState(false)
   const [aiText, setAiText] = useState(null)
   const [loadingAi, setLoadingAi] = useState(false)
   const [stage, setStage] = useState(null)
+  const [use3d, setUse3d] = useState(() => { try { return localStorage.getItem('policypilot.2d') !== '1' } catch { return true } })
+  const [muted, setMuted] = useState(sfx.isMuted())
+  const [botFast, setBotFast] = useState(false)
+  const [drawer, setDrawer] = useState(null)
+  const [toast, setToast] = useState(null)
+  const [popups, setPopups] = useState([])
+  const [feed, setFeed] = useState([])
+  const [burst, setBurst] = useState(0)
+  const [shake, setShake] = useState(false)
+  const [ranks, setRanks] = useState(null)
+  const [fresh, setFresh] = useState([])
   const token = useRef(0)
+  const wide = useMedia('(min-width: 1100px)')
 
+  const g = players[0]?.s || null
+  const commit = useCallback((idx, s) => {
+    const ps = playersRef.current.map((p, i) => (i === idx ? { ...p, s } : p))
+    playersRef.current = ps
+    setPlayers(ps)
+  }, [])
+  const human = () => playersRef.current[0].s
+
+  // ---------- 啟動 ----------
   useEffect(() => {
     aiHealth().then(setAiInfo)
     if (params.get('auto')) {
-      start({
-        name: params.get('name') || '小明',
-        look: { ...defaultLook(), top: LOOKS.tops[1] },
-        career: params.get('career') || 'office',
-        background: params.get('bg') || 'normal',
-        style: params.get('style') || 'steady',
-        length: params.get('len') || 'standard',
-      })
+      const setup = {
+        name: params.get('name') || '小明', look: { ...defaultLook(), top: LOOKS.tops[1] }, career: params.get('career') || 'office',
+        background: params.get('bg') || 'normal', style: params.get('style') || '穩健型', length: params.get('len') || 'standard',
+      }
+      startAdult(setup, Number(params.get('opp') ?? 2))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const start = useCallback((setup) => {
+  const seedOf = () => {
     const raw = params.get('seed')
-    const seed = raw && Number.isFinite(Number(raw)) ? Number(raw) : Math.floor(Math.random() * 100000)
-    setG(createGame(setup, seed))
+    return raw && Number.isFinite(Number(raw)) ? Number(raw) : Math.floor(Math.random() * 100000)
+  }
+
+  // ---------- 成長篇 ----------
+  function startLife(setup) {
+    sfx.unlock()
+    const l = beginLife(createLife(setup, seedOf()))
+    setLife(l)
+    setScreen('prologue')
+    requestLifeAi(l)
+  }
+
+  async function requestLifeAi(l) {
+    setLifeAi(null)
+    if (!aiInfo.ai || !l.scene) return
+    const my = ++token.current
+    setLifeLoading(true)
+    const fake = { player: { name: l.name, title: '學生', background: l.family, style: l.style }, age: l.age, dependents: 0, partner: null, house: null, cash: l.cash, expense: 300000, loan: l.loan }
+    const out = await ai.narrate(l.scene, fake)
+    if (my !== token.current) return
+    setLifeLoading(false)
+    if (out) setLifeAi(out)
+  }
+
+  const lifeScene = useMemo(() => {
+    if (!life?.scene) return null
+    const base = life.scene
+    if (lifeAi && !base.result) {
+      const choices = lifeAi.choices && lifeAi.choices.length === base.choices.length
+        ? base.choices.map((c, i) => ({ ...c, label: lifeAi.choices[i].label || c.label, hint: lifeAi.choices[i].hint ?? c.hint })) : base.choices
+      return { ...base, title: lifeAi.title || base.title, story: lifeAi.story || base.story, choices }
+    }
+    return base
+  }, [life, lifeAi])
+
+  function onLifeChoose(i) {
+    sfx.click()
+    const nl = chooseLife(life, i)
+    setLife(nl)
+    const lines = nl.scene.result.lines
+    if (lines.some((l) => l.kind === 'cover')) sfx.claim()
+    else if (lines.some((l) => l.kind === 'out' && l.amount < -50000)) sfx.bad()
+    else sfx.coin()
+  }
+  function onLifeContinue() {
+    const nl = advanceLife(life)
+    setLife(nl)
+    if (!nl.done) requestLifeAi(nl)
+    else setLifeAi(null)
+  }
+
+  // ---------- 進入棋盤 ----------
+  function startAdult(setup, opp) {
+    const seed = seedOf()
+    const h = createGame(setup, seed)
+    const m = createMatch(h, opp, seed)
+    playersRef.current = m.players
+    setPlayers(m.players)
+    setGameKey((k) => k + 1)
+    setActiveIdx(0)
+    setFeed([])
+    setStage(null)
+    setAiText(null)
+    setSceneReady(false)
+    setYearOpen(false)
+    setRanks(null)
+    setFresh([])
+    setBusy(false)
     setScreen('game')
     setPlanOpen(true)
-    setYearOpen(false)
-    setSceneReady(false)
-    setAiText(null)
-    setStage(null)
-  }, [])
+  }
 
-  // ---- 擲骰 ----
-  function onRoll() {
-    if (!g || g.phase !== 'plan' || rolling) return
-    setRolling(true)
+  function onPickCareer(careerId) {
+    sfx.fanfare()
+    startAdult(lifeToSetup(life, careerId, length, opponents), opponents)
+  }
+
+  // ---------- 提示 / 特效 ----------
+  const showToast = useCallback(async (t, ms = 1700) => {
+    setToast(t)
+    await sleep(ms)
+    setToast((cur) => (cur === t ? null : cur))
+  }, [])
+  const popup = useCallback((text, kind, x = 50) => {
+    const id = ++uid
+    setPopups((p) => [...p, { id, text, kind, x }])
+    setTimeout(() => setPopups((p) => p.filter((q) => q.id !== id)), 1900)
+  }, [])
+  const doShake = () => { setShake(true); setTimeout(() => setShake(false), 520) }
+
+  function react(sc) {
+    const lines = sc.result.lines
+    const cover = lines.filter((l) => l.kind === 'cover' && l.amount > 0)
+    const gain = lines.filter((l) => l.kind === 'in' && l.amount > 0)
+    const loss = lines.filter((l) => l.amount < 0 && l.kind !== 'lesson')
+    const sum = (a) => a.reduce((x, l) => x + l.amount, 0)
+    let k = 0
+    if (cover.length) {
+      popup(`🛡️ 理賠 +${wan(sum(cover))}`, 'cover', 50 + (k++ % 2) * 8)
+      sfx.claim()
+      setBurst((b) => b + 1)
+    }
+    if (loss.length) {
+      popup(`${wan(sum(loss))}`, 'loss', 40 + (k++ % 2) * 12)
+      if (sum(loss) < -150000) { sfx.bad(); doShake() } else sfx.coin()
+    }
+    if (gain.length) {
+      popup(`+${wan(sum(gain))}`, 'gain', 56)
+      if (!cover.length) sfx.good()
+    }
+    if (!cover.length && !loss.length && !gain.length) sfx.click()
+  }
+
+  // ---------- 你的回合 ----------
+  async function onRoll() {
+    const cur = human()
+    if (busy || cur.phase !== 'plan') return
+    setBusy(true)
     setSceneReady(false)
     setAiText(null)
-    setTimeout(() => {
-      const ng = roll(g)
-      setG(ng)
-      setRolling(false)
-      requestAi(ng)
-    }, 750)
+    setActiveIdx(0)
+    sfx.unlock()
+    sfx.dice()
+    const ng = roll(cur)
+    const b = boardRef.current
+    if (b) {
+      b.focus(0)
+      await b.rollDice(ng.dice)
+      b.hideDice()
+      await b.moveToken(0, ng.pos)
+      b.setActiveTile(ng.pos)
+    } else {
+      await sleep(900 + ng.dice * 120)
+    }
+    commit(0, ng)
+    requestAi(ng)
+    sfx.card()
+    setSceneReady(true)
+    setBusy(false)
   }
 
   async function requestAi(ng) {
@@ -79,9 +239,7 @@ export default function App() {
     if (sc.kind === 'advisor') {
       const r = await ai.advisor(sc.base.analysis, ng)
       out = r ? { story: r.message } : null
-    } else {
-      out = await ai.narrate(sc, ng)
-    }
+    } else out = await ai.narrate(sc, ng)
     if (my !== token.current) return
     setLoadingAi(false)
     if (out) setAiText(out)
@@ -91,25 +249,42 @@ export default function App() {
     if (!g?.scene) return null
     const base = g.scene
     if (aiText) {
-      const choices =
-        aiText.choices && aiText.choices.length === base.choices.length
-          ? base.choices.map((c, i) => ({ ...c, label: aiText.choices[i].label || c.label, hint: aiText.choices[i].hint ?? c.hint }))
-          : base.choices
+      const choices = aiText.choices && aiText.choices.length === base.choices.length
+        ? base.choices.map((c, i) => ({ ...c, label: aiText.choices[i].label || c.label, hint: aiText.choices[i].hint ?? c.hint })) : base.choices
       return { ...base, title: aiText.title || base.title, story: aiText.story || base.story, choices }
     }
     if (base.kind === 'advisor') return { ...base, story: `${base.story} ${advisorFallback(base.base.analysis, g.player)}` }
     return base
   }, [g, aiText])
 
-  const onChoose = (i) => setG((cur) => choose(cur, i))
+  function onChoose(i) {
+    sfx.click()
+    const ng = choose(human(), i)
+    commit(0, ng)
+    react(ng.scene)
+  }
 
-  function onContinue() {
-    const ng = endYear(g)
-    setG(ng)
+  async function onContinue() {
+    const ng = endYear(human())
+    commit(0, ng)
     setAiText(null)
     setSceneReady(false)
-    if (ng.ended?.reason === 'death') return setScreen('result')
+    boardRef.current?.setActiveTile(null)
+    if (ng.ended?.reason === 'death') return finishGame()
     setYearOpen(true)
+    for (const q of ng.newQuests || []) {
+      sfx.quest()
+      setBurst((b) => b + 1)
+      showToast({ icon: '🎯', title: `任務達成:${q.title}`, tone: 'good' }, 2200)
+    }
+  }
+
+  async function onYearNext() {
+    setYearOpen(false)
+    const cur = human()
+    if (cur.phase === 'ended') return finishGame()
+    if (cur.pendingStage) { await openStage(cur); return }
+    await runBots()
   }
 
   async function openStage(cur) {
@@ -119,101 +294,202 @@ export default function App() {
     setStage({ loading: false, data: out || stageFallback(report), fromAi: !!out })
   }
 
-  function onYearNext() {
-    setYearOpen(false)
-    if (g.phase === 'ended') return setScreen('result')
-    if (g.pendingStage) openStage(g)
-  }
-
-  function closeStage() {
+  async function closeStage() {
     setStage(null)
-    setG((cur) => ackStage(cur))
+    commit(0, ackStage(human()))
+    await runBots()
   }
 
-  const showScene = scene && ((g.phase === 'scene' && sceneReady) || g.phase === 'result')
+  // ---------- 電腦對手的回合 ----------
+  async function runBots() {
+    setBusy(true)
+    const b = boardRef.current
+    for (let i = 1; i < playersRef.current.length; i++) {
+      const pl = playersRef.current[i]
+      if (pl.s.phase === 'ended') continue
+      setActiveIdx(i)
+      let s = botPlan(pl.s, pl.persona)
+      s = roll(s)
+      const sc = s.scene
+      if (b && !botFast) {
+        b.focus(i)
+        await b.moveToken(i, s.pos)
+      } else if (b) b.teleport(i, s.pos)
+      s = choose(s, botChoose(s, pl.persona))
+      const res = s.scene.result.lines
+      const cover = res.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0)
+      const loss = res.filter((l) => l.amount < 0 && l.kind !== 'lesson').reduce((a, l) => a + l.amount, 0)
+      const note = cover > 0 ? `保險理賠 ${wan(cover)}` : loss < 0 ? `支出 ${wan(-loss)}` : '平安度過'
+      const tone = cover > 0 ? 'good' : loss < -150000 ? 'bad' : ''
+      const item = { id: ++uid, icon: sc.icon, who: pl.name, text: `「${sc.title}」${note}`, tone }
+      setFeed((f) => [item, ...f].slice(0, 12))
+      if (!botFast) {
+        showToast({ icon: sc.icon, title: `${pl.name}:${sc.title}`, text: note, tone }, 1100)
+        if (cover > 0) sfx.claim(); else if (loss < -150000) sfx.bad()
+      }
+      s = endYear(s)
+      commit(i, s)
+      if (!botFast) await sleep(500)
+    }
+    setActiveIdx(0)
+    b?.focus(0)
+    setBusy(false)
+  }
 
-  if (screen === 'title') return <Title aiInfo={aiInfo} onStart={() => setScreen('create')} />
-  if (screen === 'create') return <CharacterCreator onStart={start} onBack={() => setScreen('title')} />
+  // ---------- 結算 ----------
+  function finishGame() {
+    const fin = finishMatch(playersRef.current)
+    playersRef.current = fin
+    setPlayers(fin)
+    const rk = rank(fin)
+    const h = fin[0].s
+    const score = computeScore(h)
+    const myRank = rk.find((r) => r.human).rank
+    const cats = h.history.flatMap((x) => x.shocks.map((sh) => sh.cat))
+    const ctx = {
+      s: h, score, rank: myRank, opponents: fin.length - 1,
+      claims: h.history.reduce((a, x) => a + x.payout, 0),
+      questsDone: evalQuests(h).filter((q) => q.done).length,
+      hadCritical: cats.includes('critical'), hadDisability: cats.includes('disability'),
+    }
+    const { fresh: fr } = recordGame(ctx)
+    setRanks(rk)
+    setFresh(fr)
+    setScreen('result')
+    sfx.fanfare()
+  }
+
+  const rows = useMemo(() => (players.length ? rank(players) : []), [players])
+  const quests = useMemo(() => (g ? evalQuests(g) : []), [g])
+  const showScene = scene && g && ((g.phase === 'scene' && sceneReady) || g.phase === 'result')
+  const tokenPlayers = useMemo(() => players.map((p) => ({ look: p.look, name: p.name, pos: 0 })), [gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleMute() {
+    const m = !muted
+    sfx.setMuted(m)
+    setMuted(m)
+  }
+  function toggle3d() {
+    const v = !use3d
+    setUse3d(v)
+    try { localStorage.setItem('policypilot.2d', v ? '0' : '1') } catch { /* 忽略 */ }
+  }
+
+  // ---------- 畫面 ----------
+  if (screen === 'title') return <Title aiInfo={aiInfo} onStart={() => setScreen('create')} onRecords={() => setScreen('records')} />
+  if (screen === 'records') return <RecordsScreen onBack={() => setScreen('title')} />
+  if (screen === 'create') return <CharacterCreator onStart={startLife} onBack={() => setScreen('title')} />
+  if (screen === 'prologue' && life) {
+    return (
+      <PrologueScreen
+        life={life ? { ...life, scene: lifeScene } : life}
+        aiTag={!!lifeAi && !life.scene?.result}
+        loadingAi={lifeLoading}
+        onChoose={onLifeChoose}
+        onContinue={onLifeContinue}
+        careerOptions={life.done ? careerOptions(life) : []}
+        onPickCareer={onPickCareer}
+        length={length}
+        setLength={setLength}
+        opponents={opponents}
+        setOpponents={setOpponents}
+      />
+    )
+  }
   if (!g) return null
-  if (screen === 'result') return <ResultScreen s={g} aiOn={aiInfo.ai} onAgain={() => setScreen('create')} />
+  if (screen === 'result') {
+    return <ResultScreen s={g} aiOn={aiInfo.ai} ranks={ranks} fresh={fresh} onAgain={() => setScreen('create')} onRecords={() => setScreen('records')} />
+  }
+
+  const centerSlot = (
+    <div className="center-actions">
+      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label="擲骰子">🎲 擲骰子</button>
+    </div>
+  )
 
   return (
-    <div className="game">
+    <div className={`game3 ${shake ? 'shake' : ''}`}>
       <header className="topbar">
         <div className="brand"><span aria-hidden>🎲</span> 保險大富翁</div>
         <div className="topbar-r">
           <span className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`} title={aiInfo.ai ? `Gemini(${aiInfo.model})` : '未設定金鑰,使用內建題庫與規則式教練'}>
             {aiInfo.ai ? (aiInfo.mock ? '✨ AI(模擬)' : '✨ AI 已連線') : '離線備援模式'}
           </span>
-          <label className="switch">
-            <input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} />
-            <span>教練提示</span>
-          </label>
+          <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title="音效">{muted ? '🔇' : '🔊'}</button>
+          {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title="對手回合快轉">⏩ 快轉</button>}
+          <button className="btn ghost" onClick={toggle3d} title="切換 2D / 3D">{use3d ? '3D' : '2D'}</button>
+          <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>教練提示</span></label>
           <button className="btn ghost" onClick={() => setScreen('create')}>重新開始</button>
         </div>
       </header>
 
-      <main className="layout">
-        <section className="stage">
-          <Board
-            pos={g.pos}
-            dice={g.dice}
-            rolling={rolling}
-            look={g.player.look}
-            turnKey={g.turn + ':' + g.dice}
-            onWalkDone={() => setSceneReady(true)}
-            centerSlot={
-              <div className="center-actions">
-                <div className="center-year">{g.age} 歲 · 第 {Math.min(g.turn + 1, g.years)} / {g.years} 年</div>
-                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || rolling || planOpen || !!stage} aria-label="擲骰子">
-                  {rolling ? '擲骰中…' : '🎲 擲骰子'}
-                </button>
-                <button className="btn" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || rolling}>🛡️ 規劃與理財</button>
+      <div className="gbody">
+        {wide && <aside className="side side-l"><Dashboard s={g} /></aside>}
+        <main className="gstage">
+          {use3d ? (
+            <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} onFail={() => setUse3d(false)} onStep={() => sfx.step()} />
+          ) : (
+            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} /></div>
+          )}
+          <div className="stage-hud">
+            <div className="year-chip">
+              <Avatar look={g.player.look} size={30} ring={false} />
+              <span><b>{g.age} 歲</b> · 第 {Math.min(g.turn + 1, g.years)} / {g.years} 年{players.length > 1 && activeIdx > 0 ? ` · ${players[activeIdx].name}的回合` : ''}</span>
+            </div>
+            <Toast toast={toast} />
+            <Popups items={popups} />
+            {use3d && (
+              <div className="action-bar">
+                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label="擲骰子">🎲 擲骰子</button>
+                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button>
               </div>
-            }
-          />
-          <Timeline s={g} />
-        </section>
-        <Dashboard s={g} />
-      </main>
+            )}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button></div>}
+          </div>
+          <Confetti burst={burst} />
+        </main>
+        {wide && (
+          <aside className="side side-r">
+            {rows.length > 1 && <Leaderboard rows={rows} activeId={players[activeIdx]?.id} />}
+            <QuestPanel quests={quests} />
+            <Feed items={feed} />
+          </aside>
+        )}
+      </div>
+
+      {!wide && (
+        <nav className="mbar" aria-label="面板">
+          <button onClick={() => setDrawer('status')}>📊 狀態</button>
+          <button onClick={() => setDrawer('rank')}>🏁 排名與任務</button>
+        </nav>
+      )}
+      <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title="我的狀態"><Dashboard s={g} /></Drawer>
+      <Drawer open={drawer === 'rank'} onClose={() => setDrawer(null)} title="排名與任務">
+        {rows.length > 1 && <Leaderboard rows={rows} activeId={players[activeIdx]?.id} />}
+        <QuestPanel quests={quests} />
+        <Feed items={feed} />
+      </Drawer>
 
       {planOpen && (
         <PlanModal
           s={g}
           coach={coach}
           title={g.turn === 0 ? `開局規劃:${g.player.name} · 22 歲` : `${g.age} 歲 · 年度規劃`}
-          onCoverage={(id, t) => setG((c) => setCoverage(c, id, t))}
-          onTrade={(cls, d) => setG((c) => trade(c, cls, d))}
-          onBorrow={(a) => setG((c) => borrow(c, a))}
-          onRepay={(a) => setG((c) => repay(c, a))}
+          onCoverage={(id, t) => commit(0, setCoverage(human(), id, t))}
+          onTrade={(cls, d) => commit(0, trade(human(), cls, d))}
+          onBorrow={(a) => commit(0, borrow(human(), a))}
+          onRepay={(a) => commit(0, repay(human(), a))}
           onClose={() => setPlanOpen(false)}
         />
       )}
-      {showScene && (
-        <SceneModal scene={scene} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />
-      )}
+      {showScene && <SceneModal scene={scene} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
       {stage && <StageModal data={stage.data} fromAi={stage.fromAi} loading={stage.loading} onClose={closeStage} age={g.age} />}
     </div>
   )
 }
 
-function Timeline({ s }) {
-  const items = s.history.flatMap((h) =>
-    h.events.filter((e) => ['event', 'milestone'].includes(e.kind)).map((e) => ({ age: h.age, ...e })),
-  )
-  if (!items.length) return <div className="timeline empty">人生足跡:還沒發生大事。保障要在事情發生「之前」準備好。</div>
-  return (
-    <div className="timeline" aria-label="人生足跡">
-      <b>人生足跡</b>
-      {items.map((e, i) => (
-        <span key={i} className={`tl-item ${e.kind}`}><i>{e.age}歲</i> {e.icon} {e.title}</span>
-      ))}
-    </div>
-  )
-}
-
-function Title({ aiInfo, onStart }) {
+function Title({ aiInfo, onStart, onRecords }) {
   const looks = [
     { ...defaultLook(), style: 'short', top: LOOKS.tops[0], extra: 'headphones' },
     { ...defaultLook(), style: 'long', top: LOOKS.tops[2], hair: LOOKS.hairs[1] },
@@ -227,20 +503,21 @@ function Title({ aiInfo, onStart }) {
         <h1>保險大富翁</h1>
         <p className="title-sub">財務人生模擬遊戲 · Financial Life Simulator</p>
         <p className="title-desc">
-          從 22 歲、一無所有開始。擲骰子、做決策:結婚、買房、投資、遇到意外……
+          從 0 歲出生開始:出生抽籤、成長、升學,22 歲踏入社會,再走進大富翁棋盤。
           <br />
-          在不同的人生與市場情境中,親身體驗風險管理、資產配置與保險保障的重要性。
+          結婚、買房、投資、遇到意外……還要和電腦對手比拚,看誰的人生過得最穩。
           <br />
           劇情與學習回饋由 AI 依你的處境即時產生;金額與保險給付由規則引擎精算,結果公平可驗證。
         </p>
-        <div className="title-avatars">
-          {looks.map((l, i) => <Avatar key={i} look={l} size={72} />)}
+        <div className="title-avatars">{looks.map((l, i) => <Avatar key={i} look={l} size={72} />)}</div>
+        <div className="title-btns">
+          <button className="btn primary huge" onClick={onStart}>開始新的人生</button>
+          <button className="btn huge2" onClick={onRecords}>🏅 成就與戰績</button>
         </div>
-        <button className="btn primary huge" onClick={onStart}>開始新的人生</button>
         <ol className="how">
-          <li><b>1 創角</b>選職業、家境與個性,從 0 開始</li>
-          <li><b>2 規劃</b>配置保障、投資與貸款</li>
-          <li><b>3 擲骰</b>機會、事件、行情、里程碑</li>
+          <li><b>1 出生</b>抽籤決定家境與家人保障</li>
+          <li><b>2 成長</b>0 ~ 21 歲的選擇與意外</li>
+          <li><b>3 棋盤</b>3D 大富翁 · 電腦對手 · 人生任務</li>
           <li><b>4 結算</b>平行人生對照與 AI 教練</li>
         </ol>
         <div className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`}>{aiInfo.ai ? '✨ AI 編劇與教練已連線' : '離線備援模式(使用內建題庫)'}</div>

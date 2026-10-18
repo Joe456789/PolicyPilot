@@ -6,9 +6,11 @@ import {
   canIncrease, householdIncome, round1k,
 } from './core.js'
 import { buildScene, resolveScene } from './scenes.js'
+import { updateQuests } from './quests.js'
 
 export * from './core.js'
 export * from './scoring.js'
+export { evalQuests, questScore, QUEST_POOL } from './quests.js'
 export { taxFor } from './scenes.js'
 
 // ---------- 年度規劃(買保險、理財、貸款)----------
@@ -100,6 +102,7 @@ export function endYear(state) {
     if (s.ended && s.ended.reason === 'death') {
       s.history.push(snapshot(s, { effIncome: 0, grossIncome: 0, premiums: 0, recurring: 0, ret: 0, savingsIn: 0, houseCost: 0 }))
       s.phase = 'ended'
+      s.newQuests = updateQuests(s)
       return
     }
 
@@ -169,6 +172,7 @@ export function endYear(state) {
     const snap = snapshot(s, { effIncome, grossIncome: gross + partnerIncome, premiums, recurring, ret: m, returns, savingsIn, houseCost })
     s.history.push(snap)
     s.lastYear = snap
+    s.newQuests = updateQuests(s)
 
     // 進入下一年
     s.turn += 1
@@ -184,6 +188,7 @@ export function endYear(state) {
     if (s.turn >= s.years) {
       s.ended = { reason: 'complete' }
       s.phase = 'ended'
+      s.newQuests = [...(s.newQuests || []), ...updateQuests(s)]
     } else {
       s.phase = 'plan'
       if (s.turn % 8 === 0) s.pendingStage = true
@@ -225,6 +230,7 @@ function snapshot(s, f) {
     coverage: { ...s.coverage },
     rec,
     protRatio: protRatio(s, rec),
+    assetKinds: ASSET_ORDER.filter((k) => s.hold[k] > 0).length,
     health: Math.round(s.health),
     monthsCash: Math.round((s.cash / (s.expense / 12)) * 10) / 10,
   }

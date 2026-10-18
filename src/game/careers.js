@@ -9,9 +9,10 @@ export const CAREERS = [
 ]
 
 export const BACKGROUNDS = [
-  { id: 'tight', icon: '🌱', title: '清寒家庭', blurb: '背著學貸與家用,起步最辛苦,日後可能要扶養父母。', cash: 20000, loan: 450000, expenseRatio: 0.78, parentsSupport: true },
-  { id: 'normal', icon: '🏘️', title: '一般家庭', blurb: '有一點小積蓄,也有些學貸。', cash: 90000, loan: 200000, expenseRatio: 0.72, parentsSupport: false },
-  { id: 'comfy', icon: '🏡', title: '小康家庭', blurb: '家裡可以給點支持,沒有債務,但花費習慣較高。', cash: 300000, loan: 0, expenseRatio: 0.7, parentsSupport: false },
+  { id: 'rich', icon: '🏰', title: '富裕家庭', blurb: '家境優渥、沒有負債,但可能不太懂得節制。', cash: 800000, loan: 0, expenseRatio: 0.66, parentsSupport: false, insuredP: 0.9, weight: 5 },
+  { id: 'tight', icon: '🌱', title: '清寒家庭', blurb: '背著學貸與家用,起步最辛苦,日後可能要扶養父母。', cash: 20000, loan: 450000, expenseRatio: 0.78, parentsSupport: true, insuredP: 0.25, weight: 25 },
+  { id: 'normal', icon: '🏘️', title: '一般家庭', blurb: '有一點小積蓄,也有些學貸。', cash: 90000, loan: 200000, expenseRatio: 0.72, parentsSupport: false, insuredP: 0.55, weight: 45 },
+  { id: 'comfy', icon: '🏡', title: '小康家庭', blurb: '家裡可以給點支持,沒有債務,但花費習慣較高。', cash: 300000, loan: 0, expenseRatio: 0.7, parentsSupport: false, insuredP: 0.8, weight: 25 },
 ]
 
 export const STYLES = [

@@ -13,9 +13,10 @@ const KIND = {
   hospital: '健康檢查',
   quiz: '保險小學堂',
   tip: '保險小學堂',
+  life: '成長篇',
 }
 
-export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi }) {
+export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel }) {
   const result = scene.result
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={scene.title}>
@@ -60,7 +61,7 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
               ))}
             </ul>
             <button className="btn primary wide" onClick={onContinue}>
-              {scene.cat === 'death' ? '查看結果' : '繼續 → 年度結算'}
+              {continueLabel || (scene.cat === 'death' ? '查看結果' : '繼續 → 年度結算')}
             </button>
           </>
         )}

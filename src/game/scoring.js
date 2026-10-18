@@ -1,6 +1,7 @@
 // 評分、平行人生對照與給 AI 的事實摘要。
 import { PRODUCTS, PRODUCT_ORDER, payoutFor, totalPremium } from './products.js'
 import { clamp, netWorth, recommended, householdIncome } from './core.js'
+import { questScore } from './quests.js'
 
 // 平行人生:同一串人生事件,只替換保障配置。
 // 作法:以「實際淨資產」為基準,逐年加上(替代配置的給付 - 實際給付)與(實際保費 - 替代配置保費)。
@@ -33,22 +34,23 @@ export function computeScore(s) {
   const shortfallYears = s.history.filter((h) => h.borrowed > 0).length
   const avgMonths = s.history.reduce((a, h) => a + h.monthsCash, 0) / years
   const resilience =
-    40 * clamp(1 - (shortfallYears / years) * 2, 0, 1) * (0.7 + 0.3 * clamp(avgMonths / 6, 0, 1))
+    35 * clamp(1 - (shortfallYears / years) * 2, 0, 1) * (0.7 + 0.3 * clamp(avgMonths / 6, 0, 1))
 
   const prot = s.history.reduce((a, h) => a + h.protRatio, 0) / years
   const avgPremium = s.history.reduce((a, h) => a + h.premiums, 0) / years
   const avgIncome = s.history.reduce((a, h) => a + h.effIncome, 0) / years || 1
   const premiumRatio = avgPremium / avgIncome
   const over = clamp((premiumRatio - 0.18) / 0.1, 0, 1)
-  const protection = 30 * prot - 6 * over
+  const protection = 25 * prot - 5 * over
 
   const end = s.history[s.history.length - 1]
   const nw = end ? end.netWorth : netWorth(s)
-  const growth = 20 * clamp((nw - s.startNetWorth) / (s.career.income * s.years * 0.35), 0, 1)
+  const growth = 20 * clamp((nw - s.startNetWorth) / (s.career.income * s.years * 0.7), 0, 1)
+  const quests = questScore(s)
 
   const behavior = clamp(6 + Math.min(4, s.quizRight) - 3 * s.panicSells, 0, 10)
 
-  let total = Math.round(resilience + protection + growth + behavior)
+  let total = Math.round(resilience + protection + growth + behavior + quests)
   let family = null
   if (s.ended && s.ended.reason === 'death') {
     total = Math.round(clamp(s.ended.ratio, 0, 1.1) * 85)
@@ -68,6 +70,7 @@ export function computeScore(s) {
       protection: Math.round(protection),
       growth: Math.round(growth),
       behavior: Math.round(behavior),
+      quests,
     },
     shortfallYears,
     avgEmergencyMonths: Math.round(avgMonths * 10) / 10,

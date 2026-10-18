@@ -1,30 +1,13 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
-import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, LOOKS, defaultLook } from '../game/careers.js'
-import { wan } from '../game/format.js'
+import { STYLES, LOOKS, defaultLook } from '../game/careers.js'
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
-
-function Choice({ on, onClick, icon, title, blurb, extra }) {
-  return (
-    <button type="button" className={`opt ${on ? 'on' : ''}`} onClick={onClick} aria-pressed={on}>
-      <span className="opt-ico" aria-hidden>{icon}</span>
-      <span className="opt-t">{title}</span>
-      <span className="opt-b">{blurb}</span>
-      {extra && <span className="opt-x">{extra}</span>}
-    </button>
-  )
-}
 
 export default function CharacterCreator({ onStart, onBack }) {
   const [name, setName] = useState('')
   const [look, setLook] = useState(defaultLook())
-  const [career, setCareer] = useState('office')
-  const [background, setBackground] = useState('normal')
   const [style, setStyle] = useState('steady')
-  const [length, setLength] = useState('standard')
-  const c = CAREERS.find((x) => x.id === career)
-  const b = BACKGROUNDS.find((x) => x.id === background)
   const set = (k, v) => setLook((l) => ({ ...l, [k]: v }))
 
   function randomize() {
@@ -35,8 +18,8 @@ export default function CharacterCreator({ onStart, onBack }) {
     <div className="screen creator">
       <header className="screen-h">
         <button className="btn ghost" onClick={onBack}>← 返回</button>
-        <h1>從 0 開始你的人生</h1>
-        <p className="muted">22 歲,剛畢業。你的每個選擇,都會決定接下來的人生。先替自己創角吧。</p>
+        <h1>你的人生,從出生開始</h1>
+        <p className="muted">先替自己取個名字、選個外型與個性。出生在哪個家庭、會經歷什麼,就交給命運抽籤。</p>
       </header>
 
       <div className="creator-grid">
@@ -60,40 +43,28 @@ export default function CharacterCreator({ onStart, onBack }) {
 
         <div className="creator-main">
           <section className="card">
-            <h3>1. 你的職業</h3>
-            <div className="opts">
-              {CAREERS.map((x) => (
-                <Choice key={x.id} on={career === x.id} onClick={() => setCareer(x.id)} icon={x.icon} title={x.title} blurb={x.blurb} extra={`起薪 ${wan(x.income, 0)}/年`} />
+            <h3>你的個性</h3>
+            <p className="muted small">個性會影響你在成長路上的選擇傾向,也會寫進人生回顧。</p>
+            <div className="opts three">
+              {STYLES.map((x) => (
+                <button key={x.id} type="button" className={`opt ${style === x.id ? 'on' : ''}`} onClick={() => setStyle(x.id)} aria-pressed={style === x.id}>
+                  <span className="opt-ico" aria-hidden>{x.icon}</span><span className="opt-t">{x.title}</span><span className="opt-b">{x.blurb}</span>
+                </button>
               ))}
             </div>
           </section>
-          <section className="card">
-            <h3>2. 你的家境</h3>
-            <div className="opts three">
-              {BACKGROUNDS.map((x) => (
-                <Choice key={x.id} on={background === x.id} onClick={() => setBackground(x.id)} icon={x.icon} title={x.title} blurb={x.blurb} extra={`現金 ${wan(x.cash, 0)} · 貸款 ${wan(x.loan, 0)}`} />
-              ))}
+          <section className="card grad">
+            <h3>接下來會發生什麼?</h3>
+            <ol className="how big">
+              <li><b>0 歲 · 出生抽籤</b>你會出生在富裕、小康、一般或清寒的家庭,家裡有沒有保險也是抽籤決定。</li>
+              <li><b>0 ~ 21 歲 · 成長</b>童年、升學、打工、意外……每個選擇都在塑造你,家人的遭遇也會影響你的起點。</li>
+              <li><b>22 歲 · 踏入社會</b>選擇第一份工作,進入大富翁棋盤,面對結婚、買房、投資與市場起伏,還要和電腦對手比拚。</li>
+            </ol>
+            <div className="start-bar">
+              <div className="start-sum"><b>{name || '你'}</b>,準備好出生了嗎?</div>
+              <button className="btn primary huge" onClick={() => onStart({ name: name.trim() || '小明', look, style: STYLES.find((x) => x.id === style).title })}>出生! →</button>
             </div>
           </section>
-          <section className="card">
-            <h3>3. 你的個性</h3>
-            <div className="opts three">
-              {STYLES.map((x) => <Choice key={x.id} on={style === x.id} onClick={() => setStyle(x.id)} icon={x.icon} title={x.title} blurb={x.blurb} />)}
-            </div>
-          </section>
-          <section className="card">
-            <h3>4. 想玩多久?</h3>
-            <div className="opts three">
-              {LENGTHS.map((x) => <Choice key={x.id} on={length === x.id} onClick={() => setLength(x.id)} icon="⏳" title={x.title} blurb={x.blurb} />)}
-            </div>
-          </section>
-          <div className="start-bar">
-            <div className="start-sum">
-              <b>{name || '你'}</b>,22 歲 {c.title},{b.title}出身。<br />
-              起始現金 {wan(b.cash, 0)}、貸款 {wan(b.loan, 0)}、年收入 {wan(c.income, 0)}。除此之外,一無所有。
-            </div>
-            <button className="btn primary huge" onClick={() => onStart({ name: name.trim() || '小明', look, career, background, style, length })}>開始人生 →</button>
-          </div>
         </div>
       </div>
     </div>

@@ -340,6 +340,7 @@ function resolveMarket(s, sc, choice, add) {
     add('已轉為現金,錯過後續的反彈', 0, 'note')
     return
   }
+  if (ret < 0 && riskHoldings(s) > 0) s.crashesHeld++
   if (choice.tag === 'buy') {
     const amt = spendable(s, 0.3)
     if (amt > 0) {

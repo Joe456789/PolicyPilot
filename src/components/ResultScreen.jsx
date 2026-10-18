@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
-import { buildReport, counterfactual, recommended, netWorth } from '../game/engine.js'
+import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER } from '../game/products.js'
 import { coachFallback } from '../game/fallback.js'
 import { wan } from '../game/format.js'
@@ -21,13 +21,14 @@ function Ring({ value, grade }) {
 }
 
 const PARTS = [
-  ['resilience', '財務韌性', 40],
-  ['protection', '保障完整度', 30],
+  ['resilience', '財務韌性', 35],
+  ['protection', '保障完整度', 25],
   ['growth', '資產成長', 20],
-  ['behavior', '決策心態', 10],
+  ['behavior', '決策與知識', 10],
+  ['quests', '人生任務', 10],
 ]
 
-export default function ResultScreen({ s, aiOn, onAgain }) {
+export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords }) {
   const report = buildReport(s)
   const { score } = report
   const data = counterfactual(s)
@@ -49,6 +50,7 @@ export default function ResultScreen({ s, aiOn, onAgain }) {
   }, [s.seed])
 
   const death = score.family
+  const quests = evalQuests(s)
   return (
     <div className="screen result">
       <header className="res-h">
@@ -101,6 +103,47 @@ export default function ResultScreen({ s, aiOn, onAgain }) {
           )}
         </div>
       </div>
+
+      {ranks && ranks.length > 1 && (
+        <section className="card">
+          <h3>🏁 最終排名</h3>
+          <div className="final-rank">
+            {ranks.map((r) => (
+              <div key={r.id} className={`fr ${r.human ? 'me' : ''} r${r.rank}`}>
+                <b className="fr-n">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank}</b>
+                <Avatar look={r.look} size={44} ring={false} />
+                <div className="fr-t"><b>{r.name}{r.human && '(你)'}</b><span>{r.title}</span></div>
+                <div className="fr-s"><b>{r.total}</b> 分<small>淨資產 {wan(r.net)}{r.dead ? ' · 中途退場' : ''}</small></div>
+              </div>
+            ))}
+          </div>
+          <p className="muted small">對手是用同一套規則的電腦玩家:他們的決策風格不同,結果也就不同。回頭看看哪一種策略在哪些事件裡贏或輸。</p>
+        </section>
+      )}
+
+      {fresh && fresh.length > 0 && (
+        <section className="card unlock">
+          <h3>🎉 解鎖新成就</h3>
+          <div className="ach-grid">
+            {fresh.map((a) => (
+              <div key={a.id} className="ach on pop"><span className="ach-i" aria-hidden>{a.icon}</span><div><b>{a.title}</b><p>{a.desc}</p></div></div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="card">
+        <h3>🎯 人生任務</h3>
+        <ul className="quests big">
+          {quests.map((q) => (
+            <li key={q.id} className={q.done ? 'done' : ''}>
+              <span className="q-ico" aria-hidden>{q.done ? '✅' : '⬜'}</span>
+              <div className="q-t"><div className="q-n">{q.title}</div><div className="muted small">{q.desc}</div></div>
+              <span className="q-v">{q.done ? '達成' : `${q.value}/${q.target}`}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="card">
         <h3>🌌 平行人生:同樣的人生,不同的保障</h3>
@@ -156,6 +199,7 @@ export default function ResultScreen({ s, aiOn, onAgain }) {
       </p>
       <div className="res-actions">
         <button className="btn primary" onClick={onAgain}>重新開始,創造新的人生</button>
+        <button className="btn" onClick={onRecords}>🏅 成就與戰績</button>
       </div>
     </div>
   )

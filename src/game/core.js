@@ -2,6 +2,7 @@
 import { Rng } from './rng.js'
 import { PRODUCTS, PRODUCT_ORDER, EMPTY_COVERAGE, totalPremium } from './products.js'
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
+import { drawQuests } from './quests.js'
 
 // 8x8 環形棋盤:28 格。
 export const BOARD = [
@@ -64,7 +65,10 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
   const bg = BACKGROUNDS.find((b) => b.id === setup.background) || BACKGROUNDS[1]
   const style = STYLES.find((x) => x.id === setup.style) || STYLES[1]
   const length = LENGTHS.find((l) => l.id === setup.length) || LENGTHS[1]
-  const income = career.income
+  const st = setup.start || null
+  const income = Math.round((career.income * (st?.incomeBoost ?? 1)) / 1000) * 1000
+  const startCash = st ? st.cash : bg.cash
+  const startLoan = st ? st.loan : bg.loan
   const s = {
     seed,
     rngN: 0,
@@ -76,7 +80,11 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
       backgroundId: bg.id,
       background: bg.title,
       style: style.title,
-      parentsSupport: bg.parentsSupport,
+      parentsSupport: st ? st.parentsSupport : bg.parentsSupport,
+      parentsInsured: st ? st.parentsInsured : null,
+      education: st?.education || null,
+      major: st?.majorTitle || null,
+      stats: st?.stats || null,
     },
     career,
     length: length.id,
@@ -86,16 +94,16 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     age: 22,
     pos: 0,
     dice: null,
-    cash: bg.cash,
+    cash: startCash,
     hold: { deposit: 0, bond: 0, stock: 0, spec: 0 },
-    loan: bg.loan,
+    loan: startLoan,
     savings: 0,
     house: null,
     income,
-    expense: Math.round((income * bg.expenseRatio) / 1000) * 1000,
+    expense: Math.round((income * (st ? st.expenseRatio : bg.expenseRatio)) / 1000) * 1000,
     partner: null,
     dependents: 0,
-    health: 100,
+    health: st ? st.health : 100,
     coverage: { ...EMPTY_COVERAGE },
     blocked: {},
     seen: {},
@@ -105,6 +113,9 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     newBonus: 0,
     checkupYears: 0,
     panicSells: 0,
+    crashesHeld: 0,
+    quests: drawQuests(seed, career, length.years),
+    questDone: {},
     quizRight: 0,
     quizTotal: 0,
     advisorUsed: 0,
@@ -115,7 +126,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     ended: null,
     flash: null,
     pendingStage: false,
-    startNetWorth: bg.cash - bg.loan,
+    startNetWorth: startCash - startLoan,
   }
   return s
 }
