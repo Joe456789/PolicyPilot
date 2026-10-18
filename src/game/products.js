@@ -61,6 +61,30 @@ export const PRODUCTS = {
       { label: '年繳 12 萬', premium: 120000, saving: true },
     ],
   },
+  accident: {
+    id: 'accident',
+    name: '意外險',
+    sub: '傷害給付',
+    icon: '🚑',
+    blurb: '因意外受傷、失能或身故時給付(車禍、骨折、運動傷害都算)。',
+    tiers: [
+      { label: '未投保', premium: 0 },
+      { label: '100 萬', premium: 5000, injury: 100000, lump: 1000000 },
+      { label: '300 萬', premium: 9000, injury: 200000, lump: 3000000 },
+    ],
+  },
+  home: {
+    id: 'home',
+    name: '住宅火險地震險',
+    sub: '房屋損失',
+    icon: '🏠',
+    blurb: '房屋遭遇火災、地震、颱風水災時,補償修繕與重建費用(需持有房屋)。',
+    needsHouse: true,
+    tiers: [
+      { label: '未投保', premium: 0 },
+      { label: '基本保障', premium: 4500, rate: 0.9, cap: 5000000 },
+    ],
+  },
   ltc: {
     id: 'ltc',
     name: '長照險',
@@ -74,7 +98,7 @@ export const PRODUCTS = {
   },
 }
 
-export const PRODUCT_ORDER = ['medical', 'critical', 'disability', 'life', 'annuity', 'ltc']
+export const PRODUCT_ORDER = ['medical', 'critical', 'disability', 'accident', 'life', 'home', 'annuity', 'ltc']
 
 export function premiumFor(productId, tierIdx, age) {
   const t = PRODUCTS[productId].tiers[tierIdx]
@@ -94,17 +118,21 @@ export const EMPTY_COVERAGE = Object.freeze({
   life: 0,
   annuity: 0,
   ltc: 0,
+  accident: 0,
+  home: 0,
 })
 
 // 保險給付:規則引擎統一計算,實際遊戲與「平行人生」對照共用,確保一致。
 // shock: { cat, medicalCost, incomeLoss:{ratio,years}, income, yearsOfLoss }
 export function payoutFor(coverage, shock) {
-  const out = { medical: 0, lump: 0, disability: 0, life: 0, ltc: 0 }
+  const out = { medical: 0, lump: 0, disability: 0, life: 0, ltc: 0, accident: 0, home: 0 }
   const m = PRODUCTS.medical.tiers[coverage.medical || 0]
   const c = PRODUCTS.critical.tiers[coverage.critical || 0]
   const d = PRODUCTS.disability.tiers[coverage.disability || 0]
   const l = PRODUCTS.life.tiers[coverage.life || 0]
   const g = PRODUCTS.ltc.tiers[coverage.ltc || 0]
+  const a = PRODUCTS.accident.tiers[coverage.accident || 0]
+  const h = PRODUCTS.home.tiers[coverage.home || 0]
 
   if (['medical', 'critical', 'disability'].includes(shock.cat) && m.rate) {
     out.medical = Math.min(Math.round((shock.medicalCost || 0) * m.rate), m.cap)
@@ -115,6 +143,11 @@ export function payoutFor(coverage, shock) {
   }
   if (shock.cat === 'death' && l.lump) out.life = l.lump
   if (shock.cat === 'ltc' && g.perYear) out.ltc = g.perYear * g.years
-  out.total = out.medical + out.lump + out.disability + out.life + out.ltc
+  if (shock.accident) {
+    if (shock.cat === 'medical') out.accident = a.injury || 0
+    if (shock.cat === 'disability') out.accident = a.lump || 0
+  }
+  if (shock.cat === 'home' && h.rate) out.home = Math.min(Math.round((shock.otherCost || 0) * h.rate), h.cap)
+  out.total = out.medical + out.lump + out.disability + out.life + out.ltc + out.accident + out.home
   return out
 }

@@ -3,12 +3,13 @@ import { BOARD } from '../game/engine.js'
 import Avatar from './Avatar.jsx'
 import Dice from './Dice.jsx'
 
-// 6x6 環形棋盤:外圈 20 格,中間 4x4 放骰子與提示。
+// 8x8 環形棋盤:外圈 28 格,中間 6x6 放骰子與提示。
+const N = 8
 function coord(i) {
-  if (i <= 5) return { r: 0, c: i }
-  if (i <= 9) return { r: i - 5, c: 5 }
-  if (i <= 15) return { r: 5, c: 15 - i }
-  return { r: 20 - i, c: 0 }
+  if (i <= 7) return { r: 0, c: i }
+  if (i <= 13) return { r: i - 7, c: 7 }
+  if (i <= 21) return { r: 7, c: 21 - i }
+  return { r: 28 - i, c: 0 }
 }
 
 export default function Board({ pos, dice, rolling, look, centerSlot, onWalkDone, turnKey }) {

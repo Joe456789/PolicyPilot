@@ -1,23 +1,29 @@
 import { wan, signed } from '../game/format.js'
 
 const KIND = {
-  event: '人生事件',
+  event: '生活事件',
+  chance: '機會卡',
   market: '市場行情',
   bonus: '意外之財',
   milestone: '人生里程碑',
   advisor: '理專諮詢',
-  tip: '理財小學堂',
+  shop: '理財商城',
+  bank: '銀行',
+  tax: '年度報稅',
+  hospital: '健康檢查',
+  quiz: '保險小學堂',
+  tip: '保險小學堂',
 }
 
 export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi }) {
   const result = scene.result
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={scene.title}>
-      <div className={`modal card-pop tone-${scene.tone}`}>
+      <div className={`modal card-pop tone-${scene.tone} kind-${scene.kind}`}>
         <div className="card-top">
           <span className="card-kind">{KIND[scene.kind]}</span>
           {aiTag && <span className="ai-pill" title="劇情由 Gemini 依角色處境生成;金額與給付由規則引擎計算">✨ AI 編劇</span>}
-          {loadingAi && !aiTag && <span className="ai-pill dim">AI 編劇中…</span>}
+          {loadingAi && !aiTag && scene.aiable && <span className="ai-pill dim">AI 編劇中…</span>}
         </div>
         <div className="card-ico" aria-hidden>{scene.icon}</div>
         <h2 className="card-title">{scene.title}</h2>
@@ -47,6 +53,7 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
             <ul className="lines">
               {result.lines.map((l, i) => (
                 <li key={i} className={`line ${l.kind}`}>
+                  {l.kind === 'lesson' && <span aria-hidden>💡</span>}
                   <span>{l.label}</span>
                   {l.amount !== 0 && <b>{signed(l.amount)}</b>}
                 </li>
@@ -75,10 +82,11 @@ export function YearModal({ s, onNext, last }) {
         <ul className="lines">
           <li className="line in"><span>實際收入{h.effIncome < h.grossIncome * 0.98 ? '(含收入中斷影響)' : ''}</span><b>{signed(h.effIncome)}</b></li>
           <li className="line out"><span>生活支出</span><b>{signed(-h.expense)}</b></li>
+          {h.houseCost > 0 && <li className="line out"><span>房貸還款</span><b>{signed(-h.houseCost)}</b></li>}
           <li className="line out"><span>保費</span><b>{signed(-h.premiums)}</b></li>
           {h.recurring > 0 && <li className="line out"><span>長期照護等支出</span><b>{signed(-h.recurring)}</b></li>}
-          <li className={`line ${h.ret < 0 ? 'out' : 'in'}`}><span>投資年報酬</span><b>{(h.ret * 100).toFixed(1)}%</b></li>
-          {h.savingsIn > 0 && <li className="line note"><span>儲蓄險累積價值</span><b>{wan(h.savings)}</b></li>}
+          <li className={`line ${h.ret < 0 ? 'out' : 'in'}`}><span>股市年報酬</span><b>{(h.ret * 100).toFixed(1)}%</b></li>
+          {h.borrowed > 0 && <li className="line warn"><span>現金不夠,被迫借款</span><b>{wan(h.borrowed)}</b></li>}
         </ul>
         <div className="nw">
           <span>淨資產</span>
@@ -86,6 +94,38 @@ export function YearModal({ s, onNext, last }) {
           <em className={delta >= 0 ? 'pos' : 'neg'}>{delta >= 0 ? '▲' : '▼'} {wan(Math.abs(delta))}</em>
         </div>
         <button className="btn primary wide" onClick={onNext}>{last ? '查看人生結算' : '進入下一年'}</button>
+      </div>
+    </div>
+  )
+}
+
+export function StageModal({ data, fromAi, loading, onClose, age }) {
+  return (
+    <div className="overlay" role="dialog" aria-modal="true" aria-label="人生階段分析">
+      <div className="modal stage-modal">
+        <div className="card-top">
+          <span className="card-kind">人生階段分析</span>
+          <span className={`ai-pill ${fromAi ? '' : 'dim'}`}>{loading ? 'AI 分析中…' : fromAi ? '✨ Gemini 分析' : '離線備援'}</span>
+        </div>
+        <div className="card-ico" aria-hidden>🧭</div>
+        <h2 className="card-title">{data?.title || `${age} 歲:階段回顧`}</h2>
+        {loading || !data ? (
+          <div className="skeleton" aria-busy="true"><i /><i /><i /></div>
+        ) : (
+          <>
+            <p className="card-story left">{data.analysis}</p>
+            <div className="stage-cols">
+              {data.strengths?.length > 0 && (
+                <div className="stage-box good"><b>做得好</b><ul>{data.strengths.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+              )}
+              {data.risks?.length > 0 && (
+                <div className="stage-box bad"><b>留意風險</b><ul>{data.risks.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+              )}
+            </div>
+            <div className="stage-box next"><b>下一階段建議</b><ol>{data.next.map((x, i) => <li key={i}>{x}</li>)}</ol></div>
+          </>
+        )}
+        <button className="btn primary wide" onClick={onClose} disabled={loading}>繼續人生</button>
       </div>
     </div>
   )

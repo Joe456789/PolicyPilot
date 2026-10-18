@@ -32,10 +32,12 @@ export async function aiHealth() {
 const brief = (s) => ({
   age: s.age,
   dependents: s.dependents,
+  married: !!s.partner,
+  ownsHouse: !!s.house,
   emergencyMonths: Math.round((s.cash / (s.expense / 12)) * 10) / 10,
-  hasDebt: s.debt > 0,
+  hasLoan: s.loan > 0,
 })
-const who = (c) => ({ name: c.name, title: c.title, traits: c.traits })
+const who = (p) => ({ name: p.name, career: p.title, background: p.background, style: p.style })
 
 export const ai = {
   narrate: (scene, s) =>
@@ -43,13 +45,13 @@ export const ai = {
       '/api/narrate',
       {
         scene: { kind: scene.kind, cat: scene.cat, title: scene.title, story: scene.story, choices: scene.choices.map((c) => ({ label: c.label, hint: c.hint })) },
-        character: who(s.char),
+        character: who(s.player),
         brief: brief(s),
       },
       9000,
     ),
   advisor: (analysis, s) =>
-    post('/api/advisor', { character: who(s.char), analysis: { gaps: analysis.gaps.map((g) => ({ text: g.text })), emergencyMonths: analysis.emergencyMonths, premiumRatio: analysis.premiumRatio }, brief: brief(s) }, 9000),
+    post('/api/advisor', { character: who(s.player), analysis: { gaps: analysis.gaps.map((g) => ({ text: g.text })), emergencyMonths: analysis.emergencyMonths, premiumRatio: analysis.premiumRatio }, brief: brief(s) }, 9000),
+  stage: (report) => post('/api/stage', { report }, 15000),
   coach: (report) => post('/api/coach', { report }, 20000),
-  persona: (description) => post('/api/persona', { description }, 15000),
 }

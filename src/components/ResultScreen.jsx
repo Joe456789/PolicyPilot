@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
-import { buildReport, counterfactual, recommended } from '../game/engine.js'
+import { buildReport, counterfactual, recommended, netWorth } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER } from '../game/products.js'
 import { coachFallback } from '../game/fallback.js'
 import { wan } from '../game/format.js'
@@ -27,7 +27,7 @@ const PARTS = [
   ['behavior', '決策心態', 10],
 ]
 
-export default function ResultScreen({ s, aiOn, onAgain, onChange }) {
+export default function ResultScreen({ s, aiOn, onAgain }) {
   const report = buildReport(s)
   const { score } = report
   const data = counterfactual(s)
@@ -46,21 +46,27 @@ export default function ResultScreen({ s, aiOn, onAgain, onChange }) {
     })()
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.seed, s.char.id])
+  }, [s.seed])
 
   const death = score.family
   return (
     <div className="screen result">
       <header className="res-h">
-        <Avatar look={s.char.avatar} size={72} />
+        <Avatar look={s.player.look} size={72} />
         <div>
-          <div className="muted">{s.char.name} · {s.char.title}的人生結算</div>
+          <div className="muted">{s.player.name} · {s.player.title} · {s.history[0]?.age ?? 22} → {s.age} 歲的人生結算</div>
           <h1>{coach?.headline || score.archetype}</h1>
         </div>
       </header>
 
       <div className="res-top">
         <div className="card score">
+          <div className="life-sum">
+            <span>{s.partner ? '💑 已婚' : '🙂 單身'}</span>
+            <span>👶 扶養 {s.dependents} 人</span>
+            <span>{s.house ? '🏠 有房' : '🏘️ 租屋'}</span>
+            <span>💰 淨資產 {wan(netWorth(s))}</span>
+          </div>
           <Ring value={score.total} grade={score.grade} />
           <div className="parts">
             {death ? (
@@ -98,7 +104,7 @@ export default function ResultScreen({ s, aiOn, onAgain, onChange }) {
 
       <section className="card">
         <h3>🌌 平行人生:同樣的人生,不同的保障</h3>
-        <p className="muted">三條線使用「完全相同」的人生事件與收支,只替換保障配置,比較現金緩衝(未含投資損益)。低於 0 代表需要賣資產或借錢。</p>
+        <p className="muted">三條線使用「完全相同」的人生事件,只替換保障配置,比較淨資產的走勢。保險平常看起來是成本,事件發生時才顯出價值。</p>
         <Chart data={data} />
         {!death && report.claims === 0 && (
           <p className="callout">
@@ -111,7 +117,7 @@ export default function ResultScreen({ s, aiOn, onAgain, onChange }) {
       <section className="card">
         <h3>🔎 保障缺口檢視</h3>
         <div className="gap-table" role="table" aria-label="保障缺口">
-          {PRODUCT_ORDER.map((id) => {
+          {PRODUCT_ORDER.filter((id) => id !== 'home' || s.house).map((id) => {
             const have = s.coverage[id] || 0
             const need = rec[id] || 0
             const ok = have >= need
@@ -145,12 +151,11 @@ export default function ResultScreen({ s, aiOn, onAgain, onChange }) {
       )}
 
       <p className="footnote">
-        遊戲分工:劇情改寫、理專諮詢、教練回饋與自訂角色由 Gemini 生成;所有金額、機率與保險給付由規則引擎確定性計算,
+        遊戲分工:劇情改寫、理專諮詢、人生階段分析與教練回饋由 Gemini 生成;所有金額、機率與保險給付由規則引擎確定性計算,
         同一個隨機種子會得到完全相同的人生(可重現、可驗證)。保障商品與費率為教學用簡化模型,非真實商品。
       </p>
       <div className="res-actions">
-        <button className="btn primary" onClick={onAgain}>同一角色再玩一次</button>
-        <button className="btn" onClick={onChange}>換個角色</button>
+        <button className="btn primary" onClick={onAgain}>重新開始,創造新的人生</button>
       </div>
     </div>
   )

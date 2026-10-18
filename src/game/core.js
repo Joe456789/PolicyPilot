@@ -1,0 +1,230 @@
+// 遊戲核心:狀態、資產、保障建議等共用的「確定性」計算。
+import { Rng } from './rng.js'
+import { PRODUCTS, PRODUCT_ORDER, EMPTY_COVERAGE, totalPremium } from './products.js'
+import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
+
+// 8x8 環形棋盤:28 格。
+export const BOARD = [
+  { type: 'start', label: '年度起點', icon: '🏁' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'chance', label: '機會卡', icon: '🎲' },
+  { type: 'market', label: '市場行情', icon: '📊' },
+  { type: 'bonus', label: '意外之財', icon: '🎁' },
+  { type: 'shop', label: '理財商城', icon: '🛒' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' },
+  { type: 'chance', label: '機會卡', icon: '🎲' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'tax', label: '年度報稅', icon: '🧾' },
+  { type: 'market', label: '市場行情', icon: '📊' },
+  { type: 'rest', label: '保險小學堂', icon: '🎓' },
+  { type: 'hospital', label: '健康檢查', icon: '🏥' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'chance', label: '機會卡', icon: '🎲' },
+  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  { type: 'bank', label: '銀行', icon: '🏦' },
+  { type: 'bonus', label: '意外之財', icon: '🎁' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'market', label: '市場行情', icon: '📊' },
+  { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' },
+  { type: 'chance', label: '機會卡', icon: '🎲' },
+  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  { type: 'rest', label: '保險小學堂', icon: '🎓' },
+  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'shop', label: '理財商城', icon: '🛒' },
+]
+
+export const ASSETS = {
+  deposit: { id: 'deposit', name: '定存', icon: '🏦', risk: '極低', blurb: '幾乎不波動,年報酬約 1.5%,但追不上通膨。' },
+  bond: { id: 'bond', name: '債券基金', icon: '📜', risk: '低', blurb: '波動較小,年報酬約 3%,景氣差時也會小跌。' },
+  stock: { id: 'stock', name: '股票型 ETF', icon: '📈', risk: '中高', blurb: '長期平均約 6% 到 7%,但單年可能大漲大跌。' },
+  spec: { id: 'spec', name: '熱門個股', icon: '🔥', risk: '極高', blurb: '漲跌幅度是大盤的 1.5 倍以上,可能翻倍也可能腰斬。' },
+}
+export const ASSET_ORDER = ['deposit', 'bond', 'stock', 'spec']
+
+export const round1k = (n) => Math.round(n / 1000) * 1000
+export const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+
+export function blankYear() {
+  return { shockCost: 0, recurringCost: 0, payout: 0, borrowed: 0, shocks: [], marketReturn: null, houseChange: null, events: [] }
+}
+
+export const holdingsTotal = (s) => ASSET_ORDER.reduce((a, k) => a + s.hold[k], 0)
+export const houseEquity = (s) => (s.house ? Math.round(s.house.value - s.house.balance) : 0)
+export const householdIncome = (s) => s.income + (s.partner ? s.partner.income : 0)
+
+export function netWorth(s) {
+  return Math.round(s.cash + holdingsTotal(s) + s.savings + houseEquity(s) - s.loan)
+}
+
+// 從 0 開始:由創角結果建立初始狀態。
+export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
+  const career = CAREERS.find((c) => c.id === setup.career) || CAREERS[0]
+  const bg = BACKGROUNDS.find((b) => b.id === setup.background) || BACKGROUNDS[1]
+  const style = STYLES.find((x) => x.id === setup.style) || STYLES[1]
+  const length = LENGTHS.find((l) => l.id === setup.length) || LENGTHS[1]
+  const income = career.income
+  const s = {
+    seed,
+    rngN: 0,
+    player: {
+      name: (setup.name || '你').slice(0, 8),
+      look: setup.look || defaultLook(),
+      careerId: career.id,
+      title: career.title,
+      backgroundId: bg.id,
+      background: bg.title,
+      style: style.title,
+      parentsSupport: bg.parentsSupport,
+    },
+    career,
+    length: length.id,
+    years: length.years,
+    turn: 0,
+    phase: 'plan',
+    age: 22,
+    pos: 0,
+    dice: null,
+    cash: bg.cash,
+    hold: { deposit: 0, bond: 0, stock: 0, spec: 0 },
+    loan: bg.loan,
+    savings: 0,
+    house: null,
+    income,
+    expense: Math.round((income * bg.expenseRatio) / 1000) * 1000,
+    partner: null,
+    dependents: 0,
+    health: 100,
+    coverage: { ...EMPTY_COVERAGE },
+    blocked: {},
+    seen: {},
+    effects: [],
+    recurring: [],
+    carryBonus: 0,
+    newBonus: 0,
+    checkupYears: 0,
+    panicSells: 0,
+    quizRight: 0,
+    quizTotal: 0,
+    advisorUsed: 0,
+    scene: null,
+    year: blankYear(),
+    lastYear: null,
+    history: [],
+    ended: null,
+    flash: null,
+    pendingStage: false,
+    startNetWorth: bg.cash - bg.loan,
+  }
+  return s
+}
+
+// 讓每個 action 都是純函式:複製 state → 執行 → 回傳新的 state。
+export function run(state, fn) {
+  const s = structuredClone(state)
+  const rng = new Rng(s.seed, s.rngN)
+  s.flash = null
+  fn(s, rng)
+  s.rngN = rng.n
+  return s
+}
+
+// 現金不足時依序:賣出投資(由低風險到高風險)→ 舉債。
+export function cover(s) {
+  if (s.cash >= 0) return
+  for (const k of ASSET_ORDER) {
+    if (s.cash >= 0) break
+    const sell = Math.min(s.hold[k], -s.cash)
+    s.hold[k] -= sell
+    s.cash += sell
+  }
+  if (s.cash < 0) {
+    s.loan += -s.cash
+    s.year.borrowed += -s.cash
+    s.cash = 0
+  }
+}
+
+export function isOwner(s) {
+  return !!s.house
+}
+
+// ---------- 保障建議(依當下人生階段與負擔能力動態計算)----------
+
+const SEVERITY = (s) => ({
+  life: s.dependents > 0 ? 5 : s.partner || s.house ? 3.5 : 2,
+  disability: s.partner || !s.career.laborIns ? 4.5 : 3.5,
+  critical: 3.8,
+  medical: 3,
+  accident: s.career.risk === 'mid' ? 2.4 : 1.6,
+  home: 3.2,
+  ltc: s.age >= 45 ? 3 : 1,
+  annuity: 1,
+})
+
+export function recommended(s) {
+  const dep = s.dependents
+  const hi = householdIncome(s)
+  const rec = { medical: 1, critical: 1, disability: 1, accident: 0, life: 0, home: 0, annuity: 0, ltc: 0 }
+  if (hi > 1400000 || dep > 0) rec.critical = 2
+  if (dep > 0 || (s.house && !s.partner) || !s.career.laborIns) rec.disability = 2
+  let lifeNeed = 0
+  if (s.partner) lifeNeed += 1
+  if (s.house) lifeNeed += 1
+  if (dep >= 1) lifeNeed += 1
+  if (dep >= 2 || (dep >= 1 && s.house)) lifeNeed += 1
+  rec.life = clamp(lifeNeed, 0, 3)
+  if (s.career.risk === 'mid' || dep > 0) rec.accident = 1
+  if (s.house) rec.home = 1
+  if (s.age >= 30 && hi > 1200000) rec.annuity = hi > 2200000 ? 2 : 1
+  if (s.age >= 45) rec.ltc = 1
+
+  // 負擔能力:保費占收入超過 15% 時,從最不重要的項目往下調。
+  const sev = SEVERITY(s)
+  const ratio = () => totalPremium(rec, s.age) / hi
+  const order = PRODUCT_ORDER.filter((id) => rec[id] > 0).sort((a, b) => sev[a] - sev[b])
+  for (const id of order) {
+    while (ratio() > 0.15 && rec[id] > 0) rec[id] -= 1
+  }
+  return rec
+}
+
+export function canIncrease(s, id) {
+  if (['medical', 'critical', 'disability'].includes(id)) return !s.blocked[id]
+  if (id === 'home') return !!s.house
+  return true
+}
+
+export function analyzeGaps(s) {
+  const rec = recommended(s)
+  const sev = SEVERITY(s)
+  const gaps = []
+  for (const id of PRODUCT_ORDER) {
+    const have = s.coverage[id] || 0
+    const need = rec[id] || 0
+    if (have < need) {
+      gaps.push({
+        id,
+        have,
+        need,
+        severity: sev[id] * (need - have),
+        blocked: !canIncrease(s, id),
+        text: `${PRODUCTS[id].name}:目前「${PRODUCTS[id].tiers[have].label}」,建議至少「${PRODUCTS[id].tiers[need].label}」`,
+      })
+    }
+  }
+  gaps.sort((a, b) => b.severity - a.severity)
+  const premium = totalPremium(s.coverage, s.age)
+  return {
+    gaps,
+    emergencyMonths: Math.round((s.cash / (s.expense / 12)) * 10) / 10,
+    premiumRatio: Math.round((premium / householdIncome(s)) * 1000) / 10,
+    premium,
+  }
+}
+
+// 實際年度支出(生活 + 房貸 + 長期支出 + 保費),用來估算緊急預備金。
+export function annualOutflow(s) {
+  return s.expense + (s.house ? s.house.payment : 0)
+}
