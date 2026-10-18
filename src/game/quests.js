@@ -71,6 +71,11 @@ export const QUEST_POOL = [
     progress: (s, q) => (s.history.length && s.history[s.history.length - 1].netWorth >= q.goal ? 1 : 0),
   },
   {
+    id: 'arcade', icon: '🎮', tag: 'fin', title: '小遊戲累積拿到 6 顆星', target: 6,
+    desc: '在棋盤的小遊戲格玩得越好,獎金越多。',
+    progress: (s) => s.miniStars,
+  },
+  {
     id: 'firehouse', icon: '🔥', tag: 'ins', title: '買房後投保住宅火險地震險', target: 1,
     desc: '房子是最大的資產,別讓一場颱風毀掉它。',
     progress: (s) => (s.house && s.coverage.home > 0 ? 1 : 0),

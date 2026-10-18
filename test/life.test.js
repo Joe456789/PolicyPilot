@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, PROLOGUE_LENGTH } from '../src/game/prologue.js'
-import { createGame, computeScore, evalQuests, QUEST_POOL, netWorth } from '../src/game/engine.js'
+import { createGame, computeScore, evalQuests, QUEST_POOL, netWorth, roll, choose, endYear, BOARD } from '../src/game/engine.js'
 import { PERSONAS, createBotGame, botFastForward } from '../src/game/bots.js'
 import { createMatch, rank, finishMatch } from '../src/game/match.js'
 import { BACKGROUNDS } from '../src/game/careers.js'
@@ -91,4 +91,27 @@ test('對局:排名一致且可快轉到最後', () => {
   assert.ok(done.every((p) => p.human || p.s.phase === 'ended'))
   const r = rank(done.map((p) => (p.human ? { ...p, s: botFastForward(p.s, PERSONAS[0]) } : p)))
   assert.deepEqual(r.map((x) => x.rank), [1, 2, 3, 4])
+})
+
+test('棋盤上有小遊戲格,玩小遊戲會依星數給獎金並累積星數', () => {
+  assert.ok(BOARD.filter((b) => b.type === 'minigame').length >= 3)
+  let found = 0
+  for (let seed = 1; seed <= 400 && found < 5; seed++) {
+    let s = createGame({ name: 't', career: 'office', background: 'normal', style: 'steady', length: 'long' }, seed)
+    for (let k = 0; k < 40 && s.phase !== 'ended'; k++) {
+      s = roll(s)
+      if (s.scene.kind === 'minigame') {
+        const cash = s.cash
+        const after = choose(s, 0, { stars: 3, note: 'x' })
+        assert.equal(after.cash - cash, 90000)
+        assert.equal(after.miniStars, s.miniStars + 3)
+        assert.equal(after.miniPerfect, s.miniPerfect + 1)
+        found++
+        s = endYear(after)
+      } else {
+        s = endYear(choose(s, 0))
+      }
+    }
+  }
+  assert.ok(found >= 5, '應該常常遇到小遊戲格')
 })

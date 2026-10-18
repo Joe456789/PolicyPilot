@@ -300,3 +300,16 @@ export function lifeToSetup(life, careerId, length, opponents) {
     },
   }
 }
+
+// 直接進入棋盤:略過 0~21 歲的成長篇,只保留出生抽籤的結果(家境與家人保障)。
+export function skipLife(state) {
+  const life = structuredClone(state)
+  life.age = 22
+  life.step = STEPS.length
+  life.done = true
+  life.scene = null
+  life.major = 'biz'
+  life.edu = '大學'
+  life.stats = { health: 92, study: 55, social: 50, finance: 45 }
+  return life
+}

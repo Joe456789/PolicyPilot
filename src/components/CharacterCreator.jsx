@@ -5,6 +5,7 @@ import { STYLES, LOOKS, defaultLook } from '../game/careers.js'
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
 
 export default function CharacterCreator({ onStart, onBack }) {
+  const go = (skip) => onStart({ name: name.trim() || '小明', look, style: STYLES.find((x) => x.id === style).title }, skip)
   const [name, setName] = useState('')
   const [look, setLook] = useState(defaultLook())
   const [style, setStyle] = useState('steady')
@@ -18,8 +19,8 @@ export default function CharacterCreator({ onStart, onBack }) {
     <div className="screen creator">
       <header className="screen-h">
         <button className="btn ghost" onClick={onBack}>← 返回</button>
-        <h1>你的人生,從出生開始</h1>
-        <p className="muted">先替自己取個名字、選個外型與個性。出生在哪個家庭、會經歷什麼,就交給命運抽籤。</p>
+        <h1>創造你的角色</h1>
+        <p className="muted">先取個名字、選個外型與個性。你可以從出生開始體驗成長篇,也可以直接進入大富翁棋盤。</p>
       </header>
 
       <div className="creator-grid">
@@ -54,15 +55,17 @@ export default function CharacterCreator({ onStart, onBack }) {
             </div>
           </section>
           <section className="card grad">
-            <h3>接下來會發生什麼?</h3>
+            <h3>兩種開始方式</h3>
             <ol className="how big">
-              <li><b>0 歲 · 出生抽籤</b>你會出生在富裕、小康、一般或清寒的家庭,家裡有沒有保險也是抽籤決定。</li>
-              <li><b>0 ~ 21 歲 · 成長</b>童年、升學、打工、意外……每個選擇都在塑造你,家人的遭遇也會影響你的起點。</li>
-              <li><b>22 歲 · 踏入社會</b>選擇第一份工作,進入大富翁棋盤,面對結婚、買房、投資與市場起伏,還要和電腦對手比拚。</li>
+              <li><b>從出生開始(約 3 分鐘)</b>出生抽籤決定家境與家人有沒有保險,再走過童年、升學與意外,22 歲才進入棋盤。</li>
+              <li><b>直接進入棋盤</b>仍然會抽出生的家境,但略過成長篇,馬上開始大富翁:擲骰子、抽卡片、玩小遊戲、和電腦對手比拚。</li>
             </ol>
             <div className="start-bar">
               <div className="start-sum"><b>{name || '你'}</b>,準備好出生了嗎?</div>
-              <button className="btn primary huge" onClick={() => onStart({ name: name.trim() || '小明', look, style: STYLES.find((x) => x.id === style).title })}>出生! →</button>
+              <div className="start-btns">
+                <button className="btn primary huge" onClick={() => go(false)}>從出生開始 →</button>
+                <button className="btn huge2" onClick={() => go(true)}>🎲 直接進入大富翁棋盤</button>
+              </div>
             </div>
           </section>
         </div>

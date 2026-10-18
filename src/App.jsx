@@ -7,6 +7,7 @@ import SceneModal, { YearModal, StageModal } from './components/SceneModal.jsx'
 import CharacterCreator from './components/CharacterCreator.jsx'
 import PrologueScreen from './components/PrologueScreen.jsx'
 import ResultScreen from './components/ResultScreen.jsx'
+import MiniGameModal from './components/MiniGameModal.jsx'
 import RecordsScreen from './components/RecordsScreen.jsx'
 import Avatar from './components/Avatar.jsx'
 import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedia } from './components/HUD.jsx'
@@ -15,8 +16,8 @@ import {
   createGame, roll, choose, endYear, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
   computeScore, evalQuests,
 } from './game/engine.js'
-import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup } from './game/prologue.js'
-import { PERSONAS, botPlan, botChoose } from './game/bots.js'
+import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
+import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch } from './game/match.js'
 import { recordGame } from './game/records.js'
 import { advisorFallback, stageFallback } from './game/fallback.js'
@@ -63,6 +64,7 @@ export default function App() {
   const [shake, setShake] = useState(false)
   const [ranks, setRanks] = useState(null)
   const [fresh, setFresh] = useState([])
+  const [debugMg, setDebugMg] = useState(params.get('mg')) // 開發用:?mg=wheel 直接開啟某個小遊戲
   const token = useRef(0)
   const wide = useMedia('(min-width: 1100px)')
 
@@ -93,12 +95,13 @@ export default function App() {
   }
 
   // ---------- 成長篇 ----------
-  function startLife(setup) {
+  function startLife(setup, skip = false) {
     sfx.unlock()
-    const l = beginLife(createLife(setup, seedOf()))
+    const created = createLife(setup, seedOf())
+    const l = skip ? skipLife(created) : beginLife(created)
     setLife(l)
     setScreen('prologue')
-    requestLifeAi(l)
+    if (!skip) requestLifeAi(l)
   }
 
   async function requestLifeAi(l) {
@@ -264,6 +267,12 @@ export default function App() {
     react(ng.scene)
   }
 
+  function onMinigameDone(r) {
+    const ng = choose(human(), 0, { stars: r.stars, note: r.note })
+    commit(0, ng)
+    react(ng.scene)
+  }
+
   async function onContinue() {
     const ng = endYear(human())
     commit(0, ng)
@@ -315,7 +324,7 @@ export default function App() {
         b.focus(i)
         await b.moveToken(i, s.pos)
       } else if (b) b.teleport(i, s.pos)
-      s = choose(s, botChoose(s, pl.persona))
+      s = botAct(s, pl.persona)
       const res = s.scene.result.lines
       const cover = res.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0)
       const loss = res.filter((l) => l.amount < 0 && l.kind !== 'lesson').reduce((a, l) => a + l.amount, 0)
@@ -470,7 +479,8 @@ export default function App() {
         <Feed items={feed} />
       </Drawer>
 
-      {planOpen && (
+      {debugMg && <MiniGameModal game={debugMg} s={g} onDone={(r) => { console.log('MG ' + JSON.stringify(r)); setDebugMg(null) }} />}
+      {planOpen && !debugMg && (
         <PlanModal
           s={g}
           coach={coach}
@@ -482,7 +492,8 @@ export default function App() {
           onClose={() => setPlanOpen(false)}
         />
       )}
-      {showScene && <SceneModal scene={scene} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
+      {showScene && scene.kind === 'minigame' && g.phase === 'scene' && <MiniGameModal key={scene.defId + g.turn} game={scene.base.game} s={g} onDone={onMinigameDone} />}
+      {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
       {stage && <StageModal data={stage.data} fromAi={stage.fromAi} loading={stage.loading} onClose={closeStage} age={g.age} />}
     </div>
@@ -503,11 +514,11 @@ function Title({ aiInfo, onStart, onRecords }) {
         <h1>保險大富翁</h1>
         <p className="title-sub">財務人生模擬遊戲 · Financial Life Simulator</p>
         <p className="title-desc">
-          從 0 歲出生開始:出生抽籤、成長、升學,22 歲踏入社會,再走進大富翁棋盤。
+          擲骰子、走格子、抽事件卡,和電腦對手一起在 3D 棋盤上走完人生。
           <br />
-          結婚、買房、投資、遇到意外……還要和電腦對手比拚,看誰的人生過得最穩。
+          途中會遇到結婚、買房、投資、意外與市場起伏,還有各種保險小遊戲:配對翻牌、防詐騙、命運輪盤……
           <br />
-          劇情與學習回饋由 AI 依你的處境即時產生;金額與保險給付由規則引擎精算,結果公平可驗證。
+          想從 0 歲出生開始也可以,或是直接進入棋盤。金額與保險給付由規則引擎精算,劇情與學習回饋由 AI 依你的處境產生。
         </p>
         <div className="title-avatars">{looks.map((l, i) => <Avatar key={i} look={l} size={72} />)}</div>
         <div className="title-btns">
@@ -515,9 +526,9 @@ function Title({ aiInfo, onStart, onRecords }) {
           <button className="btn huge2" onClick={onRecords}>🏅 成就與戰績</button>
         </div>
         <ol className="how">
-          <li><b>1 出生</b>抽籤決定家境與家人保障</li>
-          <li><b>2 成長</b>0 ~ 21 歲的選擇與意外</li>
-          <li><b>3 棋盤</b>3D 大富翁 · 電腦對手 · 人生任務</li>
+          <li><b>1 創角</b>可從出生開始,或直接進棋盤</li>
+          <li><b>2 規劃</b>配置保障、投資與貸款</li>
+          <li><b>3 大富翁</b>擲骰、事件卡、小遊戲、對手排名</li>
           <li><b>4 結算</b>平行人生對照與 AI 教練</li>
         </ol>
         <div className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`}>{aiInfo.ai ? '✨ AI 編劇與教練已連線' : '離線備援模式(使用內建題庫)'}</div>

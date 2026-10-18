@@ -187,11 +187,24 @@ function botMilestone(s, p, sc, rng) {
   }
 }
 
+// 電腦玩小遊戲:依個性的「知識水準」決定星數。
+export function botStars(s, p) {
+  const rng = new Rng((s.seed ^ 0x77) + s.turn * 17, 0)
+  const x = rng.next() * 0.9 + p.quiz * 0.6
+  return x > 1.25 ? 3 : x > 0.95 ? 2 : x > 0.65 ? 1 : 0
+}
+
+// 選擇並結算當前場景(小遊戲需要星數)
+export function botAct(s, p) {
+  if (s.scene.kind === 'minigame') return choose(s, 0, { stars: botStars(s, p) })
+  return choose(s, botChoose(s, p))
+}
+
 // ---------- 一整年(同步,用於快轉或測試)----------
 export function botPlayYear(s, p) {
   s = botPlan(s, p)
   s = roll(s)
-  s = choose(s, botChoose(s, p))
+  s = botAct(s, p)
   s = endYear(s)
   return s
 }
@@ -201,7 +214,7 @@ export function botFastForward(s, p) {
   while (s.phase !== 'ended' && guard++ < 100) {
     if (s.phase === 'plan') s = botPlan(s, p)
     if (s.phase === 'plan') s = roll(s)
-    if (s.phase === 'scene') s = choose(s, botChoose(s, p))
+    if (s.phase === 'scene') s = botAct(s, p)
     if (s.phase === 'result') s = endYear(s)
   }
   return s

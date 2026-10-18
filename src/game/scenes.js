@@ -4,6 +4,7 @@ import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
 } from './content.js'
 import { PRODUCTS, payoutFor } from './products.js'
+import { MINIGAMES, MINIGAME_IDS, MINIGAME_REWARD } from './minigames.js'
 import {
   ASSETS, ASSET_ORDER, round1k, clamp, cover, canIncrease, analyzeGaps, householdIncome, holdingsTotal,
 } from './core.js'
@@ -36,6 +37,7 @@ export function buildScene(s, rng, tile) {
     case 'bank': return buildBank(s)
     case 'tax': return buildTax(s)
     case 'hospital': return buildHospital(s)
+    case 'minigame': return buildMinigame(s, rng)
     case 'rest': return rng.next() < 0.6 ? buildQuiz(s, rng) : buildTip(s, rng)
     default: return buildTip(s, rng)
   }
@@ -212,6 +214,18 @@ function buildHospital(s) {
   })
 }
 
+function buildMinigame(s, rng) {
+  const ids = [...MINIGAME_IDS, 'quiz']
+  const id = rng.weighted(ids, (g) => 1 / (1 + seenCount(s, 'mg_' + g) * 1.5))
+  s.seen['mg_' + id] = (s.seen['mg_' + id] || 0) + 1
+  if (id === 'quiz') return buildQuiz(s, rng)
+  const m = MINIGAMES[id]
+  return scene({
+    kind: 'minigame', defId: 'mgplay_' + id, icon: m.icon, tone: 'neutral', title: m.title, story: m.blurb,
+    base: { game: id }, choices: [{ label: '開始挑戰', hint: '', tag: 'play' }],
+  })
+}
+
 function buildQuiz(s, rng) {
   const unseen = QUIZ_DEFS.map((q, i) => i).filter((i) => !s.seen['quiz' + i])
   const idx = unseen.length ? rng.pick(unseen) : rng.int(0, QUIZ_DEFS.length - 1)
@@ -233,7 +247,7 @@ function buildTip(s, rng) {
 
 // ======================= 結算 =======================
 
-export function resolveScene(s, rng, sc, choice, add) {
+export function resolveScene(s, rng, sc, choice, add, opts = {}) {
   s.seen[sc.defId] = (s.seen[sc.defId] || 0) + 1
   switch (sc.kind) {
     case 'event': return resolveEvent(s, sc, choice, add)
@@ -245,6 +259,7 @@ export function resolveScene(s, rng, sc, choice, add) {
     case 'tax': return resolveTax(s, sc, add)
     case 'hospital': return resolveHospital(s, choice, add)
     case 'quiz': return resolveQuiz(s, sc, choice, add)
+    case 'minigame': return resolveMinigame(s, sc, add, opts)
     case 'chance':
     case 'milestone': return resolveFxScene(s, rng, sc, choice, add)
     default: return undefined
@@ -453,6 +468,20 @@ function resolveQuiz(s, sc, choice, add) {
     add('答對了!獲得獎金', 10000, 'cover')
   } else add(`答錯了。正確答案:${q.options[q.answer]}`, 0, 'warn')
   add(q.why, 0, 'lesson')
+}
+
+function resolveMinigame(s, sc, add, opts) {
+  const m = MINIGAMES[sc.base.game]
+  const stars = clamp(Math.round(opts.stars ?? 1), 0, 3)
+  const reward = MINIGAME_REWARD[stars]
+  s.miniPlayed++
+  s.miniStars += stars
+  if (stars === 3) s.miniPerfect++
+  s.cash += reward
+  add(`完成「${m.title}」:${stars ? '⭐'.repeat(stars) : '再接再厲'}`, 0, stars ? 'in' : 'note')
+  if (reward) add('小遊戲獎金', reward, 'cover')
+  if (opts.note) add(opts.note, 0, 'note')
+  add(m.lesson, 0, 'lesson')
 }
 
 // ---- 機會卡與里程碑:以 fx 描述效果 ----

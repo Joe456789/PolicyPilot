@@ -73,7 +73,7 @@ export function roll(state) {
   })
 }
 
-export function choose(state, idx) {
+export function choose(state, idx, opts = {}) {
   return run(state, (s, rng) => {
     if (s.phase !== 'scene' || !s.scene) return
     const sc = s.scene
@@ -81,7 +81,7 @@ export function choose(state, idx) {
     sc.picked = idx
     const lines = []
     const add = (label, amount, kind) => lines.push({ label, amount, kind: kind || (amount >= 0 ? 'in' : 'out') })
-    resolveScene(s, rng, sc, choice, add)
+    resolveScene(s, rng, sc, choice, add, opts)
     cover(s)
     sc.result = { lines }
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })

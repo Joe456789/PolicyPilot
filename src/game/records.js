@@ -14,6 +14,7 @@ export const ACHIEVEMENTS = [
   { id: 'family_full', icon: '🏡', title: '美滿家庭', desc: '結婚、有 2 個以上的孩子,而且有自己的房子。', check: (c) => !!c.s.partner && c.s.dependents >= 2 && !!c.s.house },
   { id: 'quest_master', icon: '🎯', title: '任務達人', desc: '一局完成全部 3 個人生任務。', check: (c) => c.questsDone >= 3 },
   { id: 'survivor', icon: '💪', title: '九死一生', desc: '經歷重大傷病與失能事件,仍然平安走完人生。', check: (c) => c.hadCritical && c.hadDisability && c.s.ended?.reason === 'complete' },
+  { id: 'gamer', icon: '🎮', title: '小遊戲高手', desc: '一局之中,小遊戲拿到 2 次三顆星。', check: (c) => c.s.miniPerfect >= 2 },
   { id: 'variety', icon: '🎭', title: '見多識廣', desc: '體驗過 3 種不同的職業。', check: (c, rec) => Object.keys(rec.careers || {}).length >= 3 },
 ]
 

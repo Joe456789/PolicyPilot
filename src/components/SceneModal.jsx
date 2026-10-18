@@ -14,6 +14,7 @@ const KIND = {
   quiz: '保險小學堂',
   tip: '保險小學堂',
   life: '成長篇',
+  minigame: '小遊戲',
 }
 
 export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel }) {
