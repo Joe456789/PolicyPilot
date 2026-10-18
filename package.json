@@ -1,0 +1,23 @@
+{
+  "name": "policypilot-monopoly",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "保險大富翁 — 財務人生模擬遊戲 (Cardif InsurHack 2026, 題目 1-1)",
+  "scripts": {
+    "dev": "vite",
+    "server": "node server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
