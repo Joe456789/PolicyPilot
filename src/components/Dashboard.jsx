@@ -89,6 +89,8 @@ export default function Dashboard({ s }) {
         </div>
       </div>
 
+      {s.hospitalTurns > 0 && <p className="callout" role="status">🏥 住院休養中:還要休養 {s.hospitalTurns} 個回合(不能擲骰、收入打折,身體會慢慢恢復)。</p>}
+
       {s.cash < 0 && <p className="callout bad" role="alert">⚠ 現金為負,年底前補不上就會破產出局。</p>}
 
       <div className="health" aria-label={`健康 ${Math.round(s.health)}`}>

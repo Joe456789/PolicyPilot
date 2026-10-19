@@ -1,3 +1,4 @@
+import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
 import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, canIncrease, recommended, analyzeGaps, householdIncome, holdingsTotal } from '../game/engine.js'
@@ -91,6 +92,12 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
             {tab === 'invest' && (
               <>
                 <div className="note-box">💡 投資是為了累積資產,賺的是報酬;保險買的是「壞事發生時的現金流」。兩者用途不同,先把保障與緊急預備金顧好,再拿多餘的錢去投資。</div>
+                {coach && (
+                  <div className="coachbox">
+                    <b>🧑‍🏫 教練提示</b>
+                    <ul>{coachInvest(s).map((x, i) => <li key={i} className={`tone-${x.tone}`}>{x.text}</li>)}</ul>
+                  </div>
+                )}
                 <div className="step-row">
                   <span>每次金額</span>
                   {STEPS.map(([v, n]) => <button key={v} className={step === v ? 'on' : ''} onClick={() => setStep(v)}>{n}</button>)}
@@ -156,6 +163,12 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
             {tab === 'loan' && (
               <>
                 <div className="note-box">⚠️ 借錢投資是「用確定的利息,賭不確定的報酬」。貸款年利率約 7%,每年會自動還本金的 10%;現金不夠時,系統也會自動幫你借。</div>
+                {coach && (
+                  <div className="coachbox">
+                    <b>🧑‍🏫 教練提示</b>
+                    <ul>{coachLoan(s).map((x, i) => <li key={i} className={`tone-${x.tone}`}>{x.text}</li>)}</ul>
+                  </div>
+                )}
                 <div className="move">
                   <div className="move-box"><div className="muted">目前貸款</div><b>{wan(s.loan)}</b><small>年利率約 7%</small></div>
                   <div className="move-ctl">

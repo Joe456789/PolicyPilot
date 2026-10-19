@@ -556,3 +556,15 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .hcard.prot { border-color: #b9dcc9; background: #f0faf4; }
 .hcard.opp { border-color: #f0d9a8; background: #fff8e8; }
 .hand-empty { font-size: 12px; line-height: 1.5; }
+
+/* 教練提示(情境選項) */
+.coach-scene { text-align: left; margin: 10px 0 4px; padding: 9px 12px; background: #eef8f2; border: 1.5px solid #bfe3cf; border-radius: 12px; font-size: 13.5px; line-height: 1.6; }
+.coach-scene p { margin: 2px 0 0; color: #1f3d2f; }
+.choice .pick-tag { font-style: normal; font-size: 11.5px; margin-left: 8px; padding: 2px 7px; border-radius: 99px; font-weight: 700; vertical-align: middle; }
+.pick-tag.best { background: #d9f3e5; color: #0a6b43; }
+.pick-tag.warn { background: #fde7c9; color: #8a4b00; }
+.choice.pick-best { border-color: #7cc7a0; background: #f4fcf7; }
+.choice.pick-warn { border-color: #efc27d; }
+.choice .pick-text { color: #1f5a3f; margin-top: 3px; }
+.coachbox .tone-warn { color: #8a4b00; }
+.coachbox .tone-good { color: #0a6b43; }

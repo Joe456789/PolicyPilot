@@ -1,3 +1,4 @@
+import { coachScene } from './game/coach.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Board3D from './components/Board3D.jsx'
 import Board from './components/Board.jsx'
@@ -237,7 +238,12 @@ export default function App() {
     sfx.dice()
     const ng = roll(cur, worldOf(playersRef.current))
     const b = boardRef.current
-    if (b) {
+    if (ng.dice == null) {
+      // 住院休養:這一回合不擲骰、不移動
+      b?.focus(0)
+      await sleep(700)
+      b?.setActiveTile(ng.pos)
+    } else if (b) {
       await b.rollDice(ng.dice)
       b.hideDice()
       await b.moveToken(0, ng.pos)
@@ -467,7 +473,7 @@ export default function App() {
 
   const centerSlot = (
     <div className="center-actions">
-      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label="擲骰子">🎲 擲骰子</button>
+      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? '🛌 住院休養(跳過這回合)' : '🎲 擲骰子'}</button>
     </div>
   )
 
@@ -504,7 +510,7 @@ export default function App() {
             <Popups items={popups} />
             {use3d && (
               <div className="action-bar">
-                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label="擲骰子">🎲 擲骰子</button>
+                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? '🛌 住院休養(跳過這回合)' : '🎲 擲骰子'}</button>
                 <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button>
                 <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}>💬 問理專</button>
               </div>
@@ -552,7 +558,7 @@ export default function App() {
         />
       )}
       {showScene && scene.kind === 'minigame' && g.phase === 'scene' && <MiniGameModal key={scene.defId + g.turn} game={scene.base.game} s={g} onDone={onMinigameDone} />}
-      {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
+      {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} tips={coach && g.phase === 'scene' ? coachScene(g, scene) : null} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
       {stage && <StageModal data={stage.data} fromAi={stage.fromAi} loading={stage.loading} onClose={closeStage} age={g.age} />}
     </div>

@@ -102,3 +102,52 @@ test('手牌:最多 3 張、滿了換掉最舊的;免災金牌擋下事件;醫�
   const withAid = choose(mk(['medaid']), 0)
   assert.ok(withAid.cash > bare.cash && withAid.cash < withShield.cash)
 })
+
+test('住院停等:住院後接下來的回合不擲骰、不移動,有醫療保障可提早出院', async () => {
+  const { roll, choose, endYear } = await import('../src/game/engine.js')
+  const admit = (cov) => {
+    let s = createGame(base, 51)
+    s = { ...s, coverage: { ...s.coverage, ...cov }, phase: 'scene', pos: 14,
+      scene: { kind: 'event', cat: 'medical', defId: 'hospital_stay', base: { medical: 60000, other: 0, hospital: true }, choices: [{ costMult: 0.6, stay: 2 }], title: 't', icon: 'i' } }
+    return choose(s, 0)
+  }
+  assert.equal(admit({}).hospitalTurns, 2)
+  assert.equal(admit({ medical: 1 }).hospitalTurns, 1)
+  let s = endYear(admit({}))
+  assert.equal(s.phase, 'plan')
+  const pos = s.pos
+  s = roll(s)
+  assert.equal(s.dice, null)
+  assert.equal(s.pos, pos)
+  assert.equal(s.hospitalTurns, 1)
+  assert.equal(s.scene.defId, 'hospital_rest')
+  s = { ...s, health: 60 }
+  const h0 = s.health
+  s = choose(s, 0)
+  assert.ok(s.health > h0)
+  assert.ok(s.effects.some((e) => e.label === '住院休養中'))
+})
+
+test('教練提示:跑完整局,每個情境都能算出提示、不報錯;小測驗不給答案', async () => {
+  const { coachScene, coachInvest, coachLoan } = await import('../src/game/coach.js')
+  const { roll, choose, endYear } = await import('../src/game/engine.js')
+  let s = createGame(base, 61)
+  let seen = 0, kinds = new Set(), badges = 0
+  for (let i = 0; i < 400 && s.phase !== 'ended'; i++) {
+    if (s.phase === 'plan') { coachInvest(s); coachLoan(s); s = roll(s); continue }
+    if (s.phase === 'scene') {
+      const tips = coachScene(s, s.scene)
+      if (s.scene.kind === 'quiz') assert.equal(tips, null)
+      if (tips) {
+        seen++; kinds.add(s.scene.kind)
+        assert.equal(tips.picks.length, s.scene.choices.length)
+        for (const p of tips.picks) { assert.ok(!/NaN|undefined/.test(p.text)); if (p.badge) badges++ }
+        assert.ok(!/NaN|undefined/.test(tips.summary))
+      }
+      s = choose(s, s.scene.kind === 'minigame' ? 0 : s.scene.choices.length - 1, { stars: 2 })
+      continue
+    }
+    if (s.phase === 'result') s = endYear(s)
+  }
+  assert.ok(seen >= 10 && kinds.size >= 4 && badges > 0, `${seen} ${[...kinds]} ${badges}`)
+})

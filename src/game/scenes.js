@@ -39,7 +39,7 @@ export function buildScene(s, rng, tile, world = {}) {
     case 'shop': return buildShop(s)
     case 'bank': return buildBank(s)
     case 'tax': return buildTax(s)
-    case 'hospital': return buildHospital(s)
+    case 'hospital': return buildHospital(s, rng)
     case 'minigame': return buildMinigame(s, rng)
     case 'rest': return rng.next() < 0.6 ? buildQuiz(s, rng) : buildTip(s, rng)
     default: return buildTip(s, rng)
@@ -48,6 +48,18 @@ export function buildScene(s, rng, tile, world = {}) {
 
 const scene = (o) => ({ ai: false, aiable: false, tone: 'neutral', base: {}, ...o })
 
+
+// 住院休養中的回合:不擲骰,身體慢慢恢復,收入打折。
+export function buildHospitalRest(s) {
+  const inflation = Math.pow(1.025, s.turn)
+  const left = s.hospitalTurns
+  return scene({
+    kind: 'event', cat: 'medical', defId: 'hospital_rest', icon: '🛌', tone: 'neutral', title: '住院休養中',
+    story: `這一年你都在醫院與家裡休養,無法正常工作。${left > 0 ? `之後還要再休養 ${left} 個回合。` : '醫生說這是最後一個休養的回合,下一回合就能回到棋盤上。'}`,
+    base: { medical: round1k(25000 * inflation), other: 0, loss: { ratio: 0.2, years: 1 }, rest: true },
+    choices: [{ label: '好好休養', hint: '健康 +12,今年收入少 2 成' }],
+  })
+}
 
 // ---------- 資產格 ----------
 const wan = (n) => `${Math.round(n / 10000).toLocaleString('en-US')} 萬`
@@ -254,7 +266,26 @@ function buildTax(s) {
   })
 }
 
-function buildHospital(s) {
+// 醫院格:身體還好就是健檢日;身體差(或運氣不好的急診)就要住院,之後停等幾個回合休養。
+// 有醫療險或住院日額險,可以選更好的病房、提早出院。
+function buildHospital(s, rng) {
+  const pAdmit = clamp((95 - s.health) / 45, 0.08, 0.9)
+  if (rng.next() < pAdmit) {
+    const inflation = Math.pow(1.025, s.turn)
+    const bill = round1k(rng.int(45000, 90000) * inflation)
+    const insured = (s.coverage.medical || 0) > 0 || (s.coverage.daily || 0) > 0
+    return scene({
+      kind: 'event', cat: 'medical', defId: 'hospital_stay', icon: '🏥', tone: 'bad', title: '住院觀察(停等 1–2 回合)',
+      story: s.health < 70
+        ? '你的身體狀況不太好,醫生要求你住院觀察幾天。住院期間無法正常工作,接下來的幾個回合要在醫院休養。'
+        : '突然的急診讓你住進了醫院,醫生要求你至少休養一陣子。接下來的幾個回合要在醫院休養。',
+      base: { medical: bill, other: 0, hospital: true, healthHit: 0 },
+      choices: [
+        { label: '健保病房', hint: `自付較少;${insured ? '有保險可提早 1 回合出院' : '沒有保險要多休養 1 回合'}`, costMult: 0.6, stay: 2 },
+        { label: '單人病房(自付差額)', hint: `舒適、恢復快,自付較多;停等 1 回合`, costMult: 1.6, stay: 1 },
+      ],
+    })
+  }
   return scene({
     kind: 'hospital', defId: 'hospital', icon: '🏥', title: '健康檢查日',
     story: '趁著健康好好檢查一下吧。早期發現,治療成本通常更低;但別忘了,健康時才買得到最划算的保障。',
@@ -367,9 +398,16 @@ function resolveEvent(s, sc, choice, add) {
     s.recurring.push({ amount, yearsLeft: b.recurring.years, label: b.recurring.label })
     add(`${b.recurring.label}:每年 ${Math.round(amount / 10000)} 萬,持續 ${b.recurring.years} 年`, 0, 'note')
   }
+  if (b.hospital) {
+    const covered = (s.coverage.medical || 0) > 0 || (s.coverage.daily || 0) > 0
+    const n = Math.max(1, (choice.stay || 1) - (covered ? 1 : 0))
+    s.hospitalTurns = n
+    add(`住院:接下來要休養 ${n} 個回合${covered && (choice.stay || 1) > 1 ? '(有醫療保障,提早 1 回合出院)' : ''}`, 0, 'warn')
+  }
+  if (b.rest) s.health = Math.min(100, s.health + 12)
   if (choice.tag === 'upskill') s.income = Math.round(s.income * 1.06)
   const hit = (b.healthHit || 0) * (choice.health ?? 1)
-  if (hit) s.health = Math.max(5, s.health - hit)
+  if (hit) s.health = clamp(s.health - hit, 5, 100)
   if (sc.cat === 'critical' || sc.cat === 'disability') {
     s.blocked.critical = s.blocked.disability = s.blocked.medical = true
     add('已有傷病紀錄:相關保障日後無法再加保', 0, 'warn')

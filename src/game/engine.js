@@ -6,7 +6,7 @@ import {
   BOARD, ASSET_ORDER, run, cover, clamp, blankYear, netWorth, holdingsTotal, recommended,
   canIncrease, householdIncome, round1k,
 } from './core.js'
-import { buildScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
+import { buildScene, buildHospitalRest, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
 import { propById, rentOf, propPremium, upgradeCost, RISK_NAME } from './properties.js'
 import { updateQuests } from './quests.js'
 
@@ -104,10 +104,18 @@ export function clearOps(state) {
 export function roll(state, world = {}) {
   return run(state, (s, rng) => {
     if (s.phase !== 'plan') return
+    s.pendingOps = []
+    if (s.hospitalTurns > 0) {
+      // 住院休養:不擲骰、不移動
+      s.hospitalTurns -= 1
+      s.dice = null
+      s.scene = buildHospitalRest(s)
+      s.phase = 'scene'
+      return
+    }
     const dice = rng.int(1, 6)
     s.dice = dice
     s.pos = (s.pos + dice) % BOARD.length
-    s.pendingOps = []
     s.scene = buildScene(s, rng, BOARD[s.pos], world)
     s.phase = 'scene'
   })

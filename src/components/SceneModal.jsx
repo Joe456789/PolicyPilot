@@ -17,7 +17,7 @@ const KIND = {
   minigame: '小遊戲',
 }
 
-export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel }) {
+export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel, tips }) {
   const result = scene.result
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={scene.title}>
@@ -40,14 +40,20 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
           </ul>
         )}
 
+        {phase === 'scene' && tips?.summary && <div className="coach-scene"><b>🧑‍🏫 教練提示</b><p>{tips.summary}</p></div>}
+
         {phase === 'scene' && (
           <div className="choices">
-            {scene.choices.map((c, i) => (
-              <button key={i} className="choice" onClick={() => onChoose(i)}>
-                <b>{c.label}</b>
-                {c.hint && <small>{c.hint}</small>}
-              </button>
-            ))}
+            {scene.choices.map((c, i) => {
+              const pk = tips?.picks?.[i]
+              return (
+                <button key={i} className={`choice ${pk?.badge ? `pick-${pk.badge}` : ''}`} onClick={() => onChoose(i)}>
+                  <b>{c.label}{pk?.badge === 'best' && <em className="pick-tag best">👍 教練推薦</em>}{pk?.badge === 'warn' && <em className="pick-tag warn">⚠ 小心</em>}</b>
+                  {c.hint && <small>{c.hint}</small>}
+                  {pk?.text && <small className="pick-text">🧑‍🏫 {pk.text}</small>}
+                </button>
+              )
+            })}
           </div>
         )}
 
