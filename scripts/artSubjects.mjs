@@ -9,9 +9,11 @@ import { ENDINGS } from '../src/game/endings.js'
 import { SLOTS } from '../src/game/prologueCards.js'
 
 export const STYLE = [
-  'Flat vector illustration, soft pastel palette (mint green, warm cream, coral, sky blue, butter yellow), rounded friendly shapes,',
-  'gentle lighting, clean uncluttered composition, 4:3 landscape, everyday Taiwan setting, diverse young characters with simple faces.',
-  'Absolutely no text, no letters, no numbers, no logos, no watermark. Non-graphic and family friendly even for sad or risky themes.',
+  'High-quality 3D render in a cute soft clay / vinyl toy style, like a miniature diorama sitting on a rounded cream-coloured base,',
+  'viewed from a consistent isometric three-quarter angle from above (about 35 degrees), same look as a colourful 3D board game with chunky rounded buildings and little toy pawn-like figures.',
+  'Soft studio lighting, gentle realistic shadows, subtle ambient occlusion, smooth matte materials, shallow depth, pastel palette (mint green, warm cream, coral, sky blue, butter yellow).',
+  'Plain soft off-white background, single centred subject, 4:3 landscape. Everyday Taiwan setting, simple friendly faces.',
+  'Absolutely no text, no letters, no numbers, no logos, no watermark. Non-graphic and family friendly even for sad or risky themes (show them gently, e.g. a clinic, an umbrella, a worried look).',
 ].join(' ')
 
 const strip = (s) => String(s || '').replace(/[()（）【】「」『』]/g, ' ').replace(/\s+/g, ' ').trim()
