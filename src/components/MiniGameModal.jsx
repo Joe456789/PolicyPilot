@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MINIGAMES, MINIGAME_REWARD } from '../game/minigames.js'
 import MemoryMatch from './minigames/MemoryMatch.jsx'
 import ScamSwipe from './minigames/ScamSwipe.jsx'
@@ -12,6 +12,11 @@ export default function MiniGameModal({ game, s, onDone }) {
   const meta = MINIGAMES[game]
   const [playing, setPlaying] = useState(false)
   const finish = (r) => { sfx.fanfare(); onDone(r) }
+  // 自動化測試用:?mgauto=1 讓小遊戲立刻以 2 顆星完成
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('mgauto') && !new URLSearchParams(location.search).get('mg')) onDone({ stars: 2, note: '(自動測試)' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={meta.title}>
       <div className="modal minigame card-pop tone-neutral">

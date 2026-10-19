@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
-import { STYLES, LOOKS, defaultLook } from '../game/careers.js'
+import { STYLES, LOOKS, defaultLook, ASPIRATIONS, BACKGROUNDS, randomName } from '../game/careers.js'
+import { wan } from '../game/format.js'
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
 
 export default function CharacterCreator({ onStart, onBack }) {
-  const go = (skip) => onStart({ name: name.trim() || '小明', look, style: STYLES.find((x) => x.id === style).title }, skip)
+  const go = (skip) => onStart({ name: name.trim() || randomName(), look, style: STYLES.find((x) => x.id === style).title, aspiration, bgId: birth === 'pick' ? bgId : null }, skip)
   const [name, setName] = useState('')
   const [look, setLook] = useState(defaultLook())
   const [style, setStyle] = useState('steady')
+  const [aspiration, setAspiration] = useState('wealth')
+  const [birth, setBirth] = useState('random')
+  const [bgId, setBgId] = useState('normal')
   const set = (k, v) => setLook((l) => ({ ...l, [k]: v }))
 
   function randomize() {
@@ -31,7 +35,10 @@ export default function CharacterCreator({ onStart, onBack }) {
           </div>
           <label className="field">
             <span>你的名字</span>
-            <input id="player-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="例如:小明" />
+            <div className="name-row">
+              <input id="player-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={8} placeholder="例如:小明" />
+              <button type="button" className="btn" onClick={() => setName(randomName())} aria-label="隨機產生名字">🎲 隨機</button>
+            </div>
           </label>
           <div className="look">
             <div className="look-row"><span>膚色</span><div className="sw">{LOOKS.skins.map((v) => <button key={v} type="button" aria-label={`膚色 ${v}`} aria-pressed={look.skin === v} className={look.skin === v ? 'on' : ''} style={{ background: v }} onClick={() => set('skin', v)} />)}</div></div>
@@ -53,6 +60,34 @@ export default function CharacterCreator({ onStart, onBack }) {
                 </button>
               ))}
             </div>
+          </section>
+          <section className="card">
+            <h3>你的人生志向</h3>
+            <p className="muted small">志向會決定你這一局的人生任務方向,也會影響最後的結局。</p>
+            <div className="opts three">
+              {ASPIRATIONS.map((x) => (
+                <button key={x.id} type="button" className={`opt ${aspiration === x.id ? 'on' : ''}`} onClick={() => setAspiration(x.id)} aria-pressed={aspiration === x.id}>
+                  <span className="opt-ico" aria-hidden>{x.icon}</span><span className="opt-t">{x.title}</span><span className="opt-b">{x.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="card">
+            <h3>出生的家庭</h3>
+            <div className="pills big">
+              <button type="button" className={birth === 'random' ? 'on' : ''} aria-pressed={birth === 'random'} onClick={() => setBirth('random')}>🎲 命運抽籤(8 種家境)</button>
+              <button type="button" className={birth === 'pick' ? 'on' : ''} aria-pressed={birth === 'pick'} onClick={() => setBirth('pick')}>✋ 自己選</button>
+            </div>
+            {birth === 'pick' && (
+              <div className="opts three bgpick">
+                {BACKGROUNDS.map((b) => (
+                  <button key={b.id} type="button" className={`opt ${bgId === b.id ? 'on' : ''}`} onClick={() => setBgId(b.id)} aria-pressed={bgId === b.id}>
+                    <span className="opt-ico" aria-hidden>{b.icon}</span><span className="opt-t">{b.title}</span><span className="opt-b">{b.blurb}</span>
+                    <span className="opt-x">現金 {wan(b.cash, 0)}{b.loan ? ` · 貸款 ${wan(b.loan, 0)}` : ''}{b.assets ? ' · 有投資' : ''}{b.house ? ' · 有房' : ''}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
           <section className="card grad">
             <h3>兩種開始方式</h3>

@@ -3,8 +3,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import { aiStatus, generateJson } from './gemini.js'
-import { SYSTEM, narratePrompt, advisorPrompt, stagePrompt, coachPrompt } from './prompts.js'
-import { mockNarrate, mockAdvisor, mockStage, mockCoach } from './mock.js'
+import { SYSTEM, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt } from './prompts.js'
+import { lookupGlossary } from '../src/game/glossary.js'
+import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach } from './mock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -35,6 +36,8 @@ function limiter(req, res, next) {
   next()
 }
 app.use('/api/narrate', limiter)
+app.use('/api/director', limiter)
+app.use('/api/ask', limiter)
 app.use('/api/advisor', limiter)
 app.use('/api/stage', limiter)
 app.use('/api/coach', limiter)
@@ -82,9 +85,51 @@ app.post('/api/narrate', (req, res) => {
       return {
         title: str(out.title, 30), story: str(out.story, 260),
         choices: out.choices.map((c) => ({ label: str(c.label, 40), hint: str(c.hint, 50) })),
+        lesson: str(out.lesson, 100),
       }
     },
     () => mockNarrate(sc, ch),
+  )
+})
+
+const STYLES = ['frugal', 'standard', 'premium', 'risky']
+app.post('/api/director', (req, res) => {
+  const { info = {}, character, brief, recent = [] } = req.body || {}
+  const inf = { cat: str(info.cat, 20), catName: str(info.catName, 20), severity: Math.min(4, Math.max(1, num(info.severity, 2))), needs: str(info.needs, 80) }
+  const ch = cleanChar(character)
+  const br = cleanBrief(brief)
+  const rc = (Array.isArray(recent) ? recent : []).slice(0, 6).map((x) => str(x, 20))
+  handle(
+    res,
+    async () => {
+      const out = await generateJson({ system: SYSTEM, prompt: directorPrompt({ info: inf, character: ch, brief: br, recent: rc }), maxTokens: 900 })
+      const choices = Array.isArray(out?.choices) ? out.choices.slice(0, 3) : []
+      const styles = choices.map((c) => c.style)
+      if (!out?.story || choices.length < 2 || !styles.every((x) => STYLES.includes(x)) || new Set(styles).size !== styles.length) {
+        throw Object.assign(new Error('bad director shape'), { code: 'bad_shape' })
+      }
+      return {
+        title: str(out.title, 30), story: str(out.story, 260), lesson: str(out.lesson, 100),
+        choices: choices.map((c) => ({ label: str(c.label, 40), hint: str(c.hint, 50), style: c.style })),
+      }
+    },
+    () => mockDirector(inf, ch),
+  )
+})
+
+app.post('/api/ask', (req, res) => {
+  const question = str(req.body?.question, 200).trim()
+  const context = str(req.body?.context, 400)
+  if (question.length < 2) return res.status(400).json({ ok: false, error: 'too_short' })
+  const refs = lookupGlossary(question, 3)
+  handle(
+    res,
+    async () => {
+      const out = await generateJson({ system: SYSTEM, prompt: askPrompt({ question, context, refs }), maxTokens: 700, temperature: 0.6 })
+      if (!out?.answer) throw Object.assign(new Error('bad ask shape'), { code: 'bad_shape' })
+      return { answer: str(out.answer, 600), followups: (out.followups || []).slice(0, 2).map((x) => str(x, 40)) }
+    },
+    () => mockAsk(question),
   )
 })
 
@@ -142,6 +187,7 @@ app.post('/api/coach', (req, res) => {
         gaps: (out.gaps || []).slice(0, 3).map((x) => str(x, 140)),
         scripts: (out.scripts || []).slice(0, 3).map((x) => ({ scenario: str(x.scenario, 50), say: str(x.say, 260) })),
         compliance: str(out.compliance, 160),
+        epilogue: str(out.epilogue, 300),
       }
     },
     () => mockCoach(report),

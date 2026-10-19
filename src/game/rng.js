@@ -10,10 +10,20 @@ export function mulberry32(seed) {
   }
 }
 
+// 連續的種子(1, 2, 3…)直接丟進 mulberry32 前幾個輸出會很像,先做一次位元混合。
+function mix(x) {
+  x = (x ^ 61) ^ (x >>> 16)
+  x = (x + (x << 3)) >>> 0
+  x ^= x >>> 4
+  x = Math.imul(x, 0x27d4eb2d)
+  x ^= x >>> 15
+  return x >>> 0
+}
+
 // 把亂數器的狀態放進 game state,讓 state 可以被複製且仍保持可重現。
 export class Rng {
   constructor(seed, n = 0) {
-    this.seed = seed >>> 0
+    this.seed = mix(seed >>> 0)
     this.n = n
     this._f = mulberry32(this.seed)
     for (let i = 0; i < n; i++) this._f()

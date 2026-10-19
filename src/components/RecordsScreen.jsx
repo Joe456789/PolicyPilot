@@ -1,4 +1,5 @@
 import { ACHIEVEMENTS, loadRecords } from '../game/records.js'
+import { ENDINGS } from '../game/endings.js'
 import { wan } from '../game/format.js'
 
 export default function RecordsScreen({ onBack }) {
@@ -23,13 +24,27 @@ export default function RecordsScreen({ onBack }) {
         })}
       </div>
       <section className="card">
+        <h3>結局圖鑑 {Object.keys(rec.endings || {}).length} / {ENDINGS.length}</h3>
+        <div className="ach-grid">
+          {ENDINGS.map((e) => {
+            const on = !!(rec.endings || {})[e.id]
+            return (
+              <div key={e.id} className={`ach ${on ? 'on' : ''}`}>
+                <span className="ach-i" aria-hidden>{on ? e.icon : '❔'}</span>
+                <div><b>{on ? e.title : '???'}</b><p>{on ? e.blurb : `${e.rarity}結局,還沒遇到。`}</p></div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+      <section className="card">
         <h3>歷史戰績</h3>
         {rec.games.length === 0 ? <p className="muted">還沒有完成過任何一局人生。</p> : (
           <div className="hist">
             {rec.games.map((g, i) => (
               <div key={i} className="hist-row">
                 <span>{new Date(g.t).toLocaleDateString()}</span>
-                <b>{g.name} · {g.career}</b>
+                <b>{g.name} · {g.career}{g.ending ? ` · ${g.ending}` : ''}</b>
                 <span>{g.score} 分({g.grade})</span>
                 <span>淨資產 {wan(g.net)}</span>
                 <span>{g.players > 1 ? `第 ${g.rank} / ${g.players} 名` : '單人'}</span>

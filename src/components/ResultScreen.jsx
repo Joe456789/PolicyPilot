@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
-import { PRODUCTS, PRODUCT_ORDER } from '../game/products.js'
+import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
+import { computeEnding } from '../game/endings.js'
 import { coachFallback } from '../game/fallback.js'
 import { wan } from '../game/format.js'
 import { ai } from '../ai.js'
@@ -50,6 +51,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
   }, [s.seed])
 
   const death = score.family
+  const ending = computeEnding(s, score)
   const quests = evalQuests(s)
   return (
     <div className="screen result">
@@ -60,6 +62,16 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
           <h1>{coach?.headline || score.archetype}</h1>
         </div>
       </header>
+
+      <section className="card ending">
+        <div className="ending-ico" aria-hidden>{ending.icon}</div>
+        <div>
+          <div className="ending-k">你的結局 · {ending.rarity}</div>
+          <h2>{ending.title}</h2>
+          <p className="ending-b">{ending.blurb}</p>
+          <p className="ending-e">{coach?.epilogue || ending.epilogue}</p>
+        </div>
+      </section>
 
       <div className="res-top">
         <div className="card score">
@@ -160,7 +172,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
       <section className="card">
         <h3>🔎 保障缺口檢視</h3>
         <div className="gap-table" role="table" aria-label="保障缺口">
-          {PRODUCT_ORDER.filter((id) => id !== 'home' || s.house).map((id) => {
+          {PRODUCT_ORDER.filter((id) => (s.coverage[id] || 0) > 0 || (!OPTIONAL_PRODUCTS.includes(id) && (id !== 'home' || s.house) && (id !== 'auto' || s.car))).map((id) => {
             const have = s.coverage[id] || 0
             const need = rec[id] || 0
             const ok = have >= need

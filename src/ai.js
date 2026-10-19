@@ -39,7 +39,15 @@ const brief = (s) => ({
 })
 const who = (p) => ({ name: p.name, career: p.title, background: p.background, style: p.style })
 
+const recentTitles = (s) => s.history.flatMap((h) => h.events.filter((e) => e.kind === 'event').map((e) => e.title)).slice(-6)
+const context = (s) => {
+  const names = Object.entries(s.coverage).filter(([, v]) => v > 0).map(([k]) => k).join('、') || '無'
+  return `${s.age} 歲 ${s.player.title}、${s.partner ? '已婚' : '單身'}、扶養 ${s.dependents} 人、${s.house ? '有房' : '無房'}、現金可撐約 ${Math.round((s.cash / (s.expense / 12)) * 10) / 10} 個月、貸款 ${Math.round(s.loan / 10000)} 萬、已投保(代碼):${names}`
+}
+
 export const ai = {
+  director: (info, s) => post('/api/director', { info, character: who(s.player), brief: brief(s), recent: recentTitles(s) }, 12000),
+  ask: (question, s) => post('/api/ask', { question, context: context(s) }, 15000),
   narrate: (scene, s) =>
     post(
       '/api/narrate',

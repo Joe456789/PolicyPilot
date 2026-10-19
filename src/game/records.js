@@ -18,7 +18,7 @@ export const ACHIEVEMENTS = [
   { id: 'variety', icon: '🎭', title: '見多識廣', desc: '體驗過 3 種不同的職業。', check: (c, rec) => Object.keys(rec.careers || {}).length >= 3 },
 ]
 
-const empty = () => ({ games: [], unlocked: {}, careers: {} })
+const empty = () => ({ games: [], unlocked: {}, careers: {}, endings: {} })
 
 export function loadRecords() {
   try {
@@ -45,10 +45,12 @@ export function recordGame(ctx) {
     grade: ctx.score.grade,
     net: ctx.score.netWorth,
     rank: ctx.rank,
+    ending: ctx.ending?.title || null,
     players: ctx.opponents + 1,
     years: ctx.s.history.length,
   }
   rec.games = [row, ...rec.games].slice(0, 30)
+  if (ctx.ending) rec.endings = { ...(rec.endings || {}), [ctx.ending.id]: rec.endings?.[ctx.ending.id] || Date.now() }
   const fresh = []
   for (const a of ACHIEVEMENTS) {
     if (rec.unlocked[a.id]) continue

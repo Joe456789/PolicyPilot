@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PRODUCTS, PRODUCT_ORDER, premiumFor, totalPremium } from '../game/products.js'
+import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, canIncrease, recommended, analyzeGaps, householdIncome, holdingsTotal } from '../game/engine.js'
 import { wan } from '../game/format.js'
 
@@ -43,38 +43,47 @@ export default function PlanModal({ s, onCoverage, onTrade, onBorrow, onRepay, o
             {tab === 'cover' && (
               <>
                 {s.flash && <div className="flash">{s.flash}</div>}
-                <div className="prod-list">
-                  {PRODUCT_ORDER.filter((id) => !PRODUCTS[id].needsHouse || s.house).map((id) => {
-                    const p = PRODUCTS[id]
-                    const cur = s.coverage[id] || 0
-                    const locked = !canIncrease(s, id)
-                    return (
-                      <div key={id} className="prod">
-                        <div className="prod-top">
-                          <span className="prod-ico" aria-hidden>{p.icon}</span>
-                          <div>
-                            <div className="prod-name">{p.name} <small>{p.sub}</small></div>
-                            <div className="prod-blurb">{p.blurb}</div>
-                          </div>
-                        </div>
-                        <div className="seg" role="radiogroup" aria-label={p.name}>
-                          {p.tiers.map((t, i) => {
-                            const disabled = locked && i > cur
-                            const isRec = coach && rec[id] === i && i > 0
-                            return (
-                              <button key={i} role="radio" aria-checked={cur === i} className={`seg-b ${cur === i ? 'on' : ''} ${isRec ? 'rec' : ''}`} disabled={disabled} onClick={() => onCoverage(id, i)}>
-                                <span>{t.label}</span>
-                                <small>{i === 0 ? '$0' : `${wan(premiumFor(id, i, s.age), 1)}/年`}</small>
-                                {isRec && <i className="rec-tag">建議</i>}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        {locked && <div className="lock">🔒 已有相關傷病紀錄,無法加保</div>}
+                {PRODUCT_GROUPS.map(([gid, gname]) => {
+                  const ids = PRODUCT_ORDER.filter((id) => PRODUCTS[id].group === gid && !(PRODUCTS[id].needsHouse && !s.house) && !(PRODUCTS[id].needsCar && !s.car))
+                  if (!ids.length) return null
+                  return (
+                    <div key={gid} className="prod-group">
+                      <h4>{gname}</h4>
+                      <div className="prod-list">
+                        {ids.map((id) => {
+                          const p = PRODUCTS[id]
+                          const cur = s.coverage[id] || 0
+                          const locked = !canIncrease(s, id)
+                          return (
+                            <div key={id} className="prod">
+                              <div className="prod-top">
+                                <span className="prod-ico" aria-hidden>{p.icon}</span>
+                                <div>
+                                  <div className="prod-name">{p.name} <small>{p.sub}</small>{OPTIONAL_PRODUCTS.includes(id) && <em className="opt-tag">選配</em>}</div>
+                                  <div className="prod-blurb">{p.blurb}</div>
+                                </div>
+                              </div>
+                              <div className="seg" role="radiogroup" aria-label={p.name}>
+                                {p.tiers.map((t, i) => {
+                                  const disabled = locked && i > cur
+                                  const isRec = coach && rec[id] === i && i > 0
+                                  return (
+                                    <button key={i} role="radio" aria-checked={cur === i} className={`seg-b ${cur === i ? 'on' : ''} ${isRec ? 'rec' : ''}`} disabled={disabled} onClick={() => onCoverage(id, i)}>
+                                      <span>{t.label}</span>
+                                      <small>{i === 0 ? '$0' : `${wan(premiumFor(id, i, s.age), 1)}/年`}</small>
+                                      {isRec && <i className="rec-tag">建議</i>}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              {locked && <div className="lock">🔒 已有相關傷病紀錄,無法加保</div>}
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
+                    </div>
+                  )
+                })}
               </>
             )}
 

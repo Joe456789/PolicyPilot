@@ -13,5 +13,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY server ./server
+COPY src/game ./src/game
 EXPOSE 8080
 CMD ["node", "server/index.js"]

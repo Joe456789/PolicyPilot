@@ -9,11 +9,26 @@ export const CAREERS = [
 ]
 
 export const BACKGROUNDS = [
-  { id: 'rich', icon: '🏰', title: '富裕家庭', blurb: '家境優渥、沒有負債,但可能不太懂得節制。', cash: 800000, loan: 0, expenseRatio: 0.66, parentsSupport: false, insuredP: 0.9, weight: 5 },
-  { id: 'tight', icon: '🌱', title: '清寒家庭', blurb: '背著學貸與家用,起步最辛苦,日後可能要扶養父母。', cash: 20000, loan: 450000, expenseRatio: 0.78, parentsSupport: true, insuredP: 0.25, weight: 25 },
-  { id: 'normal', icon: '🏘️', title: '一般家庭', blurb: '有一點小積蓄,也有些學貸。', cash: 90000, loan: 200000, expenseRatio: 0.72, parentsSupport: false, insuredP: 0.55, weight: 45 },
-  { id: 'comfy', icon: '🏡', title: '小康家庭', blurb: '家裡可以給點支持,沒有債務,但花費習慣較高。', cash: 300000, loan: 0, expenseRatio: 0.7, parentsSupport: false, insuredP: 0.8, weight: 25 },
+  { id: 'tight', icon: '🌱', title: '清寒家庭', blurb: '背著學貸與家用,起步最辛苦,日後可能要扶養父母。', cash: 20000, loan: 250000, expenseRatio: 0.78, parentsSupport: true, insuredP: 0.25, weight: 18, tuition: 1 },
+  { id: 'single', icon: '🕊️', title: '單親家庭', blurb: '媽媽(或爸爸)一個人撐起家,你很早就懂事,也很懂得省。', cash: 40000, loan: 200000, expenseRatio: 0.76, parentsSupport: true, insuredP: 0.3, weight: 12, tuition: 1 },
+  { id: 'normal', icon: '🏘️', title: '一般家庭', blurb: '有一點小積蓄,也有些學貸。', cash: 90000, loan: 80000, expenseRatio: 0.72, parentsSupport: false, insuredP: 0.55, weight: 30, tuition: 0.8 },
+  { id: 'comfy', icon: '🏡', title: '小康家庭', blurb: '家裡可以給點支持,沒有債務,但花費習慣較高。', cash: 300000, loan: 0, expenseRatio: 0.7, parentsSupport: false, insuredP: 0.8, weight: 16, tuition: 0.3 },
+  { id: 'pro', icon: '🩺', title: '專業世家', blurb: '父母是醫師或律師,教育資源豐富,對保險也很有概念。', cash: 600000, loan: 0, expenseRatio: 0.68, parentsSupport: false, insuredP: 0.95, weight: 6, tuition: 0, assets: { stock: 300000 } },
+  { id: 'biz', icon: '🏭', title: '創業家庭', blurb: '家裡做生意,景氣好時很風光,不好時週轉很吃緊。', cash: 400000, loan: 300000, expenseRatio: 0.72, parentsSupport: false, insuredP: 0.45, weight: 8, tuition: 0.6, assets: { stock: 200000 } },
+  { id: 'rich', icon: '🏰', title: '富二代', blurb: '家境優渥,有現金、股票,家裡還送了一間沒有房貸的房子,但可能不太懂得節制。', cash: 800000, loan: 0, expenseRatio: 0.66, parentsSupport: false, insuredP: 0.9, weight: 5, tuition: 0, assets: { deposit: 400000, stock: 800000 }, house: 8000000 },
+  { id: 'heritage', icon: '🏚️', title: '祖產家庭', blurb: '家裡有一棟老房子,值不少錢,但現金很少。', cash: 100000, loan: 0, expenseRatio: 0.72, parentsSupport: false, insuredP: 0.5, weight: 5, tuition: 0.7, house: 6000000 },
 ]
+
+export const ASPIRATIONS = [
+  { id: 'wealth', icon: '💎', title: '財富自由', blurb: '我要靠聰明的資產配置,讓錢替我工作。' },
+  { id: 'family', icon: '🏡', title: '幸福家庭', blurb: '結婚、生子、有一個溫暖的家。' },
+  { id: 'career', icon: '🏆', title: '事業巔峰', blurb: '在職場一路往上爬,成為領域裡的佼佼者。' },
+  { id: 'travel', icon: '🌍', title: '自由旅行', blurb: '用經驗而不是物質,豐富我的人生。' },
+  { id: 'guardian', icon: '🛡️', title: '平安守護', blurb: '我要保護好自己與所愛的人,不被意外打倒。' },
+]
+
+const NAME_POOL = ['小明', '小美', '阿凱', '小薇', '阿傑', '雅婷', '志豪', '佳穎', '宗翰', '怡君', '冠宇', '品妍', '承恩', '子晴', '柏翰', '思穎', '建宏', '郁婷', '彥廷', '心怡', '家豪', '詩涵', '俊傑', '依婷', '宥辰', '語彤', '昱廷', '芷瑄', '浩然', '欣怡']
+export const randomName = () => NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]
 
 export const STYLES = [
   { id: 'bold', icon: '🔥', title: '冒險型', blurb: '相信「富貴險中求」,愛追高風險。' },

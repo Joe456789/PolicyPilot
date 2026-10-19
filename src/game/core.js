@@ -1,6 +1,6 @@
 // 遊戲核心:狀態、資產、保障建議等共用的「確定性」計算。
 import { Rng } from './rng.js'
-import { PRODUCTS, PRODUCT_ORDER, EMPTY_COVERAGE, totalPremium } from './products.js'
+import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremium } from './products.js'
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
 import { drawQuests } from './quests.js'
 
@@ -56,7 +56,7 @@ export const houseEquity = (s) => (s.house ? Math.round(s.house.value - s.house.
 export const householdIncome = (s) => s.income + (s.partner ? s.partner.income : 0)
 
 export function netWorth(s) {
-  return Math.round(s.cash + holdingsTotal(s) + s.savings + houseEquity(s) - s.loan)
+  return Math.round(s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + houseEquity(s) - s.loan)
 }
 
 // 從 0 開始:由創角結果建立初始狀態。
@@ -82,6 +82,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
       style: style.title,
       parentsSupport: st ? st.parentsSupport : bg.parentsSupport,
       parentsInsured: st ? st.parentsInsured : null,
+      aspiration: setup.aspiration || null,
       education: st?.education || null,
       major: st?.majorTitle || null,
       stats: st?.stats || null,
@@ -95,10 +96,15 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     pos: 0,
     dice: null,
     cash: startCash,
-    hold: { deposit: 0, bond: 0, stock: 0, spec: 0 },
+    hold: { deposit: st?.assets?.deposit || 0, bond: st?.assets?.bond || 0, stock: st?.assets?.stock || 0, spec: 0 },
     loan: startLoan,
     savings: 0,
-    house: null,
+    ilv: 0,
+    ilvYears: 0,
+    car: false,
+    trips: 0,
+    promotions: 0,
+    house: st?.house ? { price: st.house, value: st.house, balance: 0, rate: 0.022, payment: 0, yearsLeft: 0 } : null,
     income,
     expense: Math.round((income * (st ? st.expenseRatio : bg.expenseRatio)) / 1000) * 1000,
     partner: null,
@@ -114,7 +120,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     checkupYears: 0,
     panicSells: 0,
     crashesHeld: 0,
-    quests: drawQuests(seed, career, length.years),
+    quests: drawQuests(seed, career, length.years, setup.aspiration),
     questDone: {},
     quizRight: 0,
     quizTotal: 0,
@@ -129,7 +135,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     ended: null,
     flash: null,
     pendingStage: false,
-    startNetWorth: startCash - startLoan,
+    startNetWorth: startCash - startLoan + (st?.assets ? Object.values(st.assets).reduce((a, b) => a + b, 0) : 0) + (st?.house || 0),
   }
   return s
 }
@@ -175,12 +181,14 @@ const SEVERITY = (s) => ({
   home: 3.2,
   ltc: s.age >= 45 ? 3 : 1,
   annuity: 1,
+  auto: 3,
+  cancer: 1, daily: 1, travel: 1, invlinked: 1,
 })
 
 export function recommended(s) {
   const dep = s.dependents
   const hi = householdIncome(s)
-  const rec = { medical: 1, critical: 1, disability: 1, accident: 0, life: 0, home: 0, annuity: 0, ltc: 0 }
+  const rec = { medical: 1, critical: 1, disability: 1, accident: 0, life: 0, home: 0, annuity: 0, ltc: 0, auto: 0, cancer: 0, daily: 0, travel: 0, invlinked: 0 }
   if (hi > 1400000 || dep > 0) rec.critical = 2
   if (dep > 0 || (s.house && !s.partner) || !s.career.laborIns) rec.disability = 2
   let lifeNeed = 0
@@ -191,6 +199,7 @@ export function recommended(s) {
   rec.life = clamp(lifeNeed, 0, 3)
   if (s.career.risk === 'mid' || dep > 0) rec.accident = 1
   if (s.house) rec.home = 1
+  if (s.car) rec.auto = 1
   if (s.age >= 30 && hi > 1200000) rec.annuity = hi > 2200000 ? 2 : 1
   if (s.age >= 45) rec.ltc = 1
 
@@ -205,8 +214,9 @@ export function recommended(s) {
 }
 
 export function canIncrease(s, id) {
-  if (['medical', 'critical', 'disability'].includes(id)) return !s.blocked[id]
+  if (['medical', 'critical', 'disability', 'cancer', 'daily'].includes(id)) return !s.blocked[id]
   if (id === 'home') return !!s.house
+  if (id === 'auto') return !!s.car
   return true
 }
 
@@ -215,6 +225,7 @@ export function analyzeGaps(s) {
   const sev = SEVERITY(s)
   const gaps = []
   for (const id of PRODUCT_ORDER) {
+    if (OPTIONAL_PRODUCTS.includes(id)) continue
     const have = s.coverage[id] || 0
     const need = rec[id] || 0
     if (have < need) {

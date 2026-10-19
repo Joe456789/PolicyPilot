@@ -21,8 +21,33 @@ export function narratePrompt({ scene, character, brief }) {
 選項(順序與數量不可改變,只可改寫文字,選項的意思不可改變):
 ${scene.choices.map((c, i) => `${i + 1}. ${c.label}(${c.hint || ''})`).join('\n')}
 
-輸出 JSON:{"title": string(14 字內), "story": string(60~110 字,可加入主角的生活細節,不要寫出金額), "choices": [{"label": string(18 字內), "hint": string(22 字內)}]}
+輸出 JSON:{"title": string(14 字內), "story": string(60~110 字,可加入主角的生活細節,不要寫出金額), "choices": [{"label": string(18 字內), "hint": string(22 字內)}], "lesson": string(一句與這張卡相關的保險或投資觀念,20~45 字)}
 choices 的長度必須等於 ${scene.choices.length}。`
+}
+
+// AI 事件導演:引擎已決定事件的「類別與嚴重程度」,AI 負責設計具體情境與 2~3 個有取捨的選項。
+export function directorPrompt({ info, character, brief, recent }) {
+  return `你是遊戲「保險大富翁」的事件導演。請為玩家設計一張全新的「${info.catName}」事件卡,情境要貼近他的人生,並讓選項有真正的取捨。
+主角:${who(character, brief)}。現金約可支應 ${brief.emergencyMonths} 個月、${brief.hasLoan ? '有貸款' : '無貸款'}。
+事件類別:${info.cat}(${info.catName})。嚴重程度:${info.severity}(1 輕微 ~ 4 嚴重)。
+${info.needs ? '情境需要自然帶到:' + info.needs + '\n' : ''}最近發生過的事件(請避免重複):${recent.length ? recent.join('、') : '無'}。
+規則:只描述情境,不要寫出金額或理賠數字。選項的 style 代表選擇的「方向」,引擎會據此決定數字:
+- frugal:省錢但代價較大(例如收入損失較長、恢復較慢)
+- standard:一般做法
+- premium:花較多錢,但恢復好、風險較低
+- risky:賭一把、硬撐或拖延,省錢但健康或後續風險較高
+輸出 JSON:{"title": string(14 字內), "story": string(70~120 字), "choices": [{"label": string(18 字內), "hint": string(22 字內), "style": "frugal"|"standard"|"premium"|"risky"}] (2~3 個,不可重複 style), "lesson": string(一句相關的保險或投資觀念,20~45 字)}`
+}
+
+// 互動式理專助教:依遊戲資料回答保險與投資觀念,避免憑空編造。
+export function askPrompt({ question, context, refs }) {
+  return `玩家在遊戲中問了一個問題,請用「理專助教」的口吻回答。
+玩家問題:「${question}」
+玩家目前狀況:${context}
+參考資料(請優先依據這些內容,不足時才用一般常識補充,並明確說明是一般觀念):
+${refs.length ? refs.map((r) => `- ${r.title}:${r.text}`).join('\n') : '(沒有直接相符的資料)'}
+回答要求:繁體中文、100~200 字、先給結論再說原因,盡量連結玩家目前的狀況;不得推薦真實的保險公司或商品、不得保證報酬、不得做醫療或法律建議。
+輸出 JSON:{"answer": string, "followups": [string, string](兩個相關的延伸問題,各 20 字內)}`
 }
 
 export function advisorPrompt({ character, analysis, brief }) {
@@ -58,6 +83,7 @@ ${JSON.stringify(report)}
  "lessons": [string, string, string](每則 30~50 字,具體、可行動),
  "gaps": [string](最多 3 則,指出保障缺口與原因,可引用「建議配置」),
  "scripts": [{"scenario": string(客戶情境 20 字內), "say": string(理專可以怎麼說 50~90 字,需合規、不誇大、不保證報酬)}] (2 則),
- "compliance": string(一句提醒,例如須如實說明商品、避免保證收益)
+ "compliance": string(一句提醒,例如須如實說明商品、避免保證收益),
+ "epilogue": string(80~140 字的人生結語,以第三人稱描寫這位主角的一生與最終結局「${report.ending?.title || ''}」,帶入關鍵事件與保障的作用,語氣溫暖、有故事感)
 }`
 }

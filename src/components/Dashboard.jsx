@@ -1,5 +1,5 @@
 import Avatar from './Avatar.jsx'
-import { PRODUCTS, PRODUCT_ORDER } from '../game/products.js'
+import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, holdingsTotal, houseEquity, netWorth, householdIncome } from '../game/engine.js'
 import { wan, signed } from '../game/format.js'
 
@@ -57,10 +57,11 @@ export default function Dashboard({ s }) {
             <span key={k} className={s.hold[k] ? 'on' : ''}><i className={`dot a-${k}`} />{ASSETS[k].name} {wan(s.hold[k])}</span>
           ))}
         </div>
-        {(s.house || s.savings > 0) && (
+        {(s.house || s.savings > 0 || s.ilv > 0) && (
           <div className="alloc-x">
             {s.house && <span>🏠 房產淨值 {wan(houseEquity(s))}(房貸 {wan(s.house.balance, 0)})</span>}
             {s.savings > 0 && <span>🌱 儲蓄險價值 {wan(s.savings)}</span>}
+            {s.ilv > 0 && <span>📊 投資型保單帳戶 {wan(s.ilv)}</span>}
           </div>
         )}
       </div>
@@ -74,7 +75,7 @@ export default function Dashboard({ s }) {
       <div className="cov">
         <div className="cov-h">目前保障</div>
         <div className="cov-list">
-          {PRODUCT_ORDER.filter((id) => id !== 'home' || s.house).map((id) => {
+          {PRODUCT_ORDER.filter((id) => (s.coverage[id] || 0) > 0 || (!OPTIONAL_PRODUCTS.includes(id) && (id !== 'home' || s.house) && (id !== 'auto' || s.car))).map((id) => {
             const t = s.coverage[id] || 0
             return (
               <span key={id} className={`chip ${t ? 'on' : ''}`} title={PRODUCTS[id].tiers[t].label}>

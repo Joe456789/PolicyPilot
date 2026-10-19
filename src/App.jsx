@@ -8,18 +8,20 @@ import CharacterCreator from './components/CharacterCreator.jsx'
 import PrologueScreen from './components/PrologueScreen.jsx'
 import ResultScreen from './components/ResultScreen.jsx'
 import MiniGameModal from './components/MiniGameModal.jsx'
+import AskModal from './components/AskModal.jsx'
 import RecordsScreen from './components/RecordsScreen.jsx'
 import Avatar from './components/Avatar.jsx'
 import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedia } from './components/HUD.jsx'
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
   createGame, roll, choose, endYear, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
-  computeScore, evalQuests,
+  computeScore, evalQuests, directorInfo, applyAiScene,
 } from './game/engine.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch } from './game/match.js'
 import { recordGame } from './game/records.js'
+import { computeEnding } from './game/endings.js'
 import { advisorFallback, stageFallback } from './game/fallback.js'
 import { wan } from './game/format.js'
 import { sfx } from './sfx.js'
@@ -64,6 +66,7 @@ export default function App() {
   const [shake, setShake] = useState(false)
   const [ranks, setRanks] = useState(null)
   const [fresh, setFresh] = useState([])
+  const [askOpen, setAskOpen] = useState(false)
   const [debugMg, setDebugMg] = useState(params.get('mg')) // 開發用:?mg=wheel 直接開啟某個小遊戲
   const token = useRef(0)
   const wide = useMedia('(min-width: 1100px)')
@@ -238,6 +241,25 @@ export default function App() {
     if (!aiInfo.ai || !sc || !(sc.aiable || sc.kind === 'advisor')) return
     const my = ++token.current
     setLoadingAi(true)
+    const info = directorInfo(sc)
+    if (info) {
+      // AI 事件導演:引擎決定類別與嚴重度,AI 設計具體情境與選項
+      const out = await ai.director(info, ng)
+      if (my !== token.current) return
+      setLoadingAi(false)
+      if (out) {
+        const cur = human()
+        if (cur.phase === 'scene' && cur.scene && cur.scene.defId === sc.defId) {
+          commit(0, applyAiScene(cur, out))
+          setAiText({ director: true })
+          return
+        }
+      }
+      // 導演失敗時,退回改寫既有事件的文字
+      const rewrite = await ai.narrate(sc, ng)
+      if (my === token.current && rewrite) setAiText(rewrite)
+      return
+    }
     let out = null
     if (sc.kind === 'advisor') {
       const r = await ai.advisor(sc.base.analysis, ng)
@@ -254,7 +276,7 @@ export default function App() {
     if (aiText) {
       const choices = aiText.choices && aiText.choices.length === base.choices.length
         ? base.choices.map((c, i) => ({ ...c, label: aiText.choices[i].label || c.label, hint: aiText.choices[i].hint ?? c.hint })) : base.choices
-      return { ...base, title: aiText.title || base.title, story: aiText.story || base.story, choices }
+      return { ...base, title: aiText.title || base.title, story: aiText.story || base.story, choices, lesson: aiText.lesson || base.lesson }
     }
     if (base.kind === 'advisor') return { ...base, story: `${base.story} ${advisorFallback(base.base.analysis, g.player)}` }
     return base
@@ -360,6 +382,7 @@ export default function App() {
       claims: h.history.reduce((a, x) => a + x.payout, 0),
       questsDone: evalQuests(h).filter((q) => q.done).length,
       hadCritical: cats.includes('critical'), hadDisability: cats.includes('disability'),
+      ending: computeEnding(h, score),
     }
     const { fresh: fr } = recordGame(ctx)
     setRanks(rk)
@@ -451,9 +474,10 @@ export default function App() {
               <div className="action-bar">
                 <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label="擲骰子">🎲 擲骰子</button>
                 <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button>
+                <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}>💬 問理專</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button></div>}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 問理專</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>
@@ -479,6 +503,7 @@ export default function App() {
         <Feed items={feed} />
       </Drawer>
 
+      {askOpen && <AskModal s={g} aiOn={aiInfo.ai} onClose={() => setAskOpen(false)} />}
       {debugMg && <MiniGameModal game={debugMg} s={g} onDone={(r) => { console.log('MG ' + JSON.stringify(r)); setDebugMg(null) }} />}
       {planOpen && !debugMg && (
         <PlanModal

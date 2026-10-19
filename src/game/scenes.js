@@ -68,6 +68,8 @@ function buildEvent(s, rng) {
       other: d.other ? rangeVal(d.other) : 0,
       loss: d.loss || null,
       accident: !!d.accident,
+      cancer: !!d.cancer,
+      carRepair: !!(d.carRepair && s.car),
       recurring: d.recurring ? { ...d.recurring, amount: round1k(d.recurring.amount * inflation) } : null,
       healthHit: d.healthHit || 0,
     },
@@ -89,8 +91,9 @@ function buildMarket(s, rng) {
   const up = m.ret >= 0
   const hasRisk = s.hold.stock + s.hold.spec > 0
   return scene({
-    kind: 'market', defId: m.id, icon: m.icon, tone: up ? 'good' : 'bad', title: m.title,
-    story: m.story + (hasRisk ? '' : '(你目前沒有持有股票類資產,這次和你的資產無關,但也許是個進場的機會。)'),
+    kind: 'market', aiable: true, defId: m.id, icon: m.icon, tone: up ? 'good' : 'bad', title: m.title,
+    story: `${m.headline}(${m.analog})` + (hasRisk ? '' : '。你目前沒有持有股票類資產,這次和你的資產無關,但也許是個進場的機會。'),
+    lesson: m.note,
     base: { ret: m.ret, rebound: m.rebound, house: m.house ?? null },
     choices: [
       { label: '繼續持有,耐心等待', hint: '不動作', tag: 'hold' },
@@ -278,15 +281,17 @@ function resolveEvent(s, sc, choice, add) {
 
   const payout = payoutFor(s.coverage, {
     cat: sc.cat, medicalCost, otherCost, income: s.income, years: lossYears || 3, accident: b.accident,
+    cancer: b.cancer, carRepair: b.carRepair,
   })
   if (medicalCost) { s.cash -= medicalCost; add('醫療與治療費用', -medicalCost) }
   if (otherCost) {
     s.cash -= otherCost
-    add(sc.cat === 'family' ? '教育費用' : sc.cat === 'home' ? '房屋修繕費用' : '額外支出', -otherCost)
+    add(sc.cat === 'family' ? '教育費用' : sc.cat === 'home' ? '房屋修繕費用' : sc.cat === 'liability' ? '對方的賠償費用' : '額外支出', -otherCost)
   }
   const pays = [
     ['medical', '醫療險給付'], ['lump', '重大傷病險給付'], ['disability', '失能所得補償給付'],
     ['ltc', '長照險給付'], ['accident', '意外險給付'], ['home', '住宅火險給付'],
+    ['cancer', '癌症險給付'], ['daily', '住院日額險給付'], ['auto', '汽車險給付'],
   ]
   for (const [k, label] of pays) {
     if (payout[k]) { s.cash += payout[k]; add(label, payout[k], 'cover') }
@@ -322,15 +327,17 @@ function resolveDeath(s, add) {
   const yearsSupport = s.dependents > 0 ? 12 : s.partner ? 8 : 5
   const mortgage = s.house ? s.house.balance : 0
   const need = s.expense * yearsSupport + mortgage + s.loan
-  const funds = s.cash + holdingsTotal(s) + s.savings + (s.house ? s.house.value : 0) + payout.life
-  s.year.payout += payout.life
+  const funds = s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + (s.house ? s.house.value : 0) + payout.life + payout.invlinked
+  s.year.payout += payout.life + payout.invlinked
   s.year.shocks.push({ cat: 'death', medicalCost: 0, otherCost: 0, income: s.income, years: 0 })
   add('壽險身故給付', payout.life, 'cover')
+  if (payout.invlinked) add('投資型保單身故保障', payout.invlinked, 'cover')
+  if (s.ilv) add('投資型保單帳戶價值', s.ilv, 'cover')
   add('家人未來生活所需(生活費+房貸+負債)', -Math.round(need), 'out')
   add('家人可動用資金(含保險金與房產)', Math.round(funds), 'in')
   s.ended = {
     reason: 'death', need: Math.round(need), funds: Math.round(funds),
-    ratio: Math.round((funds / need) * 100) / 100, payout: payout.life, yearsSupport,
+    ratio: Math.round((funds / need) * 100) / 100, payout: payout.life + payout.invlinked, yearsSupport,
   }
 }
 
@@ -518,6 +525,17 @@ function applyFx(s, rng, fx, add) {
   if (fx.incomeMult) { s.income = Math.round(s.income * fx.incomeMult); add(`年收入調整為約 ${Math.round(s.income / 10000)} 萬`, 0, 'in') }
   if (fx.health) { s.health = clamp(s.health + fx.health, 5, 100); }
   if (fx.checkup) s.checkupYears = 2
+  if (fx.car) s.car = true
+  if (fx.trip) s.trips++
+  if (fx.promo) s.promotions++
+  if (fx.risk) {
+    const r = fx.risk
+    s.cash -= r.cost
+    add(r.label || '意外損失', -r.cost)
+    const p = payoutFor(s.coverage, { cat: r.cat, otherCost: r.cost })
+    if (p.total) { s.cash += p.total; s.year.payout += p.total; add('旅平險給付', p.travel, 'cover') }
+    else add('沒有對應的保險,全部由自己承擔', 0, 'warn')
+  }
   if (fx.coverage) {
     if (fx.coverage === 'topGap') {
       const g = topGaps(s, 1)[0]
@@ -568,6 +586,15 @@ const specials = {
     add(`買房頭期款(房價約 ${Math.round(price / 10000)} 萬)`, -down)
     add(`房貸 ${Math.round(balance / 10000)} 萬,每年還款約 ${Math.round(payment / 10000 * 10) / 10} 萬`, 0, 'note')
     add('擁有房子後:房貸壓力、天災風險都變大,記得檢視壽險與住宅火險', 0, 'warn')
+  },
+  inheritHouse(s, rng, add) {
+    const price = 6000000
+    s.cash -= 800000
+    cover(s)
+    s.house = { price, value: price, balance: 0, rate: 0.022, payment: 0, yearsLeft: 0 }
+    s.expense = Math.round(s.expense * 0.85)
+    add('整修老房子', -800000)
+    add('房子產權清楚、沒有房貸,但天災風險還是你的,記得投保住宅火險', 0, 'warn')
   },
   jobChange(s, rng, add) {
     s.income = Math.round(s.income * 1.15)

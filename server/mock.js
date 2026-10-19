@@ -4,7 +4,23 @@ export function mockNarrate(sc, ch) {
     title: sc.title,
     story: `【AI 劇情】${ch.name}(${ch.career})的故事:${sc.story}`,
     choices: sc.choices.map((c) => ({ label: c.label, hint: c.hint })),
+    lesson: '【AI 觀念】先保障、再投資,輸得起的錢才拿去冒險。',
   }
+}
+export function mockDirector(info, ch) {
+  return {
+    title: `AI 事件:${info.catName}`,
+    story: `【AI 導演】${ch.name}遇到了一件${info.catName}的麻煩,需要馬上做出決定。這是 AI 即時設計的情境。`,
+    choices: [
+      { label: '省著點處理', hint: '花費少、後續較辛苦', style: 'frugal' },
+      { label: '依標準流程處理', hint: '一般做法', style: 'standard' },
+      { label: '用最好的方式處理', hint: '花費多、恢復好', style: 'premium' },
+    ],
+    lesson: '【AI 觀念】重大事件的花費,常取決於你事前準備了多少。',
+  }
+}
+export function mockAsk(q) {
+  return { answer: `【AI 理專助教】關於「${q}」:先確認你的風險缺口與現金流,再決定要不要補強。`, followups: ['我的缺口是什麼?', '保費怎麼抓比較合理?'] }
 }
 export function mockAdvisor(an, ch) {
   const g = an.gaps[0]
@@ -27,5 +43,6 @@ export function mockCoach(report) {
     gaps: [],
     scripts: [{ scenario: '客戶猶豫', say: '我們先看你的風險缺口在哪裡,再決定要不要規劃。' }],
     compliance: '請如實說明商品內容,避免保證收益。',
+    epilogue: '【AI 結語】這是一段由 AI 寫的人生結語(mock)。',
   }
 }

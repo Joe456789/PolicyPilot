@@ -29,6 +29,20 @@ const ease = {
   out: (t) => 1 - Math.pow(1 - t, 3),
 }
 
+function windowTex(base) {
+  return canvasTex(128, 192, (g, w, h) => {
+    g.fillStyle = '#' + base.toString(16).padStart(6, '0')
+    g.fillRect(0, 0, w, h)
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 4; c++) {
+        const lit = (r * 7 + c * 3) % 5 !== 0
+        g.fillStyle = lit ? '#fff3b0' : '#7aa6c7'
+        g.fillRect(12 + c * 28, 14 + r * 30, 18, 18)
+      }
+    }
+  })
+}
+
 function mulberry(seed) {
   let a = seed >>> 0
   return () => {
@@ -80,8 +94,16 @@ export class BoardScene {
     this.renderer = renderer
 
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xdff3e8)
-    scene.fog = new THREE.Fog(0xdff3e8, 55, 120)
+    const sky = canvasTex(16, 256, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h)
+      gr.addColorStop(0, '#7cc4f2')
+      gr.addColorStop(0.55, '#cfeaf7')
+      gr.addColorStop(1, '#fdf1d6')
+      g.fillStyle = gr
+      g.fillRect(0, 0, w, h)
+    })
+    scene.background = sky
+    scene.fog = new THREE.Fog(0xcfeaf7, 60, 135)
     this.scene = scene
 
     this.camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 200)
@@ -114,15 +136,28 @@ export class BoardScene {
 
   buildWorld() {
     const { scene } = this
-    // 地面
-    const ground = new THREE.Mesh(
-      new THREE.CircleGeometry(90, 64),
-      new THREE.MeshStandardMaterial({ color: 0xbfe6cf, roughness: 1 }),
+    // 水面與草地島嶼
+    const water = new THREE.Mesh(
+      new THREE.CircleGeometry(120, 64),
+      new THREE.MeshStandardMaterial({ color: 0x7cc7e8, roughness: 0.25, metalness: 0.1 }),
     )
-    ground.rotation.x = -Math.PI / 2
-    ground.position.y = -0.6
-    ground.receiveShadow = true
-    scene.add(ground)
+    water.rotation.x = -Math.PI / 2
+    water.position.y = -0.75
+    scene.add(water)
+    const island = new THREE.Mesh(
+      new THREE.CylinderGeometry(27, 29, 1.1, 64),
+      new THREE.MeshStandardMaterial({ color: 0x9bd8a9, roughness: 1 }),
+    )
+    island.position.y = -1.3
+    island.receiveShadow = true
+    scene.add(island)
+    const top = new THREE.Mesh(new THREE.CircleGeometry(27, 64), new THREE.MeshStandardMaterial({ color: 0xa8e0b3, roughness: 1 }))
+    top.rotation.x = -Math.PI / 2
+    top.position.y = -0.74
+    top.receiveShadow = true
+    scene.add(top)
+    this.buildScenery()
+    this.buildClouds()
 
     // 棋盤底座
     const base = new THREE.Mesh(
@@ -145,6 +180,7 @@ export class BoardScene {
 
     this.buildTiles()
     this.buildCity()
+    this.buildCars()
 
     // 目標格光圈
     this.ring = new THREE.Mesh(
@@ -156,8 +192,80 @@ export class BoardScene {
     scene.add(this.ring)
   }
 
+  buildScenery() {
+    const rnd = mulberry(777)
+    const trunkM = new THREE.MeshStandardMaterial({ color: 0x8a5a3c })
+    const leaf = [0x2f9e6b, 0x3fb37a, 0x5cc98a].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }))
+    for (let i = 0; i < 70; i++) {
+      const ang = rnd() * Math.PI * 2
+      const r = 14.5 + rnd() * 11
+      const x = Math.cos(ang) * r, z = Math.sin(ang) * r
+      const s = 0.8 + rnd() * 0.9
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.16 * s, 0.9 * s, 8), trunkM)
+      trunk.position.set(x, -0.3 + 0.45 * s, z)
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.65 * s, 1.7 * s, 8), leaf[Math.floor(rnd() * 3)])
+      crown.position.set(x, 0.55 + 0.85 * s - 0.3, z)
+      crown.castShadow = true
+      this.scene.add(trunk, crown)
+    }
+    const wall = [0xf9d5c7, 0xfde4a8, 0xc9e4f5, 0xe6d7f5]
+    for (let i = 0; i < 9; i++) {
+      const ang = (i / 9) * Math.PI * 2 + rnd() * 0.3
+      const r = 16.5 + rnd() * 6
+      const x = Math.cos(ang) * r, z = Math.sin(ang) * r
+      const h = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.1, 1.4, 2, 0.08), new THREE.MeshStandardMaterial({ color: wall[i % 4] }))
+      h.position.set(x, -0.15, z)
+      h.rotation.y = rnd() * Math.PI
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.8, 4), new THREE.MeshStandardMaterial({ color: 0xd96a4b }))
+      roof.position.set(x, 0.8, z)
+      roof.rotation.y = h.rotation.y + Math.PI / 4
+      h.castShadow = true
+      roof.castShadow = true
+      this.scene.add(h, roof)
+    }
+  }
+
+  buildClouds() {
+    this.clouds = []
+    const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, transparent: true, opacity: 0.95 })
+    for (let i = 0; i < 7; i++) {
+      const g = new THREE.Group()
+      for (let k = 0; k < 4; k++) {
+        const s = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2 + Math.random() * 0.8, 1), m)
+        s.position.set(k * 1.6 - 2.4, Math.random() * 0.6, Math.random() * 1.2)
+        g.add(s)
+      }
+      g.position.set(-45 + i * 15, 16 + Math.random() * 7, -26 + Math.random() * 22)
+      g.scale.setScalar(1 + Math.random() * 0.8)
+      this.scene.add(g)
+      this.clouds.push({ g, v: 0.5 + Math.random() * 0.6 })
+    }
+  }
+
+  buildCars() {
+    this.cars = []
+    const colors = [0xe5484d, 0x3b82f6, 0xf5b301, 0x2eb67d, 0xa855f7]
+    const lines = [
+      { axis: 'z', fixed: S - 0.18, dir: 1 }, { axis: 'z', fixed: -S + 0.18, dir: -1 },
+      { axis: 'x', fixed: S - 0.18, dir: -1 }, { axis: 'x', fixed: -S + 0.18, dir: 1 },
+      { axis: 'z', fixed: S + 0.18, dir: -1 },
+    ]
+    lines.forEach((ln, i) => {
+      const car = new THREE.Group()
+      const body = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.22, 0.34, 2, 0.05), new THREE.MeshStandardMaterial({ color: colors[i % colors.length], roughness: 0.4 }))
+      body.position.y = 0.2
+      const cab = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.18, 0.3, 2, 0.05), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, roughness: 0.2 }))
+      cab.position.set(-0.03, 0.38, 0)
+      body.castShadow = true
+      car.add(body, cab)
+      this.scene.add(car)
+      this.cars.push({ car, ln, t: (i * 2.3) % (6 * S - 1.2) })
+    })
+  }
+
   buildTiles() {
     this.tileMeshes = []
+    this.tileDecals = []
     const geo = new RoundedBoxGeometry(S - 0.14, 0.26, S - 0.14, 3, 0.07)
     const decalGeo = new THREE.PlaneGeometry(S - 0.34, S - 0.34)
     this.board.forEach((t, i) => {
@@ -190,6 +298,7 @@ export class BoardScene {
       decal.position.set(p.x, 0.565, p.z)
       this.scene.add(decal)
       this.tileMeshes.push(m)
+      this.tileDecals.push(decal)
     })
   }
 
@@ -229,7 +338,7 @@ export class BoardScene {
           const oz = (rnd() - 0.5) * 2.0
           const b = new THREE.Mesh(
             new RoundedBoxGeometry(w, h, d, 2, 0.08),
-            new THREE.MeshStandardMaterial({ color: pastel[Math.floor(rnd() * pastel.length)], roughness: 0.7 }),
+            new THREE.MeshStandardMaterial({ map: windowTex(pastel[Math.floor(rnd() * pastel.length)]), roughness: 0.7 }),
           )
           b.position.set(cx + ox, 0.45 + h / 2, cz + oz)
           b.castShadow = true
@@ -320,6 +429,13 @@ export class BoardScene {
     e2.position.set(0.1, 1.34, 0.28)
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.1, 24), new THREE.MeshStandardMaterial({ color, roughness: 0.4 }))
     base.position.y = 0.05
+    const armM = new THREE.MeshStandardMaterial({ color: look.top, roughness: 0.55 })
+    for (const x of [-0.36, 0.36]) {
+      const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.32, 4, 8), armM)
+      arm.position.set(x, 0.66, 0)
+      arm.rotation.z = x < 0 ? 0.25 : -0.25
+      g.add(arm)
+    }
     g.add(base, body, head, cap, e1, e2)
     if (['long', 'bob'].includes(look.style)) {
       const back = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 12), hairMat)
@@ -566,6 +682,24 @@ export class BoardScene {
       }
     }
     this.tweens = this.tweens.filter((t) => !t.done)
+
+    // 雲飄動、車輛繞行、有棋子的格子微微浮起
+    for (const c of this.clouds || []) { c.g.position.x += c.v * dt; if (c.g.position.x > 60) c.g.position.x = -60 }
+    for (const c of this.cars || []) {
+      const L = 6 * S - 1.2
+      c.t = (c.t + dt * 2.4) % L
+      const p = -L / 2 + c.t
+      const { axis, fixed, dir } = c.ln
+      const q = dir > 0 ? p : -p
+      if (axis === 'z') { c.car.position.set(fixed, 0.46, q); c.car.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2 }
+      else { c.car.position.set(q, 0.46, fixed); c.car.rotation.y = dir > 0 ? Math.PI : 0 }
+    }
+    this.tileMeshes.forEach((m, i) => {
+      const here = this.tokens.some((tk) => tk.pos === i)
+      const ty = (here ? 0.55 : 0.43)
+      m.position.y += (ty - m.position.y) * 0.2
+      this.tileDecals[i].position.y = m.position.y + 0.135
+    })
 
     // 待機動畫:棋子輕微上下浮動
     this.tokens.forEach((t, i) => {

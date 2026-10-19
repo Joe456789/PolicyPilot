@@ -24,12 +24,13 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
       <div className={`modal card-pop tone-${scene.tone} kind-${scene.kind}`}>
         <div className="card-top">
           <span className="card-kind">{KIND[scene.kind]}</span>
-          {aiTag && <span className="ai-pill" title="劇情由 Gemini 依角色處境生成;金額與給付由規則引擎計算">✨ AI 編劇</span>}
-          {loadingAi && !aiTag && scene.aiable && <span className="ai-pill dim">AI 編劇中…</span>}
+          {aiTag && <span className="ai-pill" title="情境由 Gemini 依角色處境生成;金額與給付由規則引擎計算">✨ AI 導演</span>}
+          {loadingAi && !aiTag && scene.aiable && <span className="ai-pill dim">AI 構思情境中…</span>}
         </div>
         <div className="card-ico" aria-hidden>{scene.icon}</div>
         <h2 className="card-title">{scene.title}</h2>
         <p className="card-story">{scene.story}</p>
+        {scene.lesson && phase === 'scene' && <div className="scene-lesson">💡 {scene.lesson}</div>}
 
         {scene.kind === 'advisor' && scene.base?.analysis?.gaps?.length > 0 && phase === 'scene' && (
           <ul className="gap-list">

@@ -11,7 +11,7 @@ export function counterfactual(s) {
   let dRec = 0
   const series = []
   for (const h of s.history) {
-    const keepAnnuity = { annuity: h.coverage.annuity || 0 }
+    const keepAnnuity = { annuity: h.coverage.annuity || 0, invlinked: h.coverage.invlinked || 0 }
     const cov = (base) => ({ ...base, ...keepAnnuity })
     const none = cov({})
     const rec = cov(h.rec)

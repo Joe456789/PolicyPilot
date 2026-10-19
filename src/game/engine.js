@@ -19,7 +19,7 @@ export function setCoverage(state, id, tier) {
   return run(state, (s) => {
     const cur = s.coverage[id] || 0
     if (tier > cur && !canIncrease(s, id)) {
-      s.flash = id === 'home' ? '需要先擁有房子才能投保。' : '你已有相關傷病紀錄,這項保障已無法加保(核保限制)。'
+      s.flash = id === 'home' ? '需要先擁有房子才能投保。' : id === 'auto' ? '需要先有車才能投保汽車險。' : '你已有相關傷病紀錄,這項保障已無法加保(核保限制)。'
       return
     }
     s.coverage[id] = tier
@@ -86,6 +86,40 @@ export function choose(state, idx, opts = {}) {
     sc.result = { lines }
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })
     s.phase = 'result'
+  })
+}
+
+// ---------- AI 事件導演 ----------
+// 引擎決定事件的類別與嚴重程度,AI 設計具體情境與選項;選項的「方向」由引擎轉成有上下限的數字。
+const DIRECTOR_DEFS = ['flu', 'fracture', 'car_accident', 'chronic', 'cancer', 'disability', 'burnout', 'house_repair', 'house_damage', 'tuition', 'car_liability']
+const CAT_NAME = { medical: '醫療', critical: '重大傷病', disability: '失能', career: '職場壓力', property: '家居意外', home: '房屋災損', family: '家庭教育', liability: '交通賠償' }
+const STYLE_FX = {
+  frugal: { costMult: 0.75, otherMult: 0.7, lossMult: 1.2, health: 1.3 },
+  standard: { costMult: 1, otherMult: 1, lossMult: 1, health: 1 },
+  premium: { costMult: 1.7, otherMult: 1.4, lossMult: 0.7, health: 0.5 },
+  risky: { costMult: 0.6, otherMult: 0.6, lossMult: 0.35, health: 1.8 },
+}
+
+export function directorInfo(scene) {
+  if (!scene || scene.kind !== 'event' || !DIRECTOR_DEFS.includes(scene.defId)) return null
+  const b = scene.base
+  const cost = (b.medical || 0) + (b.other || 0)
+  const rough = cost / 600000
+  const severity = rough < 0.15 ? 1 : rough < 0.5 ? 2 : rough < 1.5 ? 3 : 4
+  return { cat: scene.cat, catName: CAT_NAME[scene.cat] || '生活', severity, needs: `核心事件必須保留:「${scene.title}」(${scene.story})` }
+}
+
+export function applyAiScene(state, out) {
+  return run(state, (s) => {
+    const sc = s.scene
+    if (!sc || s.phase !== 'scene' || !out || !Array.isArray(out.choices)) return
+    const choices = out.choices.filter((c) => STYLE_FX[c.style]).slice(0, 3)
+    if (choices.length < 2) return
+    sc.title = String(out.title || sc.title).slice(0, 30)
+    sc.story = String(out.story || sc.story).slice(0, 260)
+    sc.lesson = out.lesson ? String(out.lesson).slice(0, 100) : undefined
+    sc.choices = choices.map((c) => ({ label: String(c.label).slice(0, 40), hint: String(c.hint || '').slice(0, 50), ...STYLE_FX[c.style], style: c.style }))
+    sc.ai = true
   })
 }
 
@@ -164,6 +198,15 @@ export function endYear(state) {
       spec: clamp(1.5 * m - 0.02 + rng.normal(0, 0.22), -0.85, 2.0),
     }
     for (const k of ASSET_ORDER) s.hold[k] = Math.round(Math.max(0, s.hold[k] * (1 + returns[k])))
+    // 投資型保單:帳戶價值隨市場波動、扣除費用;前兩年扣費特別高。
+    const ilTier = PRODUCTS.invlinked.tiers[s.coverage.invlinked || 0]
+    if (s.ilv > 0 || ilTier.invest) {
+      s.ilv = Math.max(0, Math.round(s.ilv * (1 + m * 0.9 - 0.015)))
+      if (ilTier.invest) {
+        s.ilvYears += 1
+        s.ilv += Math.round(ilTier.premium * (s.ilvYears <= 2 ? 0.45 : 0.75))
+      }
+    }
     s.carryBonus = s.newBonus
     s.newBonus = 0
 
@@ -224,6 +267,7 @@ function snapshot(s, f) {
     cash: Math.round(s.cash),
     holdings: Math.round(holdingsTotal(s)),
     savings: Math.round(s.savings),
+    ilv: Math.round(s.ilv || 0),
     loan: Math.round(s.loan),
     houseEquity: s.house ? Math.round(s.house.value - s.house.balance) : 0,
     netWorth: netWorth(s),

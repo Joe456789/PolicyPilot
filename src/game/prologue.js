@@ -15,7 +15,8 @@ export { MAJORS }
 
 export function createLife(setup, seed = Math.floor(Math.random() * 100000)) {
   const rng = new Rng(seed, 0)
-  const bg = rng.weighted(BACKGROUNDS, (b) => b.weight)
+  const forced = setup.bgId ? BACKGROUNDS.find((b) => b.id === setup.bgId) : null
+  const bg = forced || rng.weighted(BACKGROUNDS, (b) => b.weight)
   const insured = rng.next() < bg.insuredP
   return {
     seed,
@@ -30,6 +31,10 @@ export function createLife(setup, seed = Math.floor(Math.random() * 100000)) {
     familyBlurb: bg.blurb,
     parentsInsured: insured,
     parentsSupport: bg.parentsSupport,
+    assets: { ...(bg.assets || {}) },
+    house: bg.house || 0,
+    tuition: bg.tuition ?? 1,
+    aspiration: setup.aspiration || null,
     cash: bg.cash,
     loan: bg.loan,
     expenseRatio: bg.expenseRatio,
@@ -227,13 +232,20 @@ export function chooseLife(state, idx) {
   if (choice.boost) life.incomeBoost *= choice.boost
   if (choice.track === 'vocational') life.track = 'vocational'
   if (choice.major) {
+    const share = life.tuition ?? 1
+    const base = Math.round(((choice.loan || 0) * share) / 10000) * 10000
     if (life.stats.study < (choice.need || 0)) {
       lines.push({ label: '成績差一點,沒考上第一志願,改念較低的選擇(學貸增加)', amount: 0, kind: 'warn' })
-      life.loan += (choice.loan || 0) + 50000
-    } else life.loan += choice.loan || 0
+      life.loan += base + 50000
+    } else life.loan += base
+    if (share < 1 && choice.loan) lines.push({ label: share === 0 ? '家裡全額負擔學費' : '家裡負擔了部分學費', amount: 0, kind: 'cover' })
+    if (life.stats.study >= 75 && choice.loan) {
+      life.loan = Math.max(0, life.loan - 50000)
+      lines.push({ label: '成績優異拿到獎學金', amount: 50000, kind: 'in' })
+    }
     life.major = choice.major
     life.edu = choice.major === 'work' ? '高中職' : '大學'
-    if (choice.loan) lines.push({ label: `學貸 ${Math.round((choice.loan) / 10000)} 萬`, amount: -choice.loan, kind: 'out' })
+    if (base) lines.push({ label: `學貸 ${Math.round(base / 10000)} 萬`, amount: -base, kind: 'out' })
     if (choice.major === 'work') life.incomeBoost *= 0.95
   }
   if (choice.fx) {
@@ -284,6 +296,7 @@ export function lifeToSetup(life, careerId, length, opponents) {
     career: careerId,
     background: bg.id,
     style: life.style,
+    aspiration: life.aspiration,
     length,
     opponents,
     start: {
@@ -295,6 +308,8 @@ export function lifeToSetup(life, careerId, length, opponents) {
       health: clamp(life.stats.health, 50, 100),
       stats: { ...life.stats },
       incomeBoost: clamp(life.incomeBoost * (1 + (life.stats.study - 50) / 400), 0.85, 1.2),
+      assets: life.assets,
+      house: life.house || 0,
       education: life.edu || '高中職',
       majorTitle: MAJORS[life.major || 'work'].title,
     },

@@ -34,7 +34,7 @@ export const EVENT_DEFS = [
   {
     id: 'car_accident', cat: 'medical', icon: '🚗', tone: 'bad', accident: true, w: 3,
     title: '雨天路滑,發生車禍', story: '路口轉彎時被後方來車追撞,你受了傷,車子也要修。',
-    medical: lo(80000, 260000), other: lo(50000, 120000), loss: { ratio: 0.1, years: 1 }, healthHit: 15,
+    medical: lo(80000, 260000), other: lo(50000, 120000), loss: { ratio: 0.1, years: 1 }, healthHit: 15, carRepair: true,
     choices: [
       { label: '配合治療、走理賠和解', hint: '好好復健', costMult: 1, lossMult: 1, health: 0.7 },
       { label: '勉強提早回去上班', hint: '少請假,但傷勢拖比較久', costMult: 0.8, lossMult: 0.4, health: 1.5 },
@@ -52,7 +52,7 @@ export const EVENT_DEFS = [
     ],
   },
   {
-    id: 'cancer', cat: 'critical', icon: '🎗️', tone: 'bad', once: true,
+    id: 'cancer', cat: 'critical', icon: '🎗️', tone: 'bad', once: true, cancer: true,
     w: (s) => (s.age < 30 ? 0.7 : s.age < 40 ? 1.5 : 2.6) * (s.checkupYears > 0 ? 0.5 : 1),
     title: '健檢發現早期癌症', story: '例行健檢出現異常,確診為癌症。除了醫療費用,接下來兩年工作也會大受影響。',
     medical: lo(700000, 1400000), loss: { ratio: 0.4, years: 2 }, healthHit: 35,
@@ -106,6 +106,16 @@ export const EVENT_DEFS = [
     choices: [
       { label: '入住長照機構', hint: '每年 50 萬,持續 3 年', recurMult: 1, health: 0.7 },
       { label: '居家照顧搭配部分外援', hint: '每年約 35 萬', recurMult: 0.7, health: 1 },
+    ],
+  },
+  {
+    id: 'car_liability', cat: 'liability', icon: '⚖️', tone: 'bad', w: 2.4,
+    req: (s) => s.car,
+    title: '擦撞他人車輛,對方受傷求償', story: '路口變換車道時擦撞到機車騎士,對方受傷住院,律師函寄到家裡要求賠償。',
+    other: lo(300000, 1500000),
+    choices: [
+      { label: '協商和解,一次賠償', hint: '花費照舊', otherMult: 1 },
+      { label: '走司法程序,拖比較久', hint: '花費約 1.3 倍(含律師費)', otherMult: 1.3 },
     ],
   },
   {
@@ -218,8 +228,8 @@ export const CHANCE_DEFS = [
     id: 'travel', icon: '✈️', title: '年度旅行計畫',
     story: '工作了一整年,你想好好放個假。要去哪裡?',
     choices: [
-      { label: '出國玩一趟', hint: '約 9 萬,心情大好', fx: { cash: -90000, health: 6 } },
-      { label: '國內小旅行', hint: '約 3 萬', fx: { cash: -30000, health: 3 } },
+      { label: '出國玩一趟', hint: '約 9 萬,心情大好', fx: { cash: -90000, health: 6, trip: true } },
+      { label: '國內小旅行', hint: '約 3 萬', fx: { cash: -30000, health: 3, trip: true } },
       { label: '在家休息、存錢', hint: '不動作', fx: {} },
     ],
     lesson: '生活品質也是人生的一部分。重點是花得有計畫,而不是什麼都不花。',
@@ -228,8 +238,8 @@ export const CHANCE_DEFS = [
     id: 'car_buy', icon: '🚙', title: '要不要買車?',
     story: '通勤越來越累,朋友勸你買車,但你知道養車的成本不只車價。',
     choices: [
-      { label: '買新車', hint: '頭期款 25 萬,每年多 8 萬', fx: { cash: -250000, expense: 80000 } },
-      { label: '買二手車', hint: '8 萬,每年多 3.5 萬', fx: { cash: -80000, expense: 35000 } },
+      { label: '買新車', hint: '頭期款 25 萬,每年多 8 萬', fx: { cash: -250000, expense: 80000, car: true } },
+      { label: '買二手車', hint: '8 萬,每年多 3.5 萬', fx: { cash: -80000, expense: 35000, car: true } },
       { label: '不買,繼續搭大眾運輸', hint: '不動作', fx: {} },
     ],
     lesson: '養車的成本包含保險、稅金、停車與保養。有車也讓意外與責任風險變大,記得檢視意外險與第三人責任。',
@@ -243,6 +253,90 @@ export const CHANCE_DEFS = [
       { label: '搬家找新房子', hint: '搬家費 2 萬,花費持平', fx: { cash: -20000 } },
     ],
     lesson: '租屋要面對房價與租金的上漲,買房前先確認自己的現金流承擔得起房貸與意外。',
+  },
+  {
+    id: 'travel_trouble', icon: '🧳', title: '旅途中行李遺失、班機取消',
+    story: '出國旅行時班機臨時取消,行李也不見了,飯店與改票花了一大筆錢。你有沒有準備旅遊平安險?',
+    choices: [
+      { label: '自己想辦法處理', hint: '損失約 8 萬', fx: { risk: { cost: 80000, cat: 'trip', label: '旅途額外花費' } } },
+    ],
+    lesson: '旅平險保費很低,卻能補貼旅途中的突發花費與意外,是低成本的好選擇。',
+  },
+  {
+    id: 'invlinked_pitch', icon: '🏦', title: '銀行理專推薦「投資型保單」',
+    story: '理專說這張保單「有壽險保障、又能投資,報酬比定存好」。你要怎麼回應?',
+    choices: [
+      { label: '先問清楚費用與風險,小額試試(年繳 6 萬)', hint: '前兩年費用高,價值隨市場波動', fx: { coverage: { id: 'invlinked', tier: 1 } } },
+      { label: '聽起來不錯,買大一點(年繳 12 萬)', hint: '保費負擔較重', fx: { coverage: { id: 'invlinked', tier: 2 } } },
+      { label: '我想保障歸保障、投資歸投資,先不買', hint: '不動作', fx: {} },
+    ],
+    lesson: '投資型保單同時包含保障與投資,但費用結構較複雜、投資風險由自己承擔。買之前務必看清楚費用與帳戶價值試算。',
+  },
+  {
+    id: 'cancer_news', icon: '📰', title: '新聞:名人罹癌過世',
+    story: '一位知名的公眾人物因癌症離世,新聞天天討論。你開始想,萬一是自己怎麼辦?',
+    choices: [
+      { label: '評估補強癌症險(確診 50 萬)', hint: '癌症險可與重大傷病險疊加', fx: { coverage: { id: 'cancer', tier: 1 } } },
+      { label: '先檢查自己的重大傷病險夠不夠', hint: '補強最大缺口', fx: { coverage: 'topGap' } },
+      { label: '看看新聞就好', hint: '不動作', fx: {} },
+    ],
+    lesson: '癌症是常見的重大風險。重點不是買越多越好,而是先確認「收入中斷期間」的現金流能不能撐住。',
+  },
+  {
+    id: 'daily_hospital_ad', icon: '🛏️', title: '同事住院一週,收入也跟著少了',
+    story: '同事因腸胃炎住院七天,醫療費健保大部分負擔了,但看護與請假的損失卻讓他很頭痛。',
+    choices: [
+      { label: '加保住院日額險(日額 1,000 元)', hint: '補貼住院期間的雜支', fx: { coverage: { id: 'daily', tier: 1 } } },
+      { label: '覺得健保加醫療險就夠了', hint: '不動作', fx: {} },
+    ],
+    lesson: '醫療險補的是醫療費用,住院期間的看護、營養品、請假損失,可以靠日額型給付補一補。',
+  },
+  {
+    id: 'etf_dca', icon: '📅', title: '定期定額:要不要每年固定投資?',
+    story: '朋友說他每年固定投資一筆錢,不看盤、不預測,幾年下來資產默默長大。你想試試嗎?',
+    choices: [
+      { label: '每年固定拿現金的 15% 買股票型 ETF', hint: '現在先買一筆', fx: { invest: { cls: 'stock', pct: 0.15 } } },
+      { label: '先觀望,等跌了再買', hint: '不動作', fx: {} },
+    ],
+    lesson: '定期定額是用時間分散進場成本,不必預測市場高低點。重要的是持續,以及先保留好緊急預備金。',
+  },
+  {
+    id: 'credit_card', icon: '💳', title: '信用卡帳單:只繳最低應繳金額?',
+    story: '這個月花得有點多,帳單上寫著「最低應繳金額 3,000 元」,看起來很輕鬆。',
+    choices: [
+      { label: '全額繳清', hint: '本月現金少 4 萬', fx: { cash: -40000 } },
+      { label: '只繳最低,剩下循環', hint: '循環利率高,年支出增加', fx: { expense: 9000 } },
+    ],
+    lesson: '信用卡循環利率常高達十幾個百分點,是最貴的貸款之一。有餘力時優先全額繳清。',
+  },
+  {
+    id: 'pet', icon: '🐶', title: '收養了一隻毛小孩',
+    story: '朋友的狗生了小狗,你一時心軟就收養了。毛小孩很療癒,但醫療與飼料都是新的支出。',
+    choices: [
+      { label: '收養並幫牠做好健康管理', hint: '每年多 3.5 萬,心情變好', fx: { expense: 35000, health: 4 } },
+      { label: '婉拒,繼續自由的生活', hint: '不動作', fx: {} },
+    ],
+    lesson: '毛小孩的醫療費用沒有健保,生一場病可能就是幾萬元。養寵物前也要把預備金想進去。',
+  },
+  {
+    id: 'startup_friend', icon: '🚀', title: '朋友創業,邀你入股',
+    story: '朋友的新創公司需要資金,說三年內可能上市,邀請你投資 30 萬。',
+    choices: [
+      { label: '投入 30 萬', hint: '可能翻很多倍,也可能歸零', fx: { gamble: { lossP: 0.7, lose: { cash: -300000 }, win: { cash: 900000 } } } },
+      { label: '投入 5 萬,意思意思', hint: '風險有限', fx: { gamble: { lossP: 0.7, lose: { cash: -50000 }, win: { cash: 150000 } } } },
+      { label: '婉拒,留在安全的資產', hint: '不動作', fx: {} },
+    ],
+    lesson: '新創投資的成功率很低,這種錢一定要用「輸得起」的資金,不能動到緊急預備金與保費。',
+  },
+  {
+    id: 'parents_gift', icon: '🎁', title: '爸媽想贈與你一筆錢',
+    story: '爸媽看你努力工作,想一次給你一筆錢當作頭期款或創業基金,但也問你有什麼規劃。',
+    choices: [
+      { label: '存起來當緊急預備金', hint: '現金 +30 萬', fx: { cash: 300000 } },
+      { label: '拿去投資 ETF', hint: '買入 ETF 30 萬', fx: { cash: 300000, invest: { cls: 'stock', pct: 0.45 } } },
+      { label: '婉拒,他們的退休金比較重要', hint: '不動作', fx: {} },
+    ],
+    lesson: '無論資金哪裡來,先確認自己的保障與預備金,再決定投資。',
   },
   {
     id: 'appliance', icon: '🧊', title: '冷氣與電腦同時壞掉',
@@ -304,8 +398,8 @@ export const MILESTONE_DEFS = [
     id: 'promotion', icon: '🏅', title: '升遷加薪', w: 3, req: (s) => s.turn >= 1,
     story: '你的表現被看見了,薪資調高 12%。你打算怎麼運用這筆加薪?',
     choices: [
-      { label: '維持原本生活,多存下來', hint: '支出幾乎不變', fx: { incomeMult: 1.12, expenseMult: 1.02 } },
-      { label: '順便升級生活品質', hint: '支出同步增加', fx: { incomeMult: 1.12, expenseMult: 1.1 } },
+      { label: '維持原本生活,多存下來', hint: '支出幾乎不變', fx: { incomeMult: 1.12, expenseMult: 1.02, promo: true } },
+      { label: '順便升級生活品質', hint: '支出同步增加', fx: { incomeMult: 1.12, expenseMult: 1.1, promo: true } },
     ],
   },
   {
@@ -344,6 +438,24 @@ export const MILESTONE_DEFS = [
     ],
   },
   {
+    id: 'family_business', icon: '🏭', title: '家裡的事業要不要接手?', w: 3.5, once: true,
+    req: (s) => s.player.bgId === 'biz' && s.age >= 25 && s.age <= 38,
+    story: '爸媽經營多年的生意想交棒給你。接手可能收入大增,但風險與責任也跟著來。',
+    choices: [
+      { label: '接手家業', hint: '年收入 +40%,但現金週轉壓力大', fx: { incomeMult: 1.4, cash: -150000 } },
+      { label: '婉拒,走自己的路', hint: '收入 +5%', fx: { incomeMult: 1.05 } },
+    ],
+  },
+  {
+    id: 'inherit_house', icon: '🏚️', title: '長輩過世,留下老房子', w: 2.5, once: true,
+    req: (s) => !s.house && s.age >= 30 && s.age <= 50 && s.player.bgId === 'heritage',
+    story: '長輩留下一間老房子,地點不錯但屋況很舊。是要整修自住,還是賣掉換現金?',
+    choices: [
+      { label: '整修後自住', hint: '花 80 萬整修,省下租金', special: 'inheritHouse' },
+      { label: '賣掉換現金', hint: '現金 +350 萬', fx: { cash: 3500000 } },
+    ],
+  },
+  {
     id: 'retire_plan', icon: '🌅', title: '開始規劃退休', w: 3, once: true,
     req: (s) => s.age >= 46,
     story: '一轉眼就中年了。退休後的生活費從哪裡來?要不要現在就開始準備?',
@@ -356,21 +468,48 @@ export const MILESTONE_DEFS = [
 ]
 
 // ---------- 市場行情 ----------
+// 市場行情:取材自近二十多年常見的市場情境(僅為教學用的「靈感」,不代表真實數字)。
+// headline 是情境新聞標題(虛構),analog 說明它對應的歷史情境,note 是投資觀念。
 export const MARKET_DEFS = [
-  { id: 'ai_boom', icon: '🚀', title: '科技股大噴發', story: '新技術帶動資金湧入,股市一路走高。', ret: 0.24, rebound: 0, w: 2 },
-  { id: 'steady', icon: '📈', title: '緩步走升的一年', story: '景氣平穩,市場小幅成長。', ret: 0.06, rebound: 0, w: 3 },
-  { id: 'rally', icon: '🏦', title: '降息帶動反彈', story: '央行降息,資金回流股債市場。', ret: 0.12, rebound: 0, w: 1.5 },
-  { id: 'crash', icon: '💥', title: '金融海嘯式崩盤', story: '全球金融危機爆發,股市大幅重挫。', ret: -0.38, rebound: 0.25, house: -0.05, w: 1.3 },
-  { id: 'covid', icon: '🦠', title: '疫情衝擊市場', story: '突發疫情造成恐慌,股市短期急跌。', ret: -0.24, rebound: 0.25, w: 1.3 },
-  { id: 'inflation', icon: '🔥', title: '通膨升溫、升息壓力', story: '物價上漲、利率提高,資產評價下修。', ret: -0.1, rebound: 0.06, house: -0.02, w: 1.6 },
-  { id: 'bubble', icon: '🫧', title: '概念股泡沫破滅', story: '前陣子漲翻天的題材股一夕崩跌,散戶哀鴻遍野。', ret: -0.2, rebound: 0.12, w: 1.2 },
-  { id: 'housing_boom', icon: '🏙️', title: '房市熱絡,房價飆升', story: '資金行情推升房價,新聞天天報創高。', ret: 0.09, rebound: 0, house: 0.15, w: 1.2 },
-  { id: 'housing_slump', icon: '📉', title: '房市降溫,價格鬆動', story: '政策與升息影響下,房市成交量明顯萎縮。', ret: 0.02, rebound: 0, house: -0.1, w: 1.0 },
-  { id: 'oil_shock', icon: '🛢️', title: '地緣衝突推升油價', story: '國際局勢緊張,能源價格飆升,市場震盪。', ret: -0.08, rebound: 0.08, w: 1.2 },
+  { id: 'ai_boom', icon: '🚀', title: '科技股大噴發', story: '新技術帶動資金湧入,股市一路走高。', ret: 0.24, rebound: 0, w: 2,
+    headline: '【財經快訊】AI 概念全面起飛,指數一年大漲兩成', analog: '類似 2023 年前後由新技術題材帶動的多頭行情', note: '好行情時最容易追高。紀律地分批投入,比預測高點更重要。' },
+  { id: 'steady', icon: '📈', title: '緩步走升的一年', story: '景氣平穩,市場小幅成長。', ret: 0.06, rebound: 0, w: 3,
+    headline: '【財經快訊】景氣溫和,股市穩步向上', analog: '長期平均的「普通年份」', note: '大多數年份是平淡的,資產是靠時間慢慢長大的。' },
+  { id: 'rally', icon: '🏦', title: '降息帶動反彈', story: '央行降息,資金回流股債市場。', ret: 0.12, rebound: 0, w: 1.5,
+    headline: '【財經快訊】央行宣布降息,資金重返股債市場', analog: '類似央行轉向寬鬆後的資產價格回升', note: '利率變動會影響各類資產,債券價格通常在降息時上漲。' },
+  { id: 'crash', icon: '💥', title: '金融海嘯式崩盤', story: '全球金融危機爆發,股市大幅重挫。', ret: -0.38, rebound: 0.25, house: -0.05, w: 1.3,
+    headline: '【財經快訊】大型金融機構出現危機,全球股市重挫', analog: '類似 2008 年全球金融海嘯', note: '歷史上大跌後常有反彈,但過程中很多人選擇恐慌賣出,錯過了回升。' },
+  { id: 'covid', icon: '🦠', title: '疫情衝擊市場', story: '突發疫情造成恐慌,股市短期急跌。', ret: -0.24, rebound: 0.25, w: 1.3,
+    headline: '【財經快訊】疫情擴散、封鎖擴大,全球股市短期急跌', analog: '類似 2020 年初疫情引發的快速下跌與之後的反彈', note: '突發事件造成的下跌可能很快,反彈也可能很快。想想你的資金短期會不會用到。' },
+  { id: 'inflation', icon: '🔥', title: '通膨升溫、升息壓力', story: '物價上漲、利率提高,資產評價下修。', ret: -0.1, rebound: 0.06, house: -0.02, w: 1.6,
+    headline: '【財經快訊】物價居高不下,央行連續升息', analog: '類似 2022 年通膨與升息使股債同跌', note: '通膨時期連債券也可能下跌,這就是為什麼要分散在不同性質的資產。' },
+  { id: 'bubble', icon: '🫧', title: '概念股泡沫破滅', story: '前陣子漲翻天的題材股一夕崩跌,散戶哀鴻遍野。', ret: -0.2, rebound: 0.12, w: 1.2,
+    headline: '【財經快訊】熱門題材股崩跌,市場資金大舉撤出', analog: '類似 2000 年前後網路泡沫破滅', note: '漲得太快、人人都在談的東西,風險往往也最大。' },
+  { id: 'housing_boom', icon: '🏙️', title: '房市熱絡,房價飆升', story: '資金行情推升房價,新聞天天報創高。', ret: 0.09, rebound: 0, house: 0.15, w: 1.2,
+    headline: '【財經快訊】成交量大增、房價創高,購屋族觀望情緒升溫', analog: '類似資金寬鬆時期的房市熱潮', note: '房價上漲時,別忘了房貸的負擔與天災風險,擁有房子要把住宅火險顧好。' },
+  { id: 'housing_slump', icon: '📉', title: '房市降溫,價格鬆動', story: '政策與升息影響下,房市成交量明顯萎縮。', ret: 0.02, rebound: 0, house: -0.1, w: 1.0,
+    headline: '【財經快訊】房市交易冷清,部分區域價格回落', analog: '類似升息與政策影響下的房市降溫', note: '房子不是只會漲。背著房貸時,收入穩定與保障比價格更重要。' },
+  { id: 'oil_shock', icon: '🛢️', title: '地緣衝突推升油價', story: '國際局勢緊張,能源價格飆升,市場震盪。', ret: -0.08, rebound: 0.08, w: 1.2,
+    headline: '【財經快訊】地緣衝突升溫,油價大漲、股市震盪', analog: '類似區域衝突造成的能源與供應鏈衝擊', note: '外部事件會讓市場短期波動,長期投資人要看的是自己的規劃,不是每日新聞。' },
+  { id: 'euro_crisis', icon: '🇪🇺', title: '歐債風暴,市場不安', story: '海外債務問題擴大,投資人開始擔心連鎖效應。', ret: -0.14, rebound: 0.1, w: 1.0,
+    headline: '【財經快訊】海外債務疑慮升高,避險資金湧入', analog: '類似 2011 年前後的歐債危機', note: '遠方的問題也會影響你的資產,分散投資能降低單一事件的衝擊。' },
+  { id: 'trade_war', icon: '⚔️', title: '貿易戰升級,供應鏈受影響', story: '大國間的關稅與制裁不斷升高,出口產業首當其衝。', ret: -0.07, rebound: 0.07, w: 1.0,
+    headline: '【財經快訊】貿易摩擦升溫,出口股走弱', analog: '類似 2018 年前後的貿易戰', note: '政策消息來得快、去得也快,不要因為單一新聞就大幅改變配置。' },
+  { id: 'rate_hold', icon: '🧘', title: '低波動的平靜年', story: '市場波瀾不驚,成交量偏低,投資人沒什麼話題。', ret: 0.04, rebound: 0, w: 1.4,
+    headline: '【財經快訊】市場波動降到低檔,投資人觀望', analog: '低波動的平靜時期', note: '平靜的年份是累積資產的好時機,也是檢視保障配置的好時機。' },
 ]
 
 // ---------- 理財小學堂(純學習卡)----------
 export const TIP_DEFS = [
+  { icon: '🧮', title: '72 法則', story: '用 72 除以年報酬率,大約就是資產翻倍需要的年數:年報酬 6%,約 12 年翻倍。' },
+  { icon: '📉', title: '最大風險是「被迫賣出」', story: '真正的虧損常發生在需要用錢時剛好遇到低點。緊急預備金與保障,就是避免你被迫賣在最低點。' },
+  { icon: '⚖️', title: '風險與報酬成正比', story: '想要高報酬,就必須接受高風險。如果有人跟你說「高報酬、零風險」,那一定有問題。' },
+  { icon: '🧾', title: '看清楚費用', story: '無論是基金還是投資型保單,費用都會長期侵蝕報酬。買之前先問:總共要付哪些費用?' },
+  { icon: '🏥', title: '健保不是萬能', story: '健保負擔了大部分醫療費,但自費項目、看護與收入中斷,仍需要自己準備。' },
+  { icon: '👶', title: '人生階段會改變需求', story: '結婚、生子、買房、換工作,每一個階段都會改變你的保障需求,記得每年檢視一次。' },
+  { icon: '💳', title: '信用卡是工具,不是收入', story: '刷卡很方便,但帳單是一定要還的錢。避免循環利息,才是真正的理財。' },
+  { icon: '🎯', title: '先目標,再工具', story: '先想清楚這筆錢的用途與時間(3 年內要用?20 年後才用?),再選擇適合的工具。' },
+
   { icon: '💡', title: '緊急預備金', story: '建議保留 3 到 6 個月的生活費,遇到收入中斷時才不用賣資產或借錢。' },
   { icon: '💡', title: '保險不是越多越好', story: '保費約占年收入 10% 到 15% 較為健康。先補最大的風險缺口,再談其他。' },
   { icon: '💡', title: '健康時才投保', story: '一旦罹患重大疾病,日後很可能無法再加保或被加費、除外,保障要趁健康時規劃。' },
@@ -385,6 +524,39 @@ export const TIP_DEFS = [
 
 // ---------- 保險小測驗 ----------
 export const QUIZ_DEFS = [
+  {
+    q: '「住院日額險」和「實支實付醫療險」最大的差別是?', options: ['日額險依住院天數定額給付,實支實付依實際收據給付', '兩者完全一樣', '日額險只有車禍才賠'], answer: 0,
+    why: '日額險按天給固定金額,補貼看護與請假等雜支;實支實付則依實際醫療單據理賠。兩者可以搭配。',
+  },
+  {
+    q: '關於「投資型保單」,下列何者正確?', options: ['保證每年都有固定報酬', '帳戶價值會隨市場波動,投資風險由自己承擔', '完全沒有任何費用'], answer: 1,
+    why: '投資型保單的帳戶價值會隨市場起伏,而且有保險成本與各項費用,買前務必看清楚。',
+  },
+  {
+    q: '年報酬 6% 時,資產大約幾年可以翻倍?(72 法則)', options: ['約 3 年', '約 12 年', '約 30 年'], answer: 1,
+    why: '72 ÷ 6 = 12,所以約 12 年。越早開始,複利的力量越大。',
+  },
+  {
+    q: '「定期定額」投資的主要好處是?', options: ['保證不會虧損', '用時間分散進場成本,不必預測高低點', '一定比單筆投資報酬高'], answer: 1,
+    why: '定期定額不保證獲利,但能降低「買在最高點」的風險,並養成紀律。',
+  },
+  {
+    q: '有車的人,為什麼要考慮「第三人責任險」?', options: ['補貼自己的修車費', '補貼撞傷他人或損壞他人財物的賠償', '讓保費變便宜'], answer: 1,
+    why: '賠償金額可能遠超過存款。第三人責任險就是在這種情況下保護你。',
+  },
+  {
+    q: '投保時有「等待期」,代表什麼?', options: ['投保後馬上全部生效', '投保後一段時間內發生的某些事故不理賠', '可以隨時無條件解約'], answer: 1,
+    why: '不同保險的等待期不同,要看條款。目的是避免「明知有病才投保」。',
+  },
+  {
+    q: '用信用卡「只繳最低應繳金額」,最可能發生什麼事?', options: ['沒有任何影響', '剩餘金額會產生高額的循環利息', '利息比定存還低'], answer: 1,
+    why: '循環利率常高達十幾個百分點,是最貴的貸款之一。',
+  },
+  {
+    q: '遊戲裡,為什麼「完全沒有保險」的那條線在重大事件後會掉得特別多?', options: ['因為運氣不好', '因為事件的損失全部由自己承擔', '因為利率變高了'], answer: 1,
+    why: '同樣的事件,沒有保障的人要用存款、賣資產甚至借錢來承擔,這就是保險轉移風險的價值。',
+  },
+
   {
     q: '「實支實付型醫療險」最主要的功能是什麼?', options: ['住院期間每天固定給付一筆錢', '依實際醫療收據,補貼住院手術的自費項目', '保證你生病期間的薪水'], answer: 1,
     why: '實支實付是依實際單據理賠,主要補貼健保之外的自費醫療費用。',
