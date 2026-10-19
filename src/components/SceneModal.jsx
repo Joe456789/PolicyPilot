@@ -82,6 +82,9 @@ export function YearModal({ s, onNext, last }) {
       <div className="modal year">
         <div className="card-top"><span className="card-kind">年度結算</span></div>
         <h2 className="card-title">{h.age} 歲這一年</h2>
+        {s.ended?.reason === 'bankrupt' && (
+          <p className="callout bad">💥 破產出局!現金、投資、借款額度都用完,地產與房子也被低價拍賣,仍缺 {wan(s.ended.debt)}。你的人生到此結束,將以目前的人生積分排名(破產者排在存活者之後)。</p>
+        )}
         <ul className="lines">
           <li className="line in"><span>實際收入{h.effIncome < h.grossIncome * 0.98 ? '(含收入中斷影響)' : ''}</span><b>{signed(h.effIncome)}</b></li>
           <li className="line out"><span>生活支出</span><b>{signed(-h.expense)}</b></li>
@@ -94,6 +97,7 @@ export function YearModal({ s, onNext, last }) {
           {h.propLoan > 0 && <li className="line out"><span>地產貸款還款</span><b>{signed(-h.propLoan)}</b></li>}
           {h.propPrem > 0 && <li className="line out"><span>財產險保費</span><b>{signed(-h.propPrem)}</b></li>}
           {h.propDamage > 0 && <li className="line warn"><span>地產受災損失{h.propPaid > 0 ? `(保險賠 ${wan(h.propPaid)})` : '(沒有投保)'}</span><b>{signed(-h.propDamage)}</b></li>}
+          {h.forced > 0 && <li className="line warn"><span>現金見底,{h.forced} 筆資產被低價拍賣</span><b>⚠</b></li>}
           {h.borrowed > 0 && <li className="line warn"><span>現金不夠,被迫借款</span><b>{wan(h.borrowed)}</b></li>}
         </ul>
         <div className="nw">

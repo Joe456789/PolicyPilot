@@ -14,12 +14,12 @@ export function Leaderboard({ rows, activeId }) {
           const was = prev.current[r.id]
           const delta = was && was !== r.rank ? (was > r.rank ? '▲' : '▼') : ''
           return (
-            <li key={r.id} className={`${r.human ? 'me' : ''} ${r.id === activeId ? 'active' : ''} ${r.dead ? 'dead' : ''}`}>
+            <li key={r.id} className={`${r.human ? 'me' : ''} ${r.id === activeId ? 'active' : ''} ${r.dead || r.bankrupt ? 'dead' : ''}`}>
               <b className="rk">{r.rank}</b>
               <Avatar look={r.look} size={34} ring={false} />
               <div className="rk-t">
                 <div className="rk-n">{r.name}{r.human && <em>你</em>}{delta && <i className={delta === '▲' ? 'up' : 'down'}>{delta}</i>}</div>
-                <div className="rk-s">{r.dead ? '已退場' : `${r.age} 歲 · 淨資產 ${wan(r.net)}`}</div>
+                <div className="rk-s">{r.bankrupt ? '💥 破產出局' : r.dead ? '已退場' : `${r.age} 歲 · 淨資產 ${wan(r.net)}`}</div>
               </div>
               <div className="rk-sc">{r.total}<small>分</small></div>
             </li>

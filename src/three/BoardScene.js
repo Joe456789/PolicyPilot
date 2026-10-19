@@ -330,11 +330,13 @@ export class BoardScene {
           tower.position.set(cx, 2.55, cz)
           tower.castShadow = true
           group.add(tower)
+          this.fadeMats = [tower.material]
           const cap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.1, 4), new THREE.MeshStandardMaterial({ color: 0xffd166 }))
           cap.position.set(cx, 5.2, cz)
           cap.rotation.y = Math.PI / 4
           cap.castShadow = true
           group.add(cap)
+          this.fadeMats.push(cap.material)
           continue
         }
         const n = 2 + Math.floor(rnd() * 2)
@@ -666,7 +668,10 @@ export class BoardScene {
     target.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2))
     const axis = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.4, Math.random() - 0.5).normalize()
     const start = new THREE.Vector3((Math.random() - 0.5) * 3 - 6, 9, 5 + Math.random() * 2)
-    const end = new THREE.Vector3((Math.random() - 0.5) * 2, 1.35, (Math.random() - 0.5) * 2)
+    // 落在高塔「靠鏡頭的這一側」,視角怎麼轉都不會被塔擋住
+    const az = this.orbit.tAz
+    const j = (Math.random() - 0.5) * 0.9
+    const end = new THREE.Vector3(Math.sin(az) * 1.7 + Math.cos(az) * j, 1.35, Math.cos(az) * 1.7 - Math.sin(az) * j)
     const spin = new THREE.Quaternion()
     return this.tween(1.35, (t) => {
       const e = ease.out(t)
@@ -790,6 +795,14 @@ export class BoardScene {
     if (this.ring.visible) {
       this.ring.scale.setScalar(1 + Math.sin(time * 5) * 0.06)
       this.ring.material.opacity = 0.75 + Math.sin(time * 5) * 0.2
+    }
+
+    // 擲骰時高塔變半透明,骰子永遠看得到
+    const fadeGoal = this.mode === 'dice' && this.dice.visible ? 0.18 : 1
+    for (const m of this.fadeMats || []) {
+      m.transparent = true
+      m.opacity += (fadeGoal - m.opacity) * 0.15
+      m.depthWrite = m.opacity > 0.9
     }
 
     // 相機:緩動跟隨焦點棋子

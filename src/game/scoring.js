@@ -57,11 +57,14 @@ export function computeScore(s) {
     total = Math.round(clamp(s.ended.ratio, 0, 1.1) * 85)
     family = s.ended
   }
+  const bankrupt = s.ended?.reason === 'bankrupt'
+  if (bankrupt) total = Math.min(Math.round(total * 0.5), 39)
   const grade = total >= 85 ? 'S' : total >= 72 ? 'A' : total >= 58 ? 'B' : total >= 40 ? 'C' : 'D'
   let archetype = '成長中的規劃者'
   if (prot < 0.4) archetype = '裸奔冒險家'
   else if (premiumRatio > 0.22) archetype = '保障控'
   else if (total >= 80) archetype = '穩健守護者'
+  if (bankrupt) archetype = '破產出局'
   if (family) archetype = family.ratio >= 1 ? '家人的靠山' : '來不及的守護'
 
   return {

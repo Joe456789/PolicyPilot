@@ -1,5 +1,6 @@
 // 遊戲規則引擎(公開介面)。所有金額、機率、保險給付都在這裡「確定性」計算。
 // AI(Gemini)只負責文字與教練回饋,不會改動任何數字。
+import { CARDS, useCard } from './cards.js'
 import { PRODUCTS, totalPremium } from './products.js'
 import {
   BOARD, ASSET_ORDER, run, cover, clamp, blankYear, netWorth, holdingsTotal, recommended,
@@ -122,6 +123,7 @@ export function choose(state, idx, opts = {}) {
     const add = (label, amount, kind) => lines.push({ label, amount, kind: kind || (amount >= 0 ? 'in' : 'out') })
     resolveScene(s, rng, sc, choice, add, opts)
     cover(s)
+    if (s.cash < 0) add(`現金與可變現資產都用完了,缺口 ${Math.round(-s.cash / 10000)} 萬。年底前補不上就破產出局!`, 0, 'warn')
     sc.result = { lines }
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })
     s.phase = 'result'
@@ -264,7 +266,21 @@ export function endYear(state) {
     s.year.propPaid = dmgPaid
     s.year.propLoanPay = propLoan
 
-    s.cash += effIncome + rentIncome - s.expense - premiums - recurring - houseCost - loanService - propPrem - propLoan - dmgCost + dmgPaid
+    // 手牌:保費回饋、旺季租金
+    let premBack = 0
+    if (premiums > 0 && useCard(s, 'premium_off')) {
+      const back = Math.round((premiums * 0.3) / 100) * 100
+      premBack = back
+      s.year.events.push({ title: `${CARDS.premium_off.name}生效:保費回饋 ${Math.round(back / 10000 * 10) / 10} 萬`, kind: 'chance', cat: 'card', icon: CARDS.premium_off.icon })
+    }
+    if (rentIncome > 0 && useCard(s, 'rent_boost')) {
+      const extra = Math.round((rentIncome * 0.5) / 100) * 100
+      rentIncome += extra
+      s.year.rent = rentIncome
+      s.year.events.push({ title: `${CARDS.rent_boost.name}生效:租金多收 ${Math.round(extra / 10000 * 10) / 10} 萬`, kind: 'chance', cat: 'card', icon: CARDS.rent_boost.icon })
+    }
+
+    s.cash += effIncome + rentIncome + premBack - s.expense - premiums - recurring - houseCost - loanService - propPrem - propLoan - dmgCost + dmgPaid
     s.year.recurringCost = recurring
 
     // 各類資產報酬:一場市場行情會同時影響股票、個股、債券。
@@ -290,6 +306,8 @@ export function endYear(state) {
 
     cover(s)
 
+    // 破產:賣完投資、借到額度上限、地產與自宅都被拍賣,現金還是負的
+    const broke = s.cash < 0
     const snap = snapshot(s, { effIncome, grossIncome: gross + partnerIncome, premiums, recurring, ret: m, returns, savingsIn, houseCost })
     s.history.push(snap)
     s.lastYear = snap
@@ -308,7 +326,15 @@ export function endYear(state) {
     s.scene = null
     s.dice = null
 
-    if (s.turn >= s.years) {
+    if (broke) {
+      const debt = -s.cash
+      s.loan += debt
+      s.cash = 0
+      s.ended = { reason: 'bankrupt', debt: Math.round(debt), age: s.age - 1 }
+      s.phase = 'ended'
+      snap.netWorth = netWorth(s)
+      s.newQuests = [...(s.newQuests || []), ...updateQuests(s)]
+    } else if (s.turn >= s.years) {
       s.ended = { reason: 'complete' }
       s.phase = 'ended'
       s.newQuests = [...(s.newQuests || []), ...updateQuests(s)]
@@ -353,6 +379,7 @@ function snapshot(s, f) {
     propPaid: s.year.propPaid,
     propLoan: s.year.propLoanPay,
     tolls: s.year.tolls,
+    forced: s.year.forced || 0,
     propValueTotal: Math.round(Object.values(s.props).reduce((a, x) => a + x.value, 0)),
     propCount: Object.keys(s.props).length,
     ilv: Math.round(s.ilv || 0),

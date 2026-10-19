@@ -5,7 +5,7 @@ import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js
 import { drawQuests } from './quests.js'
 
 // 8x8 環形棋盤:28 格。8 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
-import { PROPERTIES } from './properties.js'
+import { PROPERTIES, propById } from './properties.js'
 const P = (id) => {
   const p = PROPERTIES.find((x) => x.id === id)
   return { type: 'property', label: p.name, icon: p.icon, prop: id }
@@ -53,7 +53,7 @@ export const round1k = (n) => Math.round(n / 1000) * 1000
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 
 export function blankYear() {
-  return { rent: 0, propPrem: 0, propDamage: 0, propPaid: 0, propLoanPay: 0, tolls: 0, shockCost: 0, recurringCost: 0, payout: 0, borrowed: 0, shocks: [], marketReturn: null, houseChange: null, events: [] }
+  return { rent: 0, propPrem: 0, propDamage: 0, propPaid: 0, propLoanPay: 0, tolls: 0, shockCost: 0, recurringCost: 0, payout: 0, borrowed: 0, forced: 0, shocks: [], marketReturn: null, houseChange: null, events: [] }
 }
 
 export const holdingsTotal = (s) => ASSET_ORDER.reduce((a, k) => a + s.hold[k], 0)
@@ -111,6 +111,8 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     ap: 2,
     pendingOps: [],
     cards: [],
+    cardsUsed: 0,
+    cardsGot: 0,
     hospitalTurns: 0,
     car: false,
     trips: 0,
@@ -161,7 +163,10 @@ export function run(state, fn) {
   return s
 }
 
-// 現金不足時依序:賣出投資(由低風險到高風險)→ 舉債。
+// 現金不足時依序:賣出投資(由低風險到高風險)→ 在額度內舉債 → 被迫拍賣地產與自宅(打 85 折)。
+// 全部用完仍補不上的缺口會留在現金上(負數);年度結算時還是負的,就破產出局。
+export const FORCED_SALE = 0.85
+
 export function cover(s) {
   if (s.cash >= 0) return
   for (const k of ASSET_ORDER) {
@@ -171,9 +176,30 @@ export function cover(s) {
     s.cash += sell
   }
   if (s.cash < 0) {
-    s.loan += -s.cash
-    s.year.borrowed += -s.cash
-    s.cash = 0
+    const room = Math.max(0, householdIncome(s) * 1.5 - s.loan)
+    const b = Math.min(room, -s.cash)
+    s.loan += b
+    s.year.borrowed += b
+    s.cash += b
+  }
+  // 被迫拍賣:價值較低的地產先賣
+  const ids = Object.keys(s.props || {}).sort((a, b) => s.props[a].value - s.props[b].value)
+  for (const id of ids) {
+    if (s.cash >= 0) break
+    const pr = s.props[id]
+    const proceeds = Math.round(pr.value * FORCED_SALE) - (pr.mortgage ? pr.mortgage.balance : 0)
+    s.cash += proceeds
+    delete s.props[id]
+    s.year.events.push({ title: `現金見底,被迫低價拍賣地產「${propById(id).name}」`, kind: 'event', cat: 'forced', icon: '🏚️' })
+    s.year.forced = (s.year.forced || 0) + 1
+  }
+  if (s.cash < 0 && s.house) {
+    const h = s.house
+    s.cash += Math.round(h.value * FORCED_SALE) - h.balance
+    s.house = null
+    s.coverage.home = 0
+    s.year.events.push({ title: '現金見底,被迫賣掉自己的房子', kind: 'event', cat: 'forced', icon: '🏚️' })
+    s.year.forced = (s.year.forced || 0) + 1
   }
 }
 

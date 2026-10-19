@@ -380,6 +380,12 @@ export default function App() {
       processOps(i)
       s = endYear(playersRef.current[i].s)
       commit(i, s)
+      if (s.ended?.reason === 'bankrupt') {
+        const bi = { id: ++uid, icon: '💥', who: pl.name, text: `${s.ended.age} 歲破產出局!資金斷裂、資產被拍賣`, tone: 'bad' }
+        setFeed((f) => [bi, ...f].slice(0, 12))
+        showToast({ icon: '💥', title: `${pl.name} 破產出局`, text: '現金見底、資產被拍賣', tone: 'bad' }, 2200)
+        sfx.bad()
+      }
       if (!botFast) await sleep(500)
     }
     setActiveIdx(0)

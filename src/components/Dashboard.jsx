@@ -1,3 +1,4 @@
+import { CARDS, MAX_CARDS } from '../game/cards.js'
 import Avatar from './Avatar.jsx'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, holdingsTotal, houseEquity, netWorth, householdIncome } from '../game/engine.js'
@@ -75,6 +76,20 @@ export default function Dashboard({ s }) {
           </div>
         </div>
       )}
+
+      <div className="hand">
+        <div className="cov-h">我的手牌 <span className="muted">{(s.cards || []).length}/{MAX_CARDS},條件成立自動生效</span></div>
+        <div className="hand-row">
+          {(s.cards || []).map((id, i) => (
+            <span key={id + i} className={`hcard ${CARDS[id].kind === '保障卡' ? 'prot' : 'opp'}`} tabIndex={0} title={`${CARDS[id].name}:${CARDS[id].desc}`}>
+              <b>{CARDS[id].icon}</b>{CARDS[id].name}<small>{CARDS[id].desc}</small>
+            </span>
+          ))}
+          {!(s.cards || []).length && <span className="muted hand-empty">還沒有卡片。機會格、小遊戲三顆星、理專諮詢都有機會抽到。</span>}
+        </div>
+      </div>
+
+      {s.cash < 0 && <p className="callout bad" role="alert">⚠ 現金為負,年底前補不上就會破產出局。</p>}
 
       <div className="health" aria-label={`健康 ${Math.round(s.health)}`}>
         <span>健康</span>

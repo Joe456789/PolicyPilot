@@ -9,6 +9,9 @@ const cats = (s) => s.history.flatMap((h) => h.shocks.map((x) => x.cat))
 const had = (s, ev) => s.history.some((h) => h.events.some((e) => e.title && e.cat === ev))
 
 export const ENDINGS = [
+  { id: 'bankrupt', icon: '💥', title: '破產出局', rarity: '稀有', blurb: '現金、投資、地產都撐不住了,這一局被迫離場。',
+    check: (s) => s.ended?.reason === 'bankrupt',
+    epilogue: (s) => `${s.player.name}在 ${s.ended.age} 歲資金斷裂:現金見底、借款額度用盡、地產與房子也被低價拍賣,仍然缺 ${wan(s.ended.debt)}。意外加上高槓桿,沒有保障與預備金就是這個下場。好消息是:這只是遊戲,下一局可以換個策略。` },
   { id: 'death_covered', icon: '🕊️', title: '家人的靠山', rarity: '稀有', blurb: '你離開得太早,但你留下的保障,讓家人撐過了最難的日子。',
     check: (s) => !alive(s) && s.ended.ratio >= 1,
     epilogue: (s) => `${s.player.name}在 ${s.age} 歲離開了。雖然人生很短,但保單的給付讓家人沒有被生活壓垮,孩子們依然完成學業。你用另一種方式守護了他們。` },

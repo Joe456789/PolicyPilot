@@ -1,5 +1,6 @@
 // 場景:依棋盤格子建立事件卡,並在玩家選擇後結算。
 // 所有數字都在這裡(規則引擎)決定;AI 只會改寫文字。
+import { CARDS, giveCard, hasCard, useCard } from './cards.js'
 import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
 } from './content.js'
@@ -306,13 +307,13 @@ export function resolveScene(s, rng, sc, choice, add, opts = {}) {
     case 'event': return resolveEvent(s, sc, choice, add)
     case 'market': return resolveMarket(s, sc, choice, add)
     case 'bonus': return resolveBonus(s, sc, choice, add)
-    case 'advisor': return resolveAdvisor(s, choice, add)
+    case 'advisor': return resolveAdvisor(s, rng, choice, add)
     case 'shop':
     case 'bank': return resolveFinance(s, choice, add)
     case 'tax': return resolveTax(s, sc, add)
     case 'hospital': return resolveHospital(s, choice, add)
     case 'quiz': return resolveQuiz(s, sc, choice, add)
-    case 'minigame': return resolveMinigame(s, sc, add, opts)
+    case 'minigame': return resolveMinigame(s, rng, sc, add, opts)
     case 'chance':
     case 'milestone': return resolveFxScene(s, rng, sc, choice, add)
     default: return undefined
@@ -328,6 +329,13 @@ function resolveEvent(s, sc, choice, add) {
   const lossYears = loss ? loss.years : 0
 
   if (sc.cat === 'death') return resolveDeath(s, add)
+
+  // 免災金牌:這次的壞事直接不發生
+  if (sc.cat !== 'family' && (medicalCost + otherCost > 0 || lossRatio > 0) && useCard(s, 'shield')) {
+    add(`${CARDS.shield.icon} 免災金牌生效:這件事沒有發生,你什麼都不用付`, 0, 'cover')
+    add(CARDS.shield.tip, 0, 'lesson')
+    return
+  }
 
   const payout = payoutFor(s.coverage, {
     cat: sc.cat, medicalCost, otherCost, income: s.income, years: lossYears || 3, accident: b.accident,
@@ -345,6 +353,10 @@ function resolveEvent(s, sc, choice, add) {
   ]
   for (const [k, label] of pays) {
     if (payout[k]) { s.cash += payout[k]; add(label, payout[k], 'cover') }
+  }
+  if (medicalCost > 0 && ['medical', 'critical'].includes(sc.cat) && hasCard(s, 'medaid')) {
+    const aid = Math.min(300000, Math.round(medicalCost * 0.5), Math.max(0, medicalCost - payout.total))
+    if (aid > 0 && useCard(s, 'medaid')) { s.cash += aid; add(`${CARDS.medaid.icon} 醫療補助卡:減免自付費用`, aid, 'cover') }
   }
   if (lossRatio > 0) {
     s.effects.push({ ratio: lossRatio, yearsLeft: lossYears, label: sc.title })
@@ -412,7 +424,13 @@ function resolveMarket(s, sc, choice, add) {
     add('已轉為現金,錯過後續的反彈', 0, 'note')
     return
   }
-  if (ret < 0 && riskHoldings(s) > 0) s.crashesHeld++
+  if (ret < 0 && riskHoldings(s) > 0) {
+    s.crashesHeld++
+    if (useCard(s, 'crash_guard')) {
+      s.year.marketReturn = ret * 0.5
+      add(`${CARDS.crash_guard.icon} 行情避險卡生效:這波跌幅減半`, 0, 'cover')
+    }
+  }
   if (choice.tag === 'buy') {
     const amt = spendable(s, 0.3)
     if (amt > 0) {
@@ -452,7 +470,7 @@ function resolveBonus(s, sc, choice, add) {
   }
 }
 
-function resolveAdvisor(s, choice, add) {
+function resolveAdvisor(s, rng, choice, add) {
   s.advisorUsed++
   if (choice.tag !== 'accept') return add('你決定自己規劃', 0, 'note')
   const gaps = topGaps(s, 2)
@@ -461,6 +479,7 @@ function resolveAdvisor(s, choice, add) {
     s.coverage[g.id] = g.need
     add(`已加保:${PRODUCTS[g.id].name}(${PRODUCTS[g.id].tiers[g.need].label})`, 0, 'cover')
   }
+  if (rng.next() < 0.5) giveCard(s, rng, 'protect', add)
 }
 
 function buyAsset(s, cls, pct, add) {
@@ -598,7 +617,7 @@ function resolveProperty(s, sc, choice, add) {
   }
 }
 
-function resolveMinigame(s, sc, add, opts) {
+function resolveMinigame(s, rng, sc, add, opts) {
   const m = MINIGAMES[sc.base.game]
   const stars = clamp(Math.round(opts.stars ?? 1), 0, 3)
   const reward = MINIGAME_REWARD[stars]
@@ -609,13 +628,19 @@ function resolveMinigame(s, sc, add, opts) {
   add(`完成「${m.title}」:${stars ? '⭐'.repeat(stars) : '再接再厲'}`, 0, stars ? 'in' : 'note')
   if (reward) add('小遊戲獎金', reward, 'cover')
   if (opts.note) add(opts.note, 0, 'note')
+  if (stars === 3) giveCard(s, rng, 'random', add)
   add(m.lesson, 0, 'lesson')
 }
 
 // ---- 機會卡與里程碑:以 fx 描述效果 ----
 function resolveFxScene(s, rng, sc, choice, add) {
   if (choice.special) specials[choice.special](s, rng, add)
-  const fx = choice.fx
+  let fx = choice.fx
+  const scam = ['scam_call', 'high_return'].includes(sc.defId) && fx && (fx.gamble || fx.cashPct < 0)
+  if (scam && useCard(s, 'antiscam')) {
+    add(`${CARDS.antiscam.icon} 防詐提醒卡生效:你一眼識破,錢保住了`, 0, 'cover')
+    fx = null
+  }
   if (fx) applyFx(s, rng, fx, add)
   if (sc.base.lesson) add(sc.base.lesson, 0, 'lesson')
 }
@@ -645,6 +670,7 @@ function applyFx(s, rng, fx, add) {
   if (fx.expenseMult) s.expense = Math.round(s.expense * fx.expenseMult)
   if (fx.incomeMult) { s.income = Math.round(s.income * fx.incomeMult); add(`年收入調整為約 ${Math.round(s.income / 10000)} 萬`, 0, 'in') }
   if (fx.health) { s.health = clamp(s.health + fx.health, 5, 100); }
+  if (fx.card) giveCard(s, rng, fx.card, add)
   if (fx.checkup) s.checkupYears = 2
   if (fx.car) s.car = true
   if (fx.trip) s.trips++

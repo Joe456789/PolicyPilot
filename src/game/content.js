@@ -169,6 +169,33 @@ export const CHANCE_DEFS = [
     lesson: '單一個股的波動很大。先有保障與緊急預備金,再談高風險投資,輸得起才玩得起。',
   },
   {
+    id: 'card_seminar', icon: '🎤', title: '社區防詐與保險講座',
+    story: '里民中心辦了一場「防詐騙與保障規劃」講座,主講人說要送每位聽眾一張提醒卡。你要去嗎?',
+    choices: [
+      { label: '去聽,順便把筆記帶回家', hint: '花一個下午', fx: { card: 'antiscam', health: 1 } },
+      { label: '沒空,下次再說', hint: '不動作', fx: { lessonOnly: true } },
+    ],
+    lesson: '多一點知識就少一點損失。防詐與保障規劃的觀念,常常比賺一筆小錢更值錢。',
+  },
+  {
+    id: 'card_lottery', icon: '🎁', title: '保戶回饋抽獎',
+    story: '你收到一封信:因為你是保戶,可以參加年度回饋抽獎,抽到的是一張「手牌」,可以留著等對的時機使用。',
+    choices: [
+      { label: '抽一張來看看', hint: '手牌最多持有 3 張', fx: { card: 'random' } },
+      { label: '先不抽', hint: '不動作', fx: { lessonOnly: true } },
+    ],
+    lesson: '手牌會在對的時候自動生效:保障卡擋壞事、機會卡放大好事。最多持有 3 張,滿了會換掉最舊的。',
+  },
+  {
+    id: 'card_checkup', icon: '🩺', title: '公司員工健檢福利',
+    story: '公司跟醫院合作,這個月員工可以免費做一次基本健檢,附贈一張「醫療補助卡」。',
+    choices: [
+      { label: '請半天假去做健檢', hint: '健康 +3', fx: { card: 'medaid', health: 3 } },
+      { label: '太忙,放棄', hint: '不動作', fx: { lessonOnly: true } },
+    ],
+    lesson: '健康時做檢查成本最低,也是投保時最有利的狀態。',
+  },
+  {
     id: 'scam_call', icon: '☎️', title: '自稱檢警的電話',
     story: '陌生來電說你的身分被盜用涉及洗錢,要你把錢轉到「監管帳戶」配合調查,語氣非常急迫。',
     choices: [

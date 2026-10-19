@@ -127,7 +127,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
                 <b className="fr-n">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank}</b>
                 <Avatar look={r.look} size={44} ring={false} />
                 <div className="fr-t"><b>{r.name}{r.human && '(你)'}</b><span>{r.title}</span></div>
-                <div className="fr-s"><b>{r.total}</b> 分<small>淨資產 {wan(r.net)}{r.dead ? ' · 中途退場' : ''}</small></div>
+                <div className="fr-s"><b>{r.total}</b> 分<small>淨資產 {wan(r.net)}{r.bankrupt ? ' · 破產出局' : r.dead ? ' · 中途退場' : ''}</small></div>
               </div>
             ))}
           </div>

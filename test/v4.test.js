@@ -90,7 +90,7 @@ test('結局:每一局都有結局,而且多種結局都會出現', () => {
     }
   }
   assert.ok(seen.size >= 7, `只出現 ${seen.size} 種結局`)
-  assert.equal(ENDINGS.length, 16)
+  assert.equal(ENDINGS.length, 17)
 })
 
 test('小辭典:能依關鍵字找到相關說明', () => {

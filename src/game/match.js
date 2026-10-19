@@ -22,9 +22,10 @@ export function createMatch(humanState, opponents, seed) {
 export function rank(players) {
   const rows = players.map((pl) => {
     const sc = pl.s.history.length ? computeScore(pl.s) : { total: 0, parts: {} }
-    return { id: pl.id, name: pl.name, title: pl.title, look: pl.look, human: pl.human, total: sc.total, net: netWorth(pl.s), dead: pl.s.ended?.reason === 'death', age: pl.s.age, coverage: pl.s.coverage }
+    return { id: pl.id, name: pl.name, title: pl.title, look: pl.look, human: pl.human, total: sc.total, net: netWorth(pl.s), dead: pl.s.ended?.reason === 'death', bankrupt: pl.s.ended?.reason === 'bankrupt', age: pl.s.age, coverage: pl.s.coverage }
   })
-  rows.sort((a, b) => b.total - a.total || b.net - a.net)
+  // 破產出局的排在還活著的後面;同類再依人生積分與淨資產比
+  rows.sort((a, b) => (a.bankrupt ? 1 : 0) - (b.bankrupt ? 1 : 0) || b.total - a.total || b.net - a.net)
   return rows.map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
