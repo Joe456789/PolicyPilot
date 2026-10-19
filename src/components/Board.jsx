@@ -9,7 +9,7 @@ function coord(i) {
   return { r: 28 - i, c: 0 }
 }
 
-export default function Board({ tokens, centerSlot }) {
+export default function Board({ tokens, centerSlot, owners = {} }) {
   return (
     <div className="board" role="group" aria-label="遊戲棋盤(2D)">
       {BOARD.map((tile, i) => {
@@ -17,6 +17,7 @@ export default function Board({ tokens, centerSlot }) {
         return (
           <div key={i} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1 }}>
             <span className="tile-n">{i === 0 ? '' : i}</span>
+            {owners[i] && <span className={`tile-own o${owners[i].ownerIdx}`} title={`Lv${owners[i].level}`}>Lv{owners[i].level}</span>}
             <span className="tile-ico" aria-hidden>{tile.icon}</span>
             <span className="tile-lbl">{tile.label}</span>
           </div>

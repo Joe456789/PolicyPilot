@@ -15,11 +15,13 @@ import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedi
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
   createGame, roll, choose, endYear, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
-  computeScore, evalQuests, directorInfo, applyAiScene,
+  computeScore, evalQuests, directorInfo, applyAiScene, propAction,
 } from './game/engine.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
-import { createMatch, rank, finishMatch } from './game/match.js'
+import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
+import { PROPERTIES } from './game/properties.js'
+import { BOARD } from './game/engine.js'
 import { recordGame } from './game/records.js'
 import { computeEnding } from './game/endings.js'
 import { advisorFallback, stageFallback } from './game/fallback.js'
@@ -78,6 +80,20 @@ export default function App() {
     setPlayers(ps)
   }, [])
   const human = () => playersRef.current[0].s
+
+  // 過路費與拍賣:把一個玩家剛做完的選擇,對其他玩家造成的影響處理掉
+  const processOps = useCallback((idx) => {
+    if (!playersRef.current[idx].s.pendingOps?.length) return
+    const { players: np, notes } = applyOps(playersRef.current, idx)
+    playersRef.current = np
+    setPlayers(np)
+    if (notes.length) {
+      setFeed((f) => [...notes.map((n) => ({ id: ++uid, icon: n.icon, who: n.who, text: n.text, tone: n.tone })), ...f].slice(0, 12))
+      const n = notes[0]
+      showToastRef.current?.({ icon: n.icon, title: `${n.who}`, text: n.text, tone: n.tone }, 1800)
+    }
+  }, [])
+  const showToastRef = useRef(null)
 
   // ---------- 啟動 ----------
   useEffect(() => {
@@ -178,6 +194,7 @@ export default function App() {
     await sleep(ms)
     setToast((cur) => (cur === t ? null : cur))
   }, [])
+  showToastRef.current = showToast
   const popup = useCallback((text, kind, x = 50) => {
     const id = ++uid
     setPopups((p) => [...p, { id, text, kind, x }])
@@ -218,7 +235,7 @@ export default function App() {
     setActiveIdx(0)
     sfx.unlock()
     sfx.dice()
-    const ng = roll(cur)
+    const ng = roll(cur, worldOf(playersRef.current))
     const b = boardRef.current
     if (b) {
       await b.rollDice(ng.dice)
@@ -286,6 +303,7 @@ export default function App() {
     const ng = choose(human(), i)
     commit(0, ng)
     react(ng.scene)
+    processOps(0)
   }
 
   function onMinigameDone(r) {
@@ -340,7 +358,7 @@ export default function App() {
       if (pl.s.phase === 'ended') continue
       setActiveIdx(i)
       let s = botPlan(pl.s, pl.persona)
-      s = roll(s)
+      s = roll(s, worldOf(playersRef.current))
       const sc = s.scene
       if (b && !botFast) {
         b.focus(i)
@@ -358,7 +376,9 @@ export default function App() {
         showToast({ icon: sc.icon, title: `${pl.name}:${sc.title}`, text: note, tone }, 1100)
         if (cover > 0) sfx.claim(); else if (loss < -150000) sfx.bad()
       }
-      s = endYear(s)
+      commit(i, s)
+      processOps(i)
+      s = endYear(playersRef.current[i].s)
       commit(i, s)
       if (!botFast) await sleep(500)
     }
@@ -392,6 +412,12 @@ export default function App() {
   }
 
   const rows = useMemo(() => (players.length ? rank(players) : []), [players])
+  const ownersMap = useMemo(() => {
+    const w = worldOf(players).owners
+    const m = {}
+    for (const p of PROPERTIES) if (w[p.id]) m[BOARD.findIndex((b) => b.prop === p.id)] = { ownerIdx: w[p.id].idx, level: w[p.id].level, insured: w[p.id].insured }
+    return m
+  }, [players])
   const quests = useMemo(() => (g ? evalQuests(g) : []), [g])
   const showScene = scene && g && ((g.phase === 'scene' && sceneReady) || g.phase === 'result')
   const tokenPlayers = useMemo(() => players.map((p) => ({ look: p.look, name: p.name, pos: 0 })), [gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -459,9 +485,9 @@ export default function App() {
         {wide && <aside className="side side-l"><Dashboard s={g} /></aside>}
         <main className="gstage">
           {use3d ? (
-            <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} onFail={() => setUse3d(false)} onStep={() => sfx.step()} />
+            <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} owners={ownersMap} onFail={() => setUse3d(false)} onStep={() => sfx.step()} />
           ) : (
-            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} /></div>
+            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} owners={ownersMap} /></div>
           )}
           <div className="stage-hud">
             <div className="year-chip">
@@ -514,6 +540,8 @@ export default function App() {
           onTrade={(cls, d) => commit(0, trade(human(), cls, d))}
           onBorrow={(a) => commit(0, borrow(human(), a))}
           onRepay={(a) => commit(0, repay(human(), a))}
+          onPropAction={(id, act) => commit(0, propAction(human(), id, act))}
+          world={worldOf(players)}
           onClose={() => setPlanOpen(false)}
         />
       )}

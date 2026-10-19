@@ -2,6 +2,7 @@
 // 對外介面:setPlayers / moveToken / rollDice / focusPlayer / setActiveTile / dispose
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { PROPERTIES } from '../game/properties.js'
 
 const N = 28
 const S = 2 // 一格的邊長
@@ -9,7 +10,7 @@ const S = 2 // 一格的邊長
 const TYPE_COLOR = {
   start: 0x00915a, event: 0xff6b57, chance: 0xf97316, market: 0x3b82f6, bonus: 0xf5b301,
   shop: 0x0ea5e9, milestone: 0x14b8a6, advisor: 0x8b5cf6, tax: 0x64748b, rest: 0x84cc16,
-  hospital: 0xec4899, bank: 0x0d9488, minigame: 0x6366f1,
+  hospital: 0xec4899, bank: 0x0d9488, minigame: 0x6366f1, property: 0xb7791f,
 }
 
 // 與 2D 棋盤相同的環形座標(8x8 外圈 28 格)
@@ -288,7 +289,13 @@ export class BoardScene {
         g.fillText(t.icon, w / 2, 70)
         g.fillStyle = '#374151'
         g.font = '800 26px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
-        g.fillText(t.label, w / 2, 132)
+        g.fillText(t.label, w / 2, t.prop ? 124 : 132)
+        if (t.prop) {
+          const pr = PROPERTIES.find((x) => x.id === t.prop)
+          g.fillStyle = '#b45309'
+          g.font = '800 21px "Noto Sans TC",sans-serif'
+          g.fillText(`${Math.round(pr.price / 10000)} 萬`, w / 2, 150)
+        }
         g.fillStyle = '#9ca3af'
         g.font = '600 14px sans-serif'
         g.textAlign = 'left'
@@ -410,6 +417,56 @@ export class BoardScene {
       3: new THREE.Vector3(1, 0, 0), 4: new THREE.Vector3(-1, 0, 0), 1: new THREE.Vector3(0, 1, 0),
       6: new THREE.Vector3(0, -1, 0), 2: new THREE.Vector3(0, 0, 1), 5: new THREE.Vector3(0, 0, -1),
     }
+  }
+
+  // ---------- 資產格標記:誰擁有、等級、有沒有保險 ----------
+  setOwners(map) {
+    this.propMarkers = this.propMarkers || {}
+    const colors = [0xffc107, 0xe5484d, 0x3b82f6, 0xa855f7]
+    this.board.forEach((tile, i) => {
+      if (tile.type !== 'property') return
+      const st = map[i] || null
+      const sig = st ? `${st.ownerIdx}:${st.level}:${st.insured ? 1 : 0}` : 'free'
+      const cur = this.propMarkers[i]
+      if (cur && cur.sig === sig) return
+      if (cur) { this.scene.remove(cur.g); cur.g.traverse((o) => { o.geometry?.dispose?.(); o.material?.map?.dispose?.(); o.material?.dispose?.() }) }
+      const g = new THREE.Group()
+      if (!st) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8), new THREE.MeshStandardMaterial({ color: 0x6b7280 }))
+        pole.position.y = 0.55
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.34, 0.05), new THREE.MeshStandardMaterial({
+          map: canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#e5484d'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 38px "Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('出售', w / 2, h / 2 + 2) }),
+        }))
+        sign.position.set(0.31, 1.0, 0)
+        g.add(pole, sign)
+      } else {
+        const col = colors[st.ownerIdx % colors.length]
+        const h = 0.55 + st.level * 0.42
+        const body = new THREE.Mesh(new RoundedBoxGeometry(0.72, h, 0.72, 2, 0.06), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 }))
+        body.position.y = h / 2
+        body.castShadow = true
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.34, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }))
+        roof.position.y = h + 0.17
+        roof.rotation.y = Math.PI / 4
+        g.add(body, roof)
+        if (st.level >= 3) {
+          const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0xffd166 }))
+          ant.position.y = h + 0.6
+          g.add(ant)
+        }
+        if (st.insured) {
+          const shield = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(64, 64, (c, w, h2) => { c.font = '48px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🛡️', w / 2, h2 / 2) }), transparent: true, depthTest: false }))
+          shield.scale.set(0.55, 0.55, 1)
+          shield.position.set(0, h + 0.85, 0)
+          shield.renderOrder = 11
+          g.add(shield)
+        }
+      }
+      const p = tileXZ(i)
+      g.position.set(p.x - 0.5, 0.56, p.z - 0.5)
+      this.scene.add(g)
+      this.propMarkers[i] = { g, sig }
+    })
   }
 
   // ---------- 角色 ----------
@@ -716,6 +773,7 @@ export class BoardScene {
       const ty = (here ? 0.55 : 0.43)
       m.position.y += (ty - m.position.y) * 0.2
       this.tileDecals[i].position.y = m.position.y + 0.135
+      if (this.propMarkers?.[i]) this.propMarkers[i].g.position.y = m.position.y + 0.13
     })
 
     // 待機動畫:棋子輕微上下浮動

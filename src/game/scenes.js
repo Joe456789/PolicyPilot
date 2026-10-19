@@ -5,6 +5,7 @@ import {
 } from './content.js'
 import { PRODUCTS, payoutFor } from './products.js'
 import { MINIGAMES, MINIGAME_IDS, MINIGAME_REWARD } from './minigames.js'
+import { propByTile, propById, LEVELS, rentOf, tollOf, upgradeCost, propPremium, mortgagePayment, localNews, baseRent, RISK_NAME } from './properties.js'
 import {
   ASSETS, ASSET_ORDER, round1k, clamp, cover, canIncrease, analyzeGaps, householdIncome, holdingsTotal,
 } from './core.js'
@@ -25,10 +26,11 @@ function pickDef(s, rng, defs, { once = true } = {}) {
   return rng.weighted(pool, (d) => wOf(d, s) / (1 + seenCount(s, d.id) * 1.2))
 }
 
-export function buildScene(s, rng, tile) {
+export function buildScene(s, rng, tile, world = {}) {
   switch (tile.type) {
+    case 'property': return buildProperty(s, rng, tile, world)
     case 'event': return buildEvent(s, rng)
-    case 'chance': return buildChance(s, rng)
+    case 'chance': return rng.next() < 0.7 ? buildChance(s, rng) : buildBonus(s, rng)
     case 'market': return buildMarket(s, rng)
     case 'bonus': return buildBonus(s, rng)
     case 'milestone': return buildMilestone(s, rng)
@@ -44,6 +46,53 @@ export function buildScene(s, rng, tile) {
 }
 
 const scene = (o) => ({ ai: false, aiable: false, tone: 'neutral', base: {}, ...o })
+
+
+// ---------- 資產格 ----------
+const wan = (n) => `${Math.round(n / 10000).toLocaleString('en-US')} 萬`
+
+function buildProperty(s, rng, tile, world) {
+  const p = propByTile(s.pos) || propById(tile.prop)
+  const owner = world.owners?.[p.id]
+  const mine = s.props[p.id]
+  const news = localNews(p, rng.next())
+  const risks = Object.entries(p.risk).map(([k, v]) => `${RISK_NAME[k]} ${(v * 100).toFixed(1)}%`).join('、')
+  const common = { kind: 'property', defId: 'prop_' + p.id, icon: p.icon, tone: 'neutral', title: `${p.region} · ${p.name}` }
+  if (mine) {
+    const lv = mine.level
+    const up = upgradeCost(p, lv)
+    const choices = []
+    if (lv < 3) choices.push({ label: `升級為「${LEVELS[lv + 1].name}」(${wan(up)})`, hint: `年租金 ${wan(rentOf(p, lv))} → ${wan(rentOf(p, lv + 1))}`, tag: 'upgrade' })
+    if (!mine.insured) choices.push({ label: `投保財產險(年繳 ${wan(propPremium(mine.value))})`, hint: '火災、地震、淹水的修繕費,保險賠 9 成', tag: 'insure' })
+    choices.push({ label: `出售(約得 ${wan(Math.max(0, mine.value * 0.95 - (mine.mortgage?.balance || 0)))})`, hint: '變現為現金', tag: 'sell' })
+    choices.push({ label: '維持現狀', hint: '', tag: 'skip' })
+    return scene({
+      ...common, story: `回到你的資產。目前等級「${LEVELS[lv].name}」,年租金約 ${wan(rentOf(p, lv))},市值約 ${wan(mine.value)}${mine.insured ? ',已投保財產險' : ',尚未投保'}。${news}`,
+      base: { propId: p.id, status: 'mine', owner: 'you' }, choices,
+    })
+  }
+  if (owner) {
+    const toll = tollOf(p, owner.level)
+    return scene({
+      ...common, story: `這處資產屬於「${owner.name}」(${LEVELS[owner.level].name})。你借住在他的地段,需要付過路費。${news}`,
+      base: { propId: p.id, status: 'rival', owner: owner.name, ownerIdx: owner.idx, toll },
+      choices: [{ label: `支付過路費 ${wan(toll)}`, hint: `付給 ${owner.name}`, tag: 'pay' }],
+    })
+  }
+  const liquid = s.cash + s.hold.deposit + s.hold.bond + s.hold.stock + s.hold.spec
+  const down = Math.round(p.price * 0.3)
+  const cashAfter = ((liquid - p.price) / (s.expense / 12))
+  return scene({
+    ...common, tone: 'good',
+    story: `${p.blurb}無人持有。售價 ${wan(p.price)},年租金約 ${wan(baseRent(p))}(報酬率 ${(p.yield * 100).toFixed(1)}%)。天災年機率:${risks}。${news}`,
+    base: { propId: p.id, status: 'unowned', price: p.price },
+    choices: [
+      { label: `全額購買(${wan(p.price)})`, hint: liquid >= p.price ? `買完現金與投資約剩 ${cashAfter.toFixed(1)} 個月生活費` : '資金不足,會動用投資甚至借款', tag: 'buy_cash' },
+      { label: `貸款購買(頭期款 ${wan(down)})`, hint: '房貸 7 成、年利率約 3%、分 15 年還', tag: 'buy_loan' },
+      { label: '先不買(交給對手競價)', hint: '對手可能會買走', tag: 'skip' },
+    ],
+  })
+}
 
 function buildEvent(s, rng) {
   const inflation = Math.pow(1.025, s.turn)
@@ -253,6 +302,7 @@ function buildTip(s, rng) {
 export function resolveScene(s, rng, sc, choice, add, opts = {}) {
   s.seen[sc.defId] = (s.seen[sc.defId] || 0) + 1
   switch (sc.kind) {
+    case 'property': return resolveProperty(s, sc, choice, add)
     case 'event': return resolveEvent(s, sc, choice, add)
     case 'market': return resolveMarket(s, sc, choice, add)
     case 'bonus': return resolveBonus(s, sc, choice, add)
@@ -475,6 +525,77 @@ function resolveQuiz(s, sc, choice, add) {
     add('答對了!獲得獎金', 10000, 'cover')
   } else add(`答錯了。正確答案:${q.options[q.answer]}`, 0, 'warn')
   add(q.why, 0, 'lesson')
+}
+
+// ---- 資產格的結算(落點事件與規劃面板共用)----
+export function acquireProperty(s, p, mode, add) {
+  const price = p.price
+  if (mode === 'loan') {
+    const down = Math.round(price * 0.3)
+    const balance = price - down
+    s.cash -= down
+    cover(s)
+    s.props[p.id] = { level: 1, value: price, bought: price, insured: false, damaged: false, mortgage: { balance, rate: 0.03, payment: mortgagePayment(balance), yearsLeft: 15 } }
+    add(`頭期款(買下${p.name})`, -down)
+    add(`房貸 ${wan(balance)},每年還款約 ${wan(mortgagePayment(balance))}`, 0, 'note')
+  } else {
+    s.cash -= price
+    cover(s)
+    s.props[p.id] = { level: 1, value: price, bought: price, insured: false, damaged: false, mortgage: null }
+    add(`全額購買${p.name}`, -price)
+  }
+  add(`每年租金約 ${wan(baseRent(p))};天災會造成修繕費,記得投保財產險`, 0, 'note')
+}
+
+export function upgradeProp(s, p, add) {
+  const mine = s.props[p.id]
+  const cost = upgradeCost(p, mine.level)
+  s.cash -= cost
+  cover(s)
+  const ratio = LEVELS[mine.level + 1].valueX / LEVELS[mine.level].valueX
+  mine.level += 1
+  mine.value = Math.round(mine.value * ratio)
+  add(`升級為「${LEVELS[mine.level].name}」`, -cost)
+  add(`年租金提升到約 ${wan(rentOf(p, mine.level))}`, 0, 'in')
+}
+
+export function insureProp(s, p, add) {
+  s.props[p.id].insured = true
+  add(`${p.name}已投保財產險,年繳約 ${wan(propPremium(s.props[p.id].value))}`, 0, 'cover')
+}
+
+export function sellProp(s, p, add) {
+  const mine = s.props[p.id]
+  const proceeds = Math.round(mine.value * 0.95) - (mine.mortgage?.balance || 0)
+  s.cash += proceeds
+  delete s.props[p.id]
+  cover(s)
+  add(`出售${p.name}(扣除房貸與 5% 費用)`, proceeds)
+}
+
+function resolveProperty(s, sc, choice, add) {
+  const p = propById(sc.base.propId)
+  s.seen['prop_' + p.id] = (s.seen['prop_' + p.id] || 0) + 1
+  switch (choice.tag) {
+    case 'buy_cash': return acquireProperty(s, p, 'cash', add)
+    case 'buy_loan': return acquireProperty(s, p, 'loan', add)
+    case 'upgrade': return upgradeProp(s, p, add)
+    case 'insure': return insureProp(s, p, add)
+    case 'sell': return sellProp(s, p, add)
+    case 'pay': {
+      const toll = sc.base.toll
+      s.cash -= toll
+      s.pendingOps.push({ op: 'toll', toIdx: sc.base.ownerIdx, amount: toll, propId: p.id })
+      add(`過路費(付給 ${sc.base.owner})`, -toll)
+      return undefined
+    }
+    default:
+      if (sc.base.status === 'unowned') {
+        s.pendingOps.push({ op: 'auction', propId: p.id, price: p.price })
+        add('你沒有出手,資產交給對手競價', 0, 'note')
+      } else add('維持現狀', 0, 'note')
+      return undefined
+  }
 }
 
 function resolveMinigame(s, sc, add, opts) {

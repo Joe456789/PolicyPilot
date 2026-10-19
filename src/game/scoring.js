@@ -17,6 +17,7 @@ export function counterfactual(s) {
     const rec = cov(h.rec)
     const pay = (c) => h.shocks.reduce((a, sh) => a + payoutFor(c, sh).total, 0)
     const prem = (c) => totalPremium(c, h.age)
+    // 資產格的財產險與天災,三條線沿用實際結果(另在結算頁單獨說明)
     dNone += (pay(none) - h.payout) - (prem(none) - h.premiums)
     dRec += (pay(rec) - h.payout) - (prem(rec) - h.premiums)
     series.push({
@@ -149,4 +150,16 @@ export function buildStageReport(s) {
     shortfallYears: recent.filter((x) => x.borrowed > 0).length,
     panicSells: s.panicSells,
   }
+}
+
+// 資產格的總結:收租、天災與財產險的效果
+export function propSummary(s) {
+  const h = s.history
+  const rent = h.reduce((a, x) => a + (x.rent || 0), 0)
+  const damage = h.reduce((a, x) => a + (x.propDamage || 0), 0)
+  const paid = h.reduce((a, x) => a + (x.propPaid || 0), 0)
+  const prem = h.reduce((a, x) => a + (x.propPrem || 0), 0)
+  const tolls = h.reduce((a, x) => a + (x.tolls || 0), 0)
+  const owned = Object.keys(s.props).length
+  return { rent, damage, paid, prem, tolls, owned, everOwned: rent > 0 || owned > 0 }
 }

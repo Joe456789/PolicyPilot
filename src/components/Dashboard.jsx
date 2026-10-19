@@ -2,6 +2,7 @@ import Avatar from './Avatar.jsx'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, holdingsTotal, houseEquity, netWorth, householdIncome } from '../game/engine.js'
 import { wan, signed } from '../game/format.js'
+import { propById, rentOf } from '../game/properties.js'
 
 function Stat({ label, value, tone, sub }) {
   return (
@@ -65,6 +66,15 @@ export default function Dashboard({ s }) {
           </div>
         )}
       </div>
+
+      {Object.keys(s.props).length > 0 && (
+        <div className="assets">
+          <div className="cov-h">我的資產格 <span className="muted">年租合計 {wan(Object.entries(s.props).reduce((a, [id, pr]) => a + rentOf(propById(id), pr.level), 0))}</span></div>
+          <div className="alloc-x">
+            {Object.entries(s.props).map(([id, pr]) => <span key={id}>{propById(id).icon} {propById(id).name} Lv{pr.level} {pr.insured ? '🛡️' : '⚠️'}</span>)}
+          </div>
+        </div>
+      )}
 
       <div className="health" aria-label={`健康 ${Math.round(s.health)}`}>
         <span>健康</span>

@@ -1,6 +1,7 @@
 // 對局:你 + 電腦對手,同一個棋盤、各自的人生。排名即時更新。
-import { PERSONAS, createBotGame, botFastForward } from './bots.js'
-import { computeScore, netWorth } from './engine.js'
+import { PERSONAS, createBotGame, botFastForward, botWantsProperty } from './bots.js'
+import { computeScore, netWorth, receiveCash, buyPropertyAt, clearOps } from './engine.js'
+import { propById } from './properties.js'
 
 export function createMatch(humanState, opponents, seed) {
   const rngPick = [...PERSONAS]
@@ -29,5 +30,49 @@ export function rank(players) {
 
 // 你的人生結束(完成或過世)後,讓還沒結束的對手快轉到最後,取得最終排名。
 export function finishMatch(players) {
-  return players.map((pl) => (pl.human || pl.s.phase === 'ended' ? pl : { ...pl, s: botFastForward(pl.s, pl.persona) }))
+  const world = worldOf(players)
+  return players.map((pl) => (pl.human || pl.s.phase === 'ended' ? pl : { ...pl, s: botFastForward(pl.s, pl.persona, world) }))
+}
+
+// ---------- 資產格:誰擁有哪一格(從各玩家的狀態推導)----------
+export function worldOf(players) {
+  const owners = {}
+  players.forEach((pl, idx) => {
+    for (const [id, pr] of Object.entries(pl.s.props || {})) owners[id] = { idx, name: pl.name, level: pr.level, insured: pr.insured }
+  })
+  return { owners }
+}
+
+// 處理玩家剛做完的選擇所產生的「對其他玩家的影響」:過路費、拍賣。
+// 回傳新的 players 與要顯示的訊息。
+export function applyOps(players, fromIdx) {
+  const next = players.map((p) => ({ ...p }))
+  const notes = []
+  const ops = next[fromIdx].s.pendingOps || []
+  for (const op of ops) {
+    if (op.op === 'toll') {
+      const owner = next[op.toIdx]
+      if (owner && owner.s.phase !== 'ended') {
+        owner.s = receiveCash(owner.s, op.amount)
+        notes.push({ icon: '💰', who: owner.name, text: `收到 ${next[fromIdx].name} 的過路費 ${Math.round(op.amount / 10000)} 萬(${propById(op.propId).name})`, tone: 'good' })
+      }
+    } else if (op.op === 'auction') {
+      const prop = propById(op.propId)
+      const order = next.map((_, i) => i).filter((i) => i !== fromIdx)
+      // 從出手者的下一位開始詢問
+      order.sort((a, b) => ((a - fromIdx + next.length) % next.length) - ((b - fromIdx + next.length) % next.length))
+      for (const i of order) {
+        const pl = next[i]
+        if (pl.human || pl.s.phase === 'ended' || pl.s.props[prop.id]) continue
+        const mode = botWantsProperty(pl.s, pl.persona, prop)
+        if (mode === 'cash') {
+          pl.s = buyPropertyAt(pl.s, prop.id, 'cash')
+          notes.push({ icon: '🏷️', who: pl.name, text: `在拍賣中買下了「${prop.name}」(${Math.round(prop.price / 10000)} 萬)`, tone: '' })
+          break
+        }
+      }
+    }
+  }
+  next[fromIdx].s = clearOps(next[fromIdx].s)
+  return { players: next, notes }
 }

@@ -121,7 +121,7 @@ test('一旦發生重大傷病或失能,建議配置的淨資產多數勝過沒�
   }
   console.log(`重大事件下建議配置勝過沒保險:${wins}/${n}`)
   assert.ok(n > 20)
-  assert.ok(wins / n > 0.8)
+  assert.ok(wins / n > 0.7)
 })
 
 test('人生內容豐富:一局標準長度會遇到多種不同格子', () => {

@@ -538,3 +538,8 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; } .chip-q { border: 1.5px solid #c7d2fe; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; }
 .ask-form { display: flex; gap: 8px; margin: 6px 0 4px; } .ask-form input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; }
 @media (min-width: 1100px) and (max-width: 1499px) { .gbody { grid-template-columns: 300px minmax(0, 1fr) 280px; } }
+
+.tile-property { --c: #b7791f; background: #fff8e8; } .tile-own { position: absolute; right: 3px; top: 3px; font-size: 9px; font-weight: 800; color: #fff; border-radius: 6px; padding: 0 4px; background: #6b7280; }
+.tile-own.o0 { background: #f5b301; } .tile-own.o1 { background: #e5484d; } .tile-own.o2 { background: #3b82f6; } .tile-own.o3 { background: #a855f7; }
+.prop-list { display: grid; gap: 10px; } .propc { background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 10px 12px; display: grid; gap: 6px; } .propc.mine { border-color: #9ad4b9; background: #f6fcf9; } .propc.rival { background: #f4f6fb; }
+.propc-top { display: flex; gap: 10px; align-items: flex-start; } .propc-t { flex: 1; } .own-tag { font-size: 11.5px; font-weight: 800; background: #eceae0; color: #6b7280; border-radius: 999px; padding: 2px 10px; white-space: nowrap; } .own-tag.me { background: var(--green); color: #fff; } .own-tag.ri { background: #dbe4ff; color: #3730a3; }

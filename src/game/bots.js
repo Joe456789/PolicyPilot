@@ -4,11 +4,12 @@
 import { Rng } from './rng.js'
 import { LOOKS, CAREERS, STYLES } from './careers.js'
 import {
-  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease,
+  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction,
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
 import { PRODUCT_ORDER, totalPremium } from './products.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup } from './prologue.js'
+import { propById, upgradeCost } from './properties.js'
 
 export const PERSONAS = [
   {
@@ -109,6 +110,7 @@ function applyInvest(s, p) {
 
 export function botPlan(s, p) {
   s = applyCoverage(s, p)
+  if (p.love > 0.3) for (const id of Object.keys(s.props)) if (!s.props[id].insured && s.ap > 0) s = propAction(s, id, 'insure')
   s = applyInvest(s, p)
   return s
 }
@@ -165,8 +167,43 @@ export function botChoose(s, p) {
       return rng.next() < p.quiz ? right : (right + 1) % n
     }
     case 'milestone': return botMilestone(s, p, sc, rng)
+    case 'property': return botProperty(s, p, sc)
     default: return 0
   }
+}
+
+const liquidOf = (s) => s.cash + s.hold.deposit + s.hold.bond + s.hold.stock + s.hold.spec
+
+// 對手想用什麼方式買資產:'cash' | 'loan' | null
+export function botWantsProperty(s, p, prop) {
+  const liquid = liquidOf(s)
+  const mo = s.expense / 12
+  const price = prop.price
+  if (p.id === 'steady') {
+    if (liquid - price >= 12 * mo && price <= liquid * 0.45) return 'cash'
+    return null
+  }
+  if (p.id === 'allin') return liquid >= price * 0.3 * 1.05 && s.age < 48 ? 'loan' : null
+  if (p.id === 'insured') return price <= liquid * 0.3 && liquid - price >= 10 * mo ? 'cash' : null
+  if (prop.yield >= 0.05 && liquid - price * 0.3 >= 7 * mo) return 'loan'
+  if (liquid - price >= 8 * mo) return 'cash'
+  return null
+}
+
+function botProperty(s, p, sc) {
+  const base = sc.base
+  const tags = sc.choices.map((c) => c.tag)
+  const idxOf = (tag) => Math.max(0, tags.indexOf(tag))
+  if (base.status === 'rival') return 0
+  const prop = propById(base.propId)
+  if (base.status === 'unowned') {
+    const m = botWantsProperty(s, p, prop)
+    return m === 'cash' ? idxOf('buy_cash') : m === 'loan' ? idxOf('buy_loan') : idxOf('skip')
+  }
+  const mine = s.props[base.propId]
+  if (!mine.insured && p.love > 0.3) return idxOf('insure')
+  if (mine.level < 3 && p.risk > 0.3 && liquidOf(s) > upgradeCost(prop, mine.level) + 8 * (s.expense / 12)) return idxOf('upgrade')
+  return idxOf('skip')
 }
 
 function botMilestone(s, p, sc, rng) {
@@ -201,19 +238,19 @@ export function botAct(s, p) {
 }
 
 // ---------- 一整年(同步,用於快轉或測試)----------
-export function botPlayYear(s, p) {
+export function botPlayYear(s, p, world = {}) {
   s = botPlan(s, p)
-  s = roll(s)
+  s = roll(s, world)
   s = botAct(s, p)
   s = endYear(s)
   return s
 }
 
-export function botFastForward(s, p) {
+export function botFastForward(s, p, world = {}) {
   let guard = 0
   while (s.phase !== 'ended' && guard++ < 100) {
     if (s.phase === 'plan') s = botPlan(s, p)
-    if (s.phase === 'plan') s = roll(s)
+    if (s.phase === 'plan') s = roll(s, world)
     if (s.phase === 'scene') s = botAct(s, p)
     if (s.phase === 'result') s = endYear(s)
   }

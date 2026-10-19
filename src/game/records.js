@@ -15,6 +15,7 @@ export const ACHIEVEMENTS = [
   { id: 'quest_master', icon: '🎯', title: '任務達人', desc: '一局完成全部 3 個人生任務。', check: (c) => c.questsDone >= 3 },
   { id: 'survivor', icon: '💪', title: '九死一生', desc: '經歷重大傷病與失能事件,仍然平安走完人生。', check: (c) => c.hadCritical && c.hadDisability && c.s.ended?.reason === 'complete' },
   { id: 'gamer', icon: '🎮', title: '小遊戲高手', desc: '一局之中,小遊戲拿到 2 次三顆星。', check: (c) => c.s.miniPerfect >= 2 },
+  { id: 'landlord', icon: '🏘️', title: '包租公婆', desc: '一局之中,地產租金累計收入超過 200 萬。', check: (c) => (c.s.history || []).reduce((a, x) => a + (x.rent || 0), 0) >= 2000000 },
   { id: 'variety', icon: '🎭', title: '見多識廣', desc: '體驗過 3 種不同的職業。', check: (c, rec) => Object.keys(rec.careers || {}).length >= 3 },
 ]
 

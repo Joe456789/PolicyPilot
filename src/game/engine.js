@@ -5,7 +5,8 @@ import {
   BOARD, ASSET_ORDER, run, cover, clamp, blankYear, netWorth, holdingsTotal, recommended,
   canIncrease, householdIncome, round1k,
 } from './core.js'
-import { buildScene, resolveScene } from './scenes.js'
+import { buildScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
+import { propById, rentOf, propPremium, upgradeCost, RISK_NAME } from './properties.js'
 import { updateQuests } from './quests.js'
 
 export * from './core.js'
@@ -60,15 +61,53 @@ export function repay(state, amount) {
   })
 }
 
+// ---------- 資產格:規劃面板的行動(每年 2 個行動點)----------
+export function propAction(state, propId, action) {
+  return run(state, (s) => {
+    const p = propById(propId)
+    const mine = s.props[propId]
+    if (!p || !mine) { s.flash = '你還沒有這處資產。'; return }
+    if (s.phase !== 'plan') return
+    if (s.ap <= 0) { s.flash = '今年的行動點已用完(每年 2 點)。'; return }
+    const lines = []
+    const add = (label, amount, kind) => lines.push({ label, amount, kind })
+    if (action === 'upgrade') {
+      if (mine.level >= 3) { s.flash = '已經是最高等級。'; return }
+      upgradeProp(s, p, add)
+    } else if (action === 'insure') {
+      if (mine.insured) return
+      insureProp(s, p, add)
+    } else if (action === 'sell') sellProp(s, p, add)
+    else return
+    s.ap -= 1
+    s.flash = lines.map((l) => l.label).join(';')
+  })
+}
+
+// 收到別人付的過路費
+export function receiveCash(state, amount) {
+  return run(state, (s) => { s.cash += amount; s.year.tolls += amount })
+}
+
+// 拍賣成交:以原價全額買下
+export function buyPropertyAt(state, propId, mode = 'cash') {
+  return run(state, (s) => { acquireProperty(s, propById(propId), mode, () => {}) })
+}
+
+export function clearOps(state) {
+  return run(state, (s) => { s.pendingOps = [] })
+}
+
 // ---------- 擲骰與場景 ----------
 
-export function roll(state) {
+export function roll(state, world = {}) {
   return run(state, (s, rng) => {
     if (s.phase !== 'plan') return
     const dice = rng.int(1, 6)
     s.dice = dice
     s.pos = (s.pos + dice) % BOARD.length
-    s.scene = buildScene(s, rng, BOARD[s.pos])
+    s.pendingOps = []
+    s.scene = buildScene(s, rng, BOARD[s.pos], world)
     s.phase = 'scene'
   })
 }
@@ -186,7 +225,46 @@ export function endYear(state) {
       h.value = Math.round(h.value * (1 + g))
     }
 
-    s.cash += effIncome - s.expense - premiums - recurring - houseCost - loanService
+    // 資產格:租金、房貸、財產險、價值變動與天災(年底被動檢查,不佔用回合)
+    let rentIncome = 0, propPrem = 0, propLoan = 0, dmgCost = 0, dmgPaid = 0, propValueTotal = 0
+    for (const [id, pr] of Object.entries(s.props)) {
+      const p = propById(id)
+      if (pr.mortgage) {
+        const interest = Math.round(pr.mortgage.balance * pr.mortgage.rate)
+        const pay = Math.min(pr.mortgage.payment, pr.mortgage.balance + interest)
+        pr.mortgage.balance = Math.max(0, pr.mortgage.balance + interest - pay)
+        pr.mortgage.yearsLeft -= 1
+        propLoan += pay
+        if (pr.mortgage.balance <= 0 || pr.mortgage.yearsLeft <= 0) pr.mortgage = null
+      }
+      let rent = Math.round(rentOf(p, pr.level) * clamp(1 + rng.normal(0, p.vol), 0.4, 1.15))
+      const r = rng.next()
+      let acc = 0
+      for (const k of ['fire', 'quake', 'flood']) {
+        acc += p.risk[k]
+        if (r < acc) {
+          const ratio = k === 'flood' ? rng.range(0.1, 0.25) : k === 'quake' ? rng.range(0.2, 0.45) : rng.range(0.2, 0.4)
+          const cost = Math.round((pr.value * ratio) / 1000) * 1000
+          dmgCost += cost
+          if (pr.insured) dmgPaid += Math.round(cost * 0.9)
+          rent = Math.round(rent * 0.5)
+          s.year.events.push({ title: `${p.name}遭遇${RISK_NAME[k]},修繕 ${Math.round(cost / 10000)} 萬${pr.insured ? '(保險賠 9 成)' : '(沒有保險,全部自付)'}`, kind: 'event', cat: 'propdamage', icon: k === 'fire' ? '🔥' : k === 'quake' ? '🌋' : '🌊' })
+          break
+        }
+      }
+      rentIncome += rent
+      if (pr.insured) propPrem += propPremium(pr.value)
+      const g = (s.year.houseChange ?? clamp(rng.normal(0.03, 0.04), -0.1, 0.12)) + rng.normal(0, 0.015)
+      pr.value = Math.max(100000, Math.round(pr.value * (1 + g)))
+      propValueTotal += pr.value
+    }
+    s.year.rent = rentIncome
+    s.year.propPrem = propPrem
+    s.year.propDamage = dmgCost
+    s.year.propPaid = dmgPaid
+    s.year.propLoanPay = propLoan
+
+    s.cash += effIncome + rentIncome - s.expense - premiums - recurring - houseCost - loanService - propPrem - propLoan - dmgCost + dmgPaid
     s.year.recurringCost = recurring
 
     // 各類資產報酬:一場市場行情會同時影響股票、個股、債券。
@@ -224,6 +302,8 @@ export function endYear(state) {
     s.expense = Math.round(s.expense * (1.022 + s.career.growth * 0.5)) // 通膨 + 生活水準隨收入提高
     s.health = Math.min(100, s.health + 5)
     if (s.checkupYears > 0) s.checkupYears -= 1
+    s.ap = 2
+    s.pendingOps = []
     s.year = blankYear()
     s.scene = null
     s.dice = null
@@ -267,6 +347,14 @@ function snapshot(s, f) {
     cash: Math.round(s.cash),
     holdings: Math.round(holdingsTotal(s)),
     savings: Math.round(s.savings),
+    rent: Math.round(s.year.rent),
+    propPrem: s.year.propPrem,
+    propDamage: s.year.propDamage,
+    propPaid: s.year.propPaid,
+    propLoan: s.year.propLoanPay,
+    tolls: s.year.tolls,
+    propValueTotal: Math.round(Object.values(s.props).reduce((a, x) => a + x.value, 0)),
+    propCount: Object.keys(s.props).length,
     ilv: Math.round(s.ilv || 0),
     loan: Math.round(s.loan),
     houseEquity: s.house ? Math.round(s.house.value - s.house.balance) : 0,

@@ -96,6 +96,11 @@ export const QUEST_POOL = [
     progress: (s) => s.miniStars,
   },
   {
+    asp: ['wealth','career'], id: 'landlord', icon: '🏘️', tag: 'fin', title: '同時擁有 2 處地產', target: 2,
+    desc: '在棋盤上買下地產收租,記得替它買財產險。',
+    progress: (s) => Math.max(Object.keys(s.props || {}).length, ...s.history.map((h) => h.propCount || 0)),
+  },
+  {
     asp: ['guardian'], id: 'firehouse', icon: '🔥', tag: 'ins', title: '買房後投保住宅火險地震險', target: 1,
     desc: '房子是最大的資產,別讓一場颱風毀掉它。',
     progress: (s) => (s.house && s.coverage.home > 0 ? 1 : 0),

@@ -4,33 +4,38 @@ import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremiu
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
 import { drawQuests } from './quests.js'
 
-// 8x8 環形棋盤:28 格。
+// 8x8 環形棋盤:28 格。8 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
+import { PROPERTIES } from './properties.js'
+const P = (id) => {
+  const p = PROPERTIES.find((x) => x.id === id)
+  return { type: 'property', label: p.name, icon: p.icon, prop: id }
+}
 export const BOARD = [
   { type: 'start', label: '年度起點', icon: '🏁' },
+  P('wanhua'),
+  { type: 'chance', label: '機會與命運', icon: '🎲' },
   { type: 'event', label: '生活事件', icon: '🎴' },
-  { type: 'chance', label: '機會卡', icon: '🎲' },
+  P('banqiao'),
   { type: 'market', label: '市場行情', icon: '📊' },
-  { type: 'bonus', label: '意外之財', icon: '🎁' },
-  { type: 'shop', label: '理財商城', icon: '🛒' },
-  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'minigame', label: '小遊戲', icon: '🎮' },
   { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  P('qingpu'),
   { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' },
-  { type: 'chance', label: '機會卡', icon: '🎲' },
   { type: 'event', label: '生活事件', icon: '🎴' },
   { type: 'tax', label: '年度報稅', icon: '🧾' },
-  { type: 'market', label: '市場行情', icon: '📊' },
+  P('zhubei'),
+  { type: 'chance', label: '機會與命運', icon: '🎲' },
+  { type: 'hospital', label: '醫院', icon: '🏥' },
+  P('qiqi'),
   { type: 'minigame', label: '小遊戲', icon: '🎮' },
-  { type: 'hospital', label: '健康檢查', icon: '🏥' },
-  { type: 'event', label: '生活事件', icon: '🎴' },
-  { type: 'chance', label: '機會卡', icon: '🎲' },
   { type: 'milestone', label: '人生里程碑', icon: '🌟' },
   { type: 'bank', label: '銀行', icon: '🏦' },
-  { type: 'bonus', label: '意外之財', icon: '🎁' },
+  P('tainan'),
   { type: 'event', label: '生活事件', icon: '🎴' },
   { type: 'market', label: '市場行情', icon: '📊' },
-  { type: 'minigame', label: '小遊戲', icon: '🎮' },
-  { type: 'chance', label: '機會卡', icon: '🎲' },
-  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  P('kaohsiung'),
+  { type: 'chance', label: '機會與命運', icon: '🎲' },
+  P('hualien'),
   { type: 'minigame', label: '小遊戲', icon: '🎮' },
   { type: 'event', label: '生活事件', icon: '🎴' },
   { type: 'shop', label: '理財商城', icon: '🛒' },
@@ -48,15 +53,16 @@ export const round1k = (n) => Math.round(n / 1000) * 1000
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 
 export function blankYear() {
-  return { shockCost: 0, recurringCost: 0, payout: 0, borrowed: 0, shocks: [], marketReturn: null, houseChange: null, events: [] }
+  return { rent: 0, propPrem: 0, propDamage: 0, propPaid: 0, propLoanPay: 0, tolls: 0, shockCost: 0, recurringCost: 0, payout: 0, borrowed: 0, shocks: [], marketReturn: null, houseChange: null, events: [] }
 }
 
 export const holdingsTotal = (s) => ASSET_ORDER.reduce((a, k) => a + s.hold[k], 0)
 export const houseEquity = (s) => (s.house ? Math.round(s.house.value - s.house.balance) : 0)
+export const propEquity = (s) => Object.values(s.props || {}).reduce((a, p) => a + (p.value - (p.mortgage ? p.mortgage.balance : 0)), 0)
 export const householdIncome = (s) => s.income + (s.partner ? s.partner.income : 0)
 
 export function netWorth(s) {
-  return Math.round(s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + houseEquity(s) - s.loan)
+  return Math.round(s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + houseEquity(s) + propEquity(s) - s.loan)
 }
 
 // 從 0 開始:由創角結果建立初始狀態。
@@ -101,6 +107,11 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     savings: 0,
     ilv: 0,
     ilvYears: 0,
+    props: {},
+    ap: 2,
+    pendingOps: [],
+    cards: [],
+    hospitalTurns: 0,
     car: false,
     trips: 0,
     promotions: 0,

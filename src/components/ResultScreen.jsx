@@ -4,6 +4,7 @@ import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { computeEnding } from '../game/endings.js'
+import { propSummary } from '../game/scoring.js'
 import { coachFallback } from '../game/fallback.js'
 import { wan } from '../game/format.js'
 import { ai } from '../ai.js'
@@ -32,6 +33,7 @@ const PARTS = [
 export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords }) {
   const report = buildReport(s)
   const { score } = report
+  const ps = propSummary(s)
   const data = counterfactual(s)
   const rec = recommended(s)
   const [coach, setCoach] = useState(null)
@@ -168,6 +170,25 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
           </p>
         )}
       </section>
+
+      {ps.everOwned && (
+        <section className="card">
+          <h3>🏘️ 地產成績單</h3>
+          <div className="gap-table" role="table" aria-label="地產成績">
+            <div className="gap-row ok"><span>累計租金收入</span><b>{wan(ps.rent)}</b></div>
+            <div className="gap-row ok"><span>收到的過路費</span><b>{wan(ps.tolls)}</b></div>
+            <div className="gap-row gap"><span>天災損失</span><b>{wan(ps.damage)}</b></div>
+            <div className="gap-row ok"><span>財產險理賠 / 保費</span><b>{wan(ps.paid)} / {wan(ps.prem)}</b></div>
+          </div>
+          <p className="muted">
+            {ps.damage > 0 && ps.paid === 0
+              ? '你的地產遇到天災時沒有投保,損失全部自己扛。地產是槓桿很高的資產,財產險就是它的安全網。'
+              : ps.paid > 0
+                ? '財產險在天災時替你分擔了損失:租金是「常態收入」,保險則是處理「少見但很痛」的風險。'
+                : '這一局沒遇到天災,但地震、颱風、淹水沒有一定的時間表,投保才不會賭運氣。'}
+          </p>
+        </section>
+      )}
 
       <section className="card">
         <h3>🔎 保障缺口檢視</h3>

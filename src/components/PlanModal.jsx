@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, canIncrease, recommended, analyzeGaps, householdIncome, holdingsTotal } from '../game/engine.js'
 import { wan } from '../game/format.js'
+import { PROPERTIES, LEVELS, rentOf, baseRent, upgradeCost, propPremium, tollOf, RISK_NAME } from '../game/properties.js'
 
 const STEPS = [
   [50000, '5 萬'],
@@ -10,7 +11,7 @@ const STEPS = [
   [1000000, '100 萬'],
 ]
 
-export default function PlanModal({ s, onCoverage, onTrade, onBorrow, onRepay, onClose, coach, title = '年度規劃' }) {
+export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onRepay, onPropAction, onClose, coach, title = '年度規劃' }) {
   const [tab, setTab] = useState('cover')
   const [step, setStep] = useState(100000)
   const rec = recommended(s)
@@ -33,7 +34,7 @@ export default function PlanModal({ s, onCoverage, onTrade, onBorrow, onRepay, o
         </header>
 
         <div className="tabs" role="tablist">
-          {[['cover', '🛡️ 保障'], ['invest', '📈 理財'], ['loan', '🏦 貸款']].map(([k, n]) => (
+          {[['cover', '🛡️ 保障'], ['invest', '📈 理財'], ['assets', '🏘️ 資產'], ['loan', '🏦 貸款']].map(([k, n]) => (
             <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>
           ))}
         </div>
@@ -112,6 +113,42 @@ export default function PlanModal({ s, onCoverage, onTrade, onBorrow, onRepay, o
                       </div>
                     </div>
                   ))}
+                </div>
+              </>
+            )}
+
+            {tab === 'assets' && (
+              <>
+                <div className="note-box">🏘️ 棋盤上有 8 處資產,走到才能買。擁有後每年收租、別人走到你的資產要付過路費。<b>行動點:{s.ap} / 2</b>(升級、投保、出售各花 1 點)。天災(火災、地震、淹水)會在年底檢查,沒保險要自己付修繕費。</div>
+                {s.flash && <div className="flash">{s.flash}</div>}
+                <div className="prop-list">
+                  {PROPERTIES.map((p) => {
+                    const mine = s.props[p.id]
+                    const owner = world?.owners?.[p.id]
+                    return (
+                      <div key={p.id} className={`propc ${mine ? 'mine' : owner ? 'rival' : ''}`}>
+                        <div className="propc-top">
+                          <span className="prod-ico" aria-hidden>{p.icon}</span>
+                          <div className="propc-t">
+                            <div className="prod-name">{p.region} · {p.name} <small>{p.kind}</small></div>
+                            <div className="prod-blurb">售價 {wan(p.price, 0)} · 年租約 {wan(baseRent(p), 0)}({(p.yield * 100).toFixed(1)}%) · 風險:{Object.entries(p.risk).map(([k, v]) => `${RISK_NAME[k]}${(v * 100).toFixed(1)}%`).join(' ')}</div>
+                          </div>
+                          <span className={`own-tag ${mine ? 'me' : owner ? 'ri' : ''}`}>{mine ? '你的' : owner ? owner.name : '無人持有'}</span>
+                        </div>
+                        {mine && (
+                          <>
+                            <div className="prod-blurb">等級「{LEVELS[mine.level].name}」· 市值 {wan(mine.value)} · 年租約 {wan(rentOf(p, mine.level))}{mine.mortgage ? ` · 房貸餘額 ${wan(mine.mortgage.balance)}` : ''} · {mine.insured ? `🛡️ 已投保(年繳 ${wan(propPremium(mine.value))})` : '⚠️ 未投保'}</div>
+                            <div className="asset-btns">
+                              <button className="btn" disabled={s.ap <= 0 || mine.level >= 3} onClick={() => onPropAction(p.id, 'upgrade')}>升級{mine.level < 3 ? `(${wan(upgradeCost(p, mine.level), 0)})` : ''}</button>
+                              <button className="btn" disabled={s.ap <= 0 || mine.insured} onClick={() => onPropAction(p.id, 'insure')}>投保財產險</button>
+                              <button className="btn ghost" disabled={s.ap <= 0} onClick={() => onPropAction(p.id, 'sell')}>出售</button>
+                            </div>
+                          </>
+                        )}
+                        {owner && !mine && <div className="prod-blurb">他人持有(等級「{LEVELS[owner.level].name}」),你走到要付過路費約 {wan(tollOf(p, owner.level))}。</div>}
+                      </div>
+                    )
+                  })}
                 </div>
               </>
             )}

@@ -89,6 +89,11 @@ export function YearModal({ s, onNext, last }) {
           <li className="line out"><span>保費</span><b>{signed(-h.premiums)}</b></li>
           {h.recurring > 0 && <li className="line out"><span>長期照護等支出</span><b>{signed(-h.recurring)}</b></li>}
           <li className={`line ${h.ret < 0 ? 'out' : 'in'}`}><span>股市年報酬</span><b>{(h.ret * 100).toFixed(1)}%</b></li>
+          {h.rent > 0 && <li className="line in"><span>地產租金收入</span><b>{signed(h.rent)}</b></li>}
+          {h.tolls > 0 && <li className="line in"><span>收到的過路費</span><b>{signed(h.tolls)}</b></li>}
+          {h.propLoan > 0 && <li className="line out"><span>地產貸款還款</span><b>{signed(-h.propLoan)}</b></li>}
+          {h.propPrem > 0 && <li className="line out"><span>財產險保費</span><b>{signed(-h.propPrem)}</b></li>}
+          {h.propDamage > 0 && <li className="line warn"><span>地產受災損失{h.propPaid > 0 ? `(保險賠 ${wan(h.propPaid)})` : '(沒有投保)'}</span><b>{signed(-h.propDamage)}</b></li>}
           {h.borrowed > 0 && <li className="line warn"><span>現金不夠,被迫借款</span><b>{wan(h.borrowed)}</b></li>}
         </ul>
         <div className="nw">
