@@ -22,6 +22,7 @@ import {
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
+import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
 import { PROPERTIES } from './game/properties.js'
 import { BOARD } from './game/engine.js'
@@ -619,6 +620,7 @@ export default function App() {
 }
 
 function Title({ aiInfo, onStart, onRecords }) {
+  const hero = useArt()('title_hero')
   const looks = [
     { ...defaultLook(), style: 'short', top: LOOKS.tops[0], extra: 'headphones' },
     { ...defaultLook(), style: 'long', top: LOOKS.tops[2], hair: LOOKS.hairs[1] },
@@ -628,6 +630,7 @@ function Title({ aiInfo, onStart, onRecords }) {
   return (
     <div className="screen title">
       <div className="title-card">
+        {hero && <img className="title-hero" src={hero} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
         <div className="title-badge">Cardif InsurHack 2026 · 題目 1-1</div>
         <h1>保險大富翁</h1>
         <p className="title-sub">財務人生模擬遊戲 · Financial Life Simulator</p>

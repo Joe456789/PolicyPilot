@@ -9,7 +9,9 @@
     "server": "node --env-file-if-exists=.env server/index.js",
     "build": "vite build",
     "start": "node server/index.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "art": "node --env-file-if-exists=.env scripts/gen-art.mjs",
+    "art:dry": "node scripts/gen-art.mjs --dry"
   },
   "dependencies": {
     "express": "^4.21.2",

@@ -3,6 +3,7 @@ import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
+import { useArt } from '../art.js'
 import { TAGS } from '../game/tags.js'
 import { computeEnding } from '../game/endings.js'
 import { propSummary } from '../game/scoring.js'
@@ -55,6 +56,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
 
   const death = score.family
   const ending = computeEnding(s, score)
+  const endingArt = useArt()('ending_' + ending.id)
   const quests = evalQuests(s)
   return (
     <div className="screen result">
@@ -67,7 +69,9 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
       </header>
 
       <section className="card ending">
-        <div className="ending-ico" aria-hidden>{ending.icon}</div>
+        {endingArt
+          ? <img className="ending-art" src={endingArt} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+          : <div className="ending-ico" aria-hidden>{ending.icon}</div>}
         <div>
           <div className="ending-k">你的結局 · {ending.rarity}</div>
           <h2>{ending.title}</h2>

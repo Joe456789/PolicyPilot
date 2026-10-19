@@ -16,6 +16,7 @@ Cardif InsurHack 2026 · 題目 1-1。以**大富翁**為主體:擲骰、走格�
 - **成長篇劇情:** 12 個年齡階段、74 張卡,依家境與先前遭遇連鎖(爸爸重病 → 復健期 → 學費吃緊 → 分擔家計),經歷變成 14 種「人生標籤」帶進棋盤,影響起點與事件機率。
 - **教練提示:** 每個選項顯示預估自付、保險能賠多少與建議;理財與貸款頁有配置提醒。
 - **對手對話:** 4 種個性的離線台詞,加上 Gemini 依戰況生成的短句(每局最多 4 次呼叫)。
+- **Gemini 插圖(選配):** 事件卡、地產、結局、標題頁可換成 AI 生成的插圖,沒有圖時自動用表情符號。生成方式見 [ART.md](ART.md)。
 - **電腦對手與即時排名**、**人生任務**、**14 種成就**、**17 種人生結局圖鑑**(存在瀏覽器)。
 - **結算:** 平行人生對照、AI 教練、給理專的客戶話術、人生結語。
 
@@ -55,4 +56,5 @@ gcloud run deploy policypilot --source . --region asia-east1 --allow-unauthentic
 - `src/game/` 規則引擎:`properties.js` 地產、`cards.js` 手牌、`tags.js` 人生標籤、`starts.js` 開局年齡、`prologueCards.js` 成長篇卡池、`coach.js` 教練提示、`banter.js` 對手台詞、`endings.js` 結局、`glossary.js` 小辭典、`minigames.js` 小遊戲設定、`prologue.js` 成長篇、`core.js` 狀態與建議、`scenes.js` 場景、`engine.js` 動作與年度結算、`scoring.js` 評分與平行人生、`quests.js` 任務、`bots.js` 電腦對手、`match.js` 對局與排名、`records.js` 成就戰績、`content.js` 題庫、`products.js` 保障商品
 - `src/three/BoardScene.js` 3D 棋盤;`src/sfx.js` 音效
 - `src/components/` 棋盤、規劃面板、事件卡、結算頁(平行人生對照圖)
+- `scripts/` 插圖生成腳本(`gen-art.mjs`);`public/art/` 生成的插圖
 - `server/` Express + Gemini 代理與提示詞(`prompts.js`)

@@ -1,4 +1,5 @@
 import { wan, signed } from '../game/format.js'
+import { useArt, sceneArtIds } from '../art.js'
 
 const KIND = {
   event: '生活事件',
@@ -19,6 +20,7 @@ const KIND = {
 
 export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel, tips }) {
   const result = scene.result
+  const artUrl = useArt()(sceneArtIds(scene))
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={scene.title}>
       <div className={`modal card-pop tone-${scene.tone} kind-${scene.kind}`}>
@@ -27,7 +29,9 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
           {aiTag && <span className="ai-pill" title="情境由 Gemini 依角色處境生成;金額與給付由規則引擎計算">✨ AI 導演</span>}
           {loadingAi && !aiTag && scene.aiable && <span className="ai-pill dim">AI 構思情境中…</span>}
         </div>
-        <div className="card-ico" aria-hidden>{scene.icon}</div>
+        {artUrl
+          ? <img className="card-art" src={artUrl} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+          : <div className="card-ico" aria-hidden>{scene.icon}</div>}
         <h2 className="card-title">{scene.title}</h2>
         <p className="card-story">{scene.story}</p>
         {scene.lesson && phase === 'scene' && <div className="scene-lesson">💡 {scene.lesson}</div>}

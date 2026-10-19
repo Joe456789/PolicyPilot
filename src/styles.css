@@ -582,3 +582,9 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .feed li.say { background: #f6f3ff; border-radius: 10px; }
 .ai-mark { font-style: normal; color: #7a49d8; }
 .intro-box { margin: 0 0 10px; background: #fff7e0; border-color: #f0d9a8; color: #5c4400; }
+
+/* Gemini 插圖(沒有圖時自動退回表情符號) */
+.card-art { display: block; width: 100%; max-height: 230px; object-fit: cover; border-radius: 16px; margin: 8px 0 10px; background: #eef2ee; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
+.ending-art { width: 150px; height: 112px; object-fit: cover; border-radius: 14px; flex: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); }
+.title-hero { display: block; width: 100%; max-height: 270px; object-fit: cover; border-radius: 20px; margin: 0 0 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); }
+@media (max-width: 560px) { .ending-art { width: 96px; height: 72px; } .card-art { max-height: 170px; } }
