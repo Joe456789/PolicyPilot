@@ -76,7 +76,8 @@ export class BoardScene {
     this.orbit = { az: 0.0, pol: 0.78, dist: 33, tAz: 0, tPol: 0.78, tDist: 33 }
     this.camTarget = new THREE.Vector3()
     this.camTargetGoal = new THREE.Vector3()
-    this.focusBlend = 0.08
+    this.mode = 'board' // board 全景 | dice 對著骰子 | token 跟著棋子
+    this.focusIdx = 0
 
     const w = container.clientWidth || 800
     const h = container.clientHeight || 600
@@ -536,6 +537,8 @@ export class BoardScene {
     const steps = (toPos - t.pos + N) % N
     if (!steps) return Promise.resolve()
     t.busy = true
+    this.focusIdx = i
+    this.setMode('token')
     return new Promise((resolve) => {
       let k = 0
       const next = () => {
@@ -573,8 +576,20 @@ export class BoardScene {
     this.placeToken(t)
   }
 
+  setMode(mode) {
+    this.mode = mode
+    const d = this.baseDist || 33
+    this.orbit.tDist = mode === 'dice' ? d * 0.6 : mode === 'token' ? d * 0.68 : d
+    this.orbit.tPol = mode === 'board' ? 0.78 : 0.7
+  }
+
   focusPlayer(i) {
     this.focusIdx = i
+    this.setMode('token')
+  }
+
+  overview() {
+    this.setMode('board')
   }
 
   setActiveTile(pos) {
@@ -588,6 +603,8 @@ export class BoardScene {
   rollDice(value) {
     const d = this.dice
     d.visible = true
+    d.scale.setScalar(1)
+    this.setMode('dice')
     const target = new THREE.Quaternion().setFromUnitVectors(this.faceNormals[value], new THREE.Vector3(0, 1, 0))
     target.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2))
     const axis = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.4, Math.random() - 0.5).normalize()
@@ -661,8 +678,8 @@ export class BoardScene {
     // 依畫面比例調整距離,讓整個棋盤都在畫面內
     const aspect = w / h
     this.baseDist = aspect < 1.4 ? Math.max(30, 31 / aspect + 1) : 31
-    this.orbit.tDist = this.baseDist
     this.orbit.dist = this.baseDist
+    this.setMode(this.mode || 'board')
     this.camera.updateProjectionMatrix()
   }
 
@@ -720,12 +737,14 @@ export class BoardScene {
     // 相機:緩動跟隨焦點棋子
     const o = this.orbit
     o.az += (o.tAz - o.az) * 0.08
-    o.pol += (o.tPol - o.pol) * 0.08
-    o.dist += (o.tDist - o.dist) * 0.08
-    const f = this.tokens[this.focusIdx]
-    if (f) this.camTargetGoal.set(f.group.position.x * this.focusBlend, 0, f.group.position.z * this.focusBlend)
-    else this.camTargetGoal.set(0, 0, 0)
-    this.camTarget.lerp(this.camTargetGoal, 0.06)
+    o.pol += (o.tPol - o.pol) * 0.07
+    o.dist += (o.tDist - o.dist) * 0.07
+    if (this.mode === 'dice' && this.dice.visible) this.camTargetGoal.set(this.dice.position.x, 0, this.dice.position.z)
+    else if (this.mode === 'token' && this.tokens[this.focusIdx]) {
+      const g = this.tokens[this.focusIdx].group.position
+      this.camTargetGoal.set(g.x, 0, g.z)
+    } else this.camTargetGoal.set(0, 0, 0)
+    this.camTarget.lerp(this.camTargetGoal, this.mode === 'board' ? 0.05 : 0.12)
     const sp = Math.sin(o.pol), cp = Math.cos(o.pol)
     this.camera.position.set(
       this.camTarget.x + Math.sin(o.az) * sp * o.dist,

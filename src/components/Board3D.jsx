@@ -21,7 +21,7 @@ const Board3D = forwardRef(function Board3D({ players, onFail, onStep }, ref) {
     scene.current = sc
     sc.onStep = (pos, i) => latest.current.onStep?.(pos, i)
     sc.setPlayers(latest.current.players.map((p) => ({ look: p.look, name: p.name, pos: p.pos })))
-    sc.focusPlayer(0)
+    sc.overview()
     return () => { sc.dispose(); scene.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -31,6 +31,7 @@ const Board3D = forwardRef(function Board3D({ players, onFail, onStep }, ref) {
     hideDice: () => scene.current?.hideDice() ?? Promise.resolve(),
     moveToken: (i, pos) => scene.current?.moveToken(i, pos) ?? Promise.resolve(),
     focus: (i) => scene.current?.focusPlayer(i),
+    overview: () => scene.current?.overview(),
     teleport: (i, pos) => scene.current?.teleport(i, pos),
     setActiveTile: (pos) => scene.current?.setActiveTile(pos),
     resetPlayers: (ps) => {

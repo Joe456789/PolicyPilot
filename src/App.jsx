@@ -221,7 +221,6 @@ export default function App() {
     const ng = roll(cur)
     const b = boardRef.current
     if (b) {
-      b.focus(0)
       await b.rollDice(ng.dice)
       b.hideDice()
       await b.moveToken(0, ng.pos)
@@ -302,6 +301,7 @@ export default function App() {
     setSceneReady(false)
     boardRef.current?.setActiveTile(null)
     if (ng.ended?.reason === 'death') return finishGame()
+    if (players.length <= 1) boardRef.current?.overview()
     setYearOpen(true)
     for (const q of ng.newQuests || []) {
       sfx.quest()
@@ -363,7 +363,7 @@ export default function App() {
       if (!botFast) await sleep(500)
     }
     setActiveIdx(0)
-    b?.focus(0)
+    b?.overview()
     setBusy(false)
   }
 
