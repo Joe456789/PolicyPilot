@@ -46,6 +46,7 @@ const context = (s) => {
 }
 
 export const ai = {
+  banter: (payload) => post('/api/banter', payload, 10000),
   director: (info, s) => post('/api/director', { info, character: who(s.player), brief: brief(s), recent: recentTitles(s) }, 12000),
   ask: (question, s) => post('/api/ask', { question, context: context(s) }, 15000),
   narrate: (scene, s) =>

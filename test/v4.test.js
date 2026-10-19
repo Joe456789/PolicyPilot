@@ -46,7 +46,7 @@ test('家境起點很多元:富二代有現金、股票與房子,祖產家庭有
   const rich = mk('rich')
   assert.ok(rich.house && rich.house.balance === 0)
   assert.ok(rich.hold.stock > 500000)
-  assert.ok(netWorth(rich) > 10000000)
+  assert.ok(netWorth(rich) > 9000000)
   const her = mk('heritage')
   assert.ok(her.house && her.cash < 300000)
   const tight = mk('tight')

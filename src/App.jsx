@@ -1,4 +1,5 @@
 import { coachScene } from './game/coach.js'
+import { classifyBanter, offlineLine, shouldSpeak } from './game/banter.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Board3D from './components/Board3D.jsx'
 import Board from './components/Board.jsx'
@@ -65,6 +66,8 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [popups, setPopups] = useState([])
   const [feed, setFeed] = useState([])
+  const feedRef = useRef([])
+  feedRef.current = feed
   const [burst, setBurst] = useState(0)
   const [shake, setShake] = useState(false)
   const [ranks, setRanks] = useState(null)
@@ -82,6 +85,22 @@ export default function App() {
   }, [])
   const human = () => playersRef.current[0].s
 
+  // 對手說話:先用 AI 產生的句子(若有),否則用離線台詞。每次最多一句,避免洗版。
+  const banterAi = useRef({})
+  const say = useCallback((idx, kind, quiet = false) => {
+    const pl = playersRef.current[idx]
+    if (!pl || pl.human || !kind) return
+    const salt = pl.s.turn * 7 + idx * 13 + (pl.s.seed % 17)
+    if (!shouldSpeak(kind, salt)) return
+    const slot = { lead: 0, behind: 1, big_loss: 2, claim: 2, buy_prop: 3 }[kind]
+    const aiLine = slot != null ? banterAi.current[pl.id]?.[slot] : null
+    if (aiLine) delete banterAi.current[pl.id][slot]
+    const text = aiLine || offlineLine(pl.persona.id, kind, salt)
+    if (!text) return
+    setFeed((f) => [{ id: ++uid, icon: '💬', who: pl.name, text: `「${text}」`, tone: 'say', ai: !!aiLine }, ...f].slice(0, 12))
+    if (!quiet) showToastRef.current?.({ icon: '💬', title: pl.name, text: `「${text}」${aiLine ? ' ✨' : ''}`, tone: '' }, 2300)
+  }, [])
+
   // 過路費與拍賣:把一個玩家剛做完的選擇,對其他玩家造成的影響處理掉
   const processOps = useCallback((idx) => {
     if (!playersRef.current[idx].s.pendingOps?.length) return
@@ -92,8 +111,10 @@ export default function App() {
       setFeed((f) => [...notes.map((n) => ({ id: ++uid, icon: n.icon, who: n.who, text: n.text, tone: n.tone })), ...f].slice(0, 12))
       const n = notes[0]
       showToastRef.current?.({ icon: n.icon, title: `${n.who}`, text: n.text, tone: n.tone }, 1800)
+      const oi = playersRef.current.findIndex((p) => p.name === n.who)
+      if (n.icon === '💰' && oi > 0) setTimeout(() => say(oi, 'toll_collect'), 1900)
     }
-  }, [])
+  }, [say])
   const showToastRef = useRef(null)
 
   // ---------- 啟動 ----------
@@ -169,6 +190,8 @@ export default function App() {
     const h = createGame(setup, seed)
     const m = createMatch(h, opp, seed)
     playersRef.current = m.players
+    banterTurns.current.clear()
+    banterAi.current = {}
     setPlayers(m.players)
     setGameKey((k) => k + 1)
     setActiveIdx(0)
@@ -382,10 +405,17 @@ export default function App() {
         showToast({ icon: sc.icon, title: `${pl.name}:${sc.title}`, text: note, tone }, 1100)
         if (cover > 0) sfx.claim(); else if (loss < -150000) sfx.bad()
       }
+      const rankBefore = rank(playersRef.current).find((r) => r.id === pl.id).rank
       commit(i, s)
       processOps(i)
+      const bought = sc.kind === 'property' && ['buy_cash', 'buy_loan'].includes(sc.choices[s.scene.picked]?.tag)
       s = endYear(playersRef.current[i].s)
       commit(i, s)
+      const rankNow = rank(playersRef.current)
+      const mine = rankNow.find((r) => r.id === pl.id).rank
+      const humanBehind = rankNow.find((r) => r.human).rank > mine
+      const kind = classifyBanter({ sc, cover, loss, bankrupt: s.ended?.reason === 'bankrupt', bought, rankNow: mine, rankBefore, human: humanBehind })
+      if (kind) setTimeout(() => say(i, kind, botFast), botFast ? 0 : 900)
       if (s.ended?.reason === 'bankrupt') {
         const bi = { id: ++uid, icon: '💥', who: pl.name, text: `${s.ended.age} 歲破產出局!資金斷裂、資產被拍賣`, tone: 'bad' }
         setFeed((f) => [bi, ...f].slice(0, 12))
@@ -397,6 +427,25 @@ export default function App() {
     setActiveIdx(0)
     b?.overview()
     setBusy(false)
+    fetchBanter()
+  }
+
+  // 對手的 AI 台詞:每局只在第 3、9、16、24 回合各呼叫一次(最多 4 次),失敗就用離線台詞
+  const banterTurns = useRef(new Set())
+  async function fetchBanter() {
+    const cur = playersRef.current
+    const turn = cur[0].s.turn
+    if (!aiInfo.ai || botFast || cur.length < 2 || ![3, 9, 16, 24].includes(turn) || banterTurns.current.has(turn)) return
+    banterTurns.current.add(turn)
+    const rows = rank(cur)
+    const bots = cur.slice(1).filter((p) => p.s.phase !== 'ended').map((p) => {
+      const r = rows.find((x) => x.id === p.id)
+      return { id: p.id, name: p.name, persona: `${p.persona.title}:${p.persona.blurb}`, age: p.s.age, rank: r.rank, players: rows.length, netWorthWan: Math.round(r.net / 10000), coverage: `${Object.values(p.s.coverage).filter(Boolean).length} 項`, properties: Object.keys(p.s.props || {}).length }
+    })
+    if (!bots.length) return
+    const recent = feedRef.current.filter((f) => f.tone !== 'say').slice(0, 6).map((f) => `${f.who}${f.text}`)
+    const out = await ai.banter({ bots, recent, human: cur[0].name })
+    if (out?.lines) for (const [id, lines] of Object.entries(out.lines)) banterAi.current[id] = Object.fromEntries(lines.map((x, i) => [i, x]))
   }
 
   // ---------- 結算 ----------

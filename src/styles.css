@@ -568,3 +568,16 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .choice .pick-text { color: #1f5a3f; margin-top: 3px; }
 .coachbox .tone-warn { color: #8a4b00; }
 .coachbox .tone-good { color: #0a6b43; }
+
+/* 人生標籤 */
+.life-tags { margin-top: 4px; }
+.tag.life { background: #f3ecff; color: #5b34a8; border-color: #dccbff; cursor: help; }
+.pro-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.life-tag-list { margin: 10px 0 14px; padding: 10px 14px; background: #f7f2ff; border: 1.5px solid #dccbff; border-radius: 12px; font-size: 13.5px; line-height: 1.6; text-align: left; }
+.life-tag-list ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.life-tag-list li span { margin-right: 6px; color: #5b34a8; }
+
+/* 對手對話 */
+.feed li.say span:last-child { font-style: italic; color: #3d4b5c; }
+.feed li.say { background: #f6f3ff; border-radius: 10px; }
+.ai-mark { font-style: normal; color: #7a49d8; }

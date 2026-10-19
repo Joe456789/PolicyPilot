@@ -115,3 +115,37 @@ test('棋盤上有小遊戲格,玩小遊戲會依星數給獎金並累積星數'
   }
   assert.ok(found >= 5, '應該常常遇到小遊戲格')
 })
+
+test('成長篇卡池:各年齡都有足夠多樣的卡,連鎖事件會依先前遭遇出現,人生標籤會帶進棋盤', async () => {
+  const { SLOTS } = await import('../src/game/prologueCards.js')
+  const { createGame } = await import('../src/game/engine.js')
+  assert.ok(SLOTS.reduce((a, s) => a + s.pool.length, 0) >= 60)
+  // 不同種子的路徑很不一樣
+  const paths = new Set()
+  const chain = { dad_rehab: 0, biz_result: 0, grandpa: 0, debt_talk: 0 }
+  const tagsSeen = new Set()
+  for (let seed = 1; seed <= 150; seed++) {
+    let l = beginLife(createLife({ name: 't', look: {}, style: '穩健型' }, seed))
+    let g = 0
+    while (!l.done && g++ < 30) { l = chooseLife(l, seed % 2); l = advanceLife(l) }
+    paths.add(l.used.join(','))
+    for (const id of l.used) if (id in chain) chain[id]++
+    l.tags.forEach((t) => tagsSeen.add(t))
+    const game = createGame(lifeToSetup(l, careerOptions(l)[0].id, 'short', 0), seed)
+    assert.deepEqual(game.tags, l.tags)
+    assert.ok(Number.isFinite(game.cash) && Number.isFinite(game.income))
+  }
+  assert.ok(paths.size > 120, `路徑種類 ${paths.size}`)
+  assert.ok(chain.dad_rehab > 0 && chain.biz_result > 0 && chain.grandpa > 0, JSON.stringify(chain))
+  assert.ok(tagsSeen.size >= 8, [...tagsSeen].join())
+  // 連鎖:沒有先前的遭遇,就不會出現後續事件
+  for (let seed = 1; seed <= 60; seed++) {
+    let l = beginLife(createLife({ name: 't', look: {}, style: 's' }, seed))
+    let g = 0
+    while (!l.done && g++ < 30) {
+      if (l.used.includes('dad_rehab')) assert.ok(l.flags.parent_ill)
+      if (l.used.includes('biz_result')) assert.ok(l.flags.parents_biz)
+      l = chooseLife(l, 0); l = advanceLife(l)
+    }
+  }
+})

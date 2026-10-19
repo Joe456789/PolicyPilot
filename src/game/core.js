@@ -3,6 +3,7 @@ import { Rng } from './rng.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremium } from './products.js'
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
 import { drawQuests } from './quests.js'
+import { applyTagsAtStart } from './tags.js'
 
 // 8x8 環形棋盤:28 格。8 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
 import { PROPERTIES, propById } from './properties.js'
@@ -111,6 +112,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     ap: 2,
     pendingOps: [],
     cards: [],
+    tags: [],
     cardsUsed: 0,
     cardsGot: 0,
     hospitalTurns: 0,
@@ -150,6 +152,8 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     pendingStage: false,
     startNetWorth: startCash - startLoan + (st?.assets ? Object.values(st.assets).reduce((a, b) => a + b, 0) : 0) + (st?.house || 0),
   }
+  applyTagsAtStart(s, st?.tags)
+  s.startNetWorth += s.cash - startCash
   return s
 }
 

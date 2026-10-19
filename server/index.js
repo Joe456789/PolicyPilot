@@ -3,9 +3,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import { aiStatus, generateJson } from './gemini.js'
-import { SYSTEM, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt } from './prompts.js'
+import { SYSTEM, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt, banterPrompt } from './prompts.js'
 import { lookupGlossary } from '../src/game/glossary.js'
-import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach } from './mock.js'
+import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach, mockBanter } from './mock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -41,6 +41,7 @@ app.use('/api/ask', limiter)
 app.use('/api/advisor', limiter)
 app.use('/api/stage', limiter)
 app.use('/api/coach', limiter)
+app.use('/api/banter', limiter)
 
 const str = (v, n = 400) => String(v ?? '').slice(0, n)
 const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d)
@@ -191,6 +192,31 @@ app.post('/api/coach', (req, res) => {
       }
     },
     () => mockCoach(report),
+  )
+})
+
+app.post('/api/banter', (req, res) => {
+  const raw = Array.isArray(req.body?.bots) ? req.body.bots.slice(0, 3) : []
+  if (!raw.length) return res.status(400).json({ ok: false, error: 'bad_request' })
+  const bots = raw.map((b) => ({
+    id: str(b.id, 16), name: str(b.name, 12), persona: str(b.persona, 60), age: num(b.age), rank: num(b.rank), players: num(b.players),
+    netWorthWan: num(b.netWorthWan), coverage: str(b.coverage, 20), properties: num(b.properties),
+  }))
+  const recent = (Array.isArray(req.body?.recent) ? req.body.recent : []).slice(0, 8).map((x) => str(x, 60))
+  const human = str(req.body?.human, 10) || '玩家'
+  handle(
+    res,
+    async () => {
+      const out = await generateJson({ system: SYSTEM, prompt: banterPrompt({ bots, recent, human }), maxTokens: 900, temperature: 0.95 })
+      const lines = {}
+      for (const b of bots) {
+        const arr = out?.lines?.[b.id]
+        if (Array.isArray(arr)) lines[b.id] = arr.slice(0, 4).map((x) => str(x, 40)).filter(Boolean)
+      }
+      if (!Object.keys(lines).length) throw Object.assign(new Error('bad banter shape'), { code: 'bad_shape' })
+      return { lines }
+    },
+    () => mockBanter(bots),
   )
 })
 

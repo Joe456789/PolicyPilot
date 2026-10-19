@@ -151,3 +151,22 @@ test('教練提示:跑完整局,每個情境都能算出提示、不報錯;小�
   }
   assert.ok(seen >= 10 && kinds.size >= 4 && badges > 0, `${seen} ${[...kinds]} ${badges}`)
 })
+
+test('對手台詞:每個個性、每種情境都有離線台詞;分類與說話頻率合理', async () => {
+  const { BANTER, offlineLine, classifyBanter, shouldSpeak } = await import('../src/game/banter.js')
+  const { PERSONAS } = await import('../src/game/bots.js')
+  for (const p of PERSONAS) {
+    for (const k of ['buy_prop', 'claim', 'big_loss', 'toll_collect', 'toll_pay', 'lead', 'behind', 'bankrupt', 'quiet']) {
+      assert.ok(BANTER[p.id][k]?.length >= 2, `${p.id}/${k}`)
+      assert.ok(offlineLine(p.id, k, 7))
+    }
+  }
+  assert.equal(classifyBanter({ bankrupt: true }), 'bankrupt')
+  assert.equal(classifyBanter({ cover: 5, loss: 0, rankNow: 2, rankBefore: 2 }), 'claim')
+  assert.equal(classifyBanter({ cover: 0, loss: 0, rankNow: 1, rankBefore: 2 }), 'lead')
+  assert.equal(classifyBanter({ cover: 0, loss: 0, rankNow: 2, rankBefore: 2 }), null)
+  let n = 0
+  for (let i = 0; i < 200; i++) if (shouldSpeak('big_loss', i)) n++
+  assert.ok(n > 30 && n < 110, `big_loss 說話次數 ${n}`)
+  assert.ok(shouldSpeak('bankrupt', 3) && shouldSpeak('lead', 4))
+})

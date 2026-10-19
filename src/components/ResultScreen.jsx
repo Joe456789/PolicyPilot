@@ -3,6 +3,7 @@ import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
+import { TAGS } from '../game/tags.js'
 import { computeEnding } from '../game/endings.js'
 import { propSummary } from '../game/scoring.js'
 import { coachFallback } from '../game/fallback.js'
@@ -72,6 +73,11 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
           <h2>{ending.title}</h2>
           <p className="ending-b">{ending.blurb}</p>
           <p className="ending-e">{coach?.epilogue || ending.epilogue}</p>
+          {(s.tags || []).length > 0 && (
+            <div className="persona-tags life-tags" aria-label="人生標籤">
+              {s.tags.map((id) => <span key={id} className="tag life" title={TAGS[id].desc}>{TAGS[id].icon} {TAGS[id].title}</span>)}
+            </div>
+          )}
         </div>
       </section>
 

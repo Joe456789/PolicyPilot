@@ -59,7 +59,7 @@ export function Feed({ items }) {
         {items.slice(0, 6).map((f) => (
           <li key={f.id} className={f.tone}>
             <span aria-hidden>{f.icon}</span>
-            <span><b>{f.who}</b> {f.text}</span>
+            <span><b>{f.who}</b> {f.text}{f.ai && <em className="ai-mark" title="Gemini 即時生成"> ✨</em>}</span>
           </li>
         ))}
       </ul>

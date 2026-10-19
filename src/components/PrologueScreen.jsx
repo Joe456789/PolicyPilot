@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import SceneModal from './SceneModal.jsx'
 import { MAJORS, PROLOGUE_LENGTH } from '../game/prologue.js'
+import { TAGS } from '../game/tags.js'
 import { wan } from '../game/format.js'
 import { sfx } from '../sfx.js'
 
@@ -38,6 +39,12 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
         <div className={`pstat ins ${life.parentsInsured ? 'yes' : 'no'}`}>{life.parentsInsured ? '🛡️ 家裡有保險' : '⚠️ 家裡沒有保險'}</div>
       </div>
 
+      {life.tags.length > 0 && !life.done && (
+        <div className="pro-tags" aria-label="人生標籤">
+          {life.tags.map((id) => <span key={id} className="tag life" title={TAGS[id].desc}>{TAGS[id].icon} {TAGS[id].title}</span>)}
+        </div>
+      )}
+
       {life.log.length > 0 && (
         <ul className="pro-log">
           {life.log.map((l, i) => <li key={i}><i>{l.age}歲</i> {l.title}</li>)}
@@ -48,6 +55,12 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
         <div className="card grad">
           <h2>畢業了!選擇你的第一份工作</h2>
           <p className="muted">你念的是「{MAJORS[life.major || 'work'].title}」。學業 {Math.round(life.stats.study)},財商 {Math.round(life.stats.finance)}。接下來的人生,才正要開始。</p>
+          {life.tags.length > 0 && (
+            <div className="life-tag-list">
+              <b>🏷️ 你的人生標籤(會一起帶進棋盤)</b>
+              <ul>{life.tags.map((id) => <li key={id}><span>{TAGS[id].icon} <b>{TAGS[id].title}</b></span> {TAGS[id].desc}</li>)}</ul>
+            </div>
+          )}
           <div className="opts">
             {careerOptions.map((c) => (
               <button key={c.id} type="button" className="opt" onClick={() => onPickCareer(c.id)}>

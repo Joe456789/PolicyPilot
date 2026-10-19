@@ -46,3 +46,9 @@ export function mockCoach(report) {
     epilogue: '【AI 結語】這是一段由 AI 寫的人生結語(mock)。',
   }
 }
+
+export function mockBanter(bots) {
+  const lines = {}
+  for (const b of bots) lines[b.id] = [`【AI】${b.name}:這局我不會輸你的!`, `【AI】${b.name}:看我的配置!`, `【AI】${b.name}:運氣也是實力的一部分。`, `【AI】${b.name}:你的保單夠全嗎?`]
+  return { lines }
+}

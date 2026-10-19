@@ -1,5 +1,6 @@
 // 場景:依棋盤格子建立事件卡,並在玩家選擇後結算。
 // 所有數字都在這裡(規則引擎)決定;AI 只會改寫文字。
+import { tagMult } from './tags.js'
 import { CARDS, giveCard, hasCard, useCard } from './cards.js'
 import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
@@ -11,7 +12,7 @@ import {
   ASSETS, ASSET_ORDER, round1k, clamp, cover, canIncrease, analyzeGaps, householdIncome, holdingsTotal,
 } from './core.js'
 
-const wOf = (d, s) => (typeof d.w === 'function' ? d.w(s) : d.w ?? 1)
+const wOf = (d, s) => (typeof d.w === 'function' ? d.w(s) : d.w ?? 1) * tagMult(s, d)
 const seenCount = (s, id) => s.seen[id] || 0
 
 // 相同卡片重複出現時降低權重,讓一局之中的內容更豐富。

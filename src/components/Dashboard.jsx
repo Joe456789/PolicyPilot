@@ -1,3 +1,4 @@
+import { TAGS } from '../game/tags.js'
 import { CARDS, MAX_CARDS } from '../game/cards.js'
 import Avatar from './Avatar.jsx'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
@@ -33,6 +34,11 @@ export default function Dashboard({ s }) {
             {s.house && <span className="tag">有房</span>}
             {!s.partner && s.dependents > 0 && <span className="tag warn">唯一收入來源</span>}
           </div>
+          {(s.tags || []).length > 0 && (
+            <div className="persona-tags life-tags" aria-label="人生標籤">
+              {s.tags.map((id) => <span key={id} className="tag life" title={`${TAGS[id].title}:${TAGS[id].desc}`}>{TAGS[id].icon} {TAGS[id].title}</span>)}
+            </div>
+          )}
         </div>
       </div>
 
