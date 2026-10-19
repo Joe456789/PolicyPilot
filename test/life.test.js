@@ -149,3 +149,43 @@ test('成長篇卡池:各年齡都有足夠多樣的卡,連鎖事件會依先前
     }
   }
 })
+
+test('開局年齡 30 / 40:起點合理、各家境各職業都能玩完整局,電腦對手同齡開局', async () => {
+  const { adultStart } = await import('../src/game/starts.js')
+  const { createGame, netWorth } = await import('../src/game/engine.js')
+  const { PERSONAS, botFastForward, createBotGame } = await import('../src/game/bots.js')
+  const { BACKGROUNDS, CAREERS } = await import('../src/game/careers.js')
+  let partners = { 30: 0, 40: 0 }, houses = { 30: 0, 40: 0 }, n = 0
+  for (const age of [30, 40]) {
+    for (const bg of BACKGROUNDS) {
+      for (const c of CAREERS) {
+        for (const seed of [1, 2, 3]) {
+          const st = adultStart({ age, bgId: bg.id, careerId: c.id, seed })
+          const g = createGame({ name: 't', career: c.id, background: bg.id, style: '穩健型', length: 'short', start: { ...st, parentsInsured: null } }, seed)
+          assert.equal(g.age, age)
+          assert.ok(Number.isFinite(g.cash) && g.cash > 0 && Number.isFinite(g.income) && g.income >= c.income)
+          assert.ok(Number.isFinite(netWorth(g)) && Number.isFinite(g.expense) && g.expense > 0)
+          assert.equal(!!g.partner, st.partner)
+          if (g.house) assert.ok(g.house.balance >= 0 && g.house.value > 0)
+          n++
+        }
+      }
+    }
+  }
+  for (const age of [30, 40]) {
+    for (let seed = 1; seed <= 80; seed++) {
+      const st = adultStart({ age, bgId: 'normal', careerId: 'office', seed })
+      if (st.partner) partners[age]++
+      if (st.houseObj) houses[age]++
+    }
+  }
+  assert.ok(partners[40] > partners[30], `伴侶 ${JSON.stringify(partners)}`)
+  assert.ok(houses[40] > houses[30], `房子 ${JSON.stringify(houses)}`)
+  // 電腦對手同齡開局,而且能跑完整局
+  for (const p of PERSONAS) {
+    const s = botFastForward(createBotGameAt(p, 40), p, { owners: {} })
+    assert.ok(s.phase === 'ended' && Number.isFinite(netWorth(s)))
+    assert.equal(s.history[0].age, 40)
+  }
+  function createBotGameAt(p, age) { return createBotGame(p, 9, 'short', age) }
+})

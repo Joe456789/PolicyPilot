@@ -46,7 +46,7 @@ export function computeScore(s) {
 
   const end = s.history[s.history.length - 1]
   const nw = end ? end.netWorth : netWorth(s)
-  const growth = 20 * clamp((nw - s.startNetWorth) / (s.career.income * s.years * 0.7), 0, 1)
+  const growth = 20 * clamp((nw - s.startNetWorth) / ((s.startIncome || s.career.income) * s.years * 0.7), 0, 1)
   const quests = questScore(s)
 
   const behavior = clamp(6 + Math.min(4, s.quizRight) - 3 * s.panicSells, 0, 10)

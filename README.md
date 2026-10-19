@@ -4,6 +4,7 @@ Cardif InsurHack 2026 · 題目 1-1。以**大富翁**為主體:擲骰、走格�
 可以從 0 歲出生開始(成長篇),也可以直接進入棋盤(22 歲)。
 
 ## 玩法與內容
+- **開局年齡:** 22 歲(社會新鮮人,可走成長篇)、30 歲(職場中堅)、40 歲(家庭責任期);30、40 歲會依家境與職業模擬出伴侶、孩子、房貸、既有保障與資產,電腦對手同齡開局。
 - **起點分支:** 8 種家境(清寒、單親、一般、小康、專業世家、創業家庭、富二代、祖產家庭),起點的現金、投資、貸款、房產都不同;5 種人生志向決定任務方向。
 - **13 種保障商品:** 醫療險、重大傷病險、癌症險、住院日額險、失能所得補償、意外險、壽險、長照險、住宅火險、汽車險、旅平險、儲蓄年金險、投資型保單。
 - **理財:** 定存、債券基金、股票型 ETF、熱門個股、貸款、買房。市場行情取材自歷史上的市場情境(金融海嘯、疫情、通膨升息、泡沫破滅、房市起伏……)。
@@ -51,7 +52,7 @@ gcloud run deploy policypilot --source . --region asia-east1 --allow-unauthentic
 
 ## 結構
 
-- `src/game/` 規則引擎:`properties.js` 地產、`cards.js` 手牌、`tags.js` 人生標籤、`prologueCards.js` 成長篇卡池、`coach.js` 教練提示、`banter.js` 對手台詞、`endings.js` 結局、`glossary.js` 小辭典、`minigames.js` 小遊戲設定、`prologue.js` 成長篇、`core.js` 狀態與建議、`scenes.js` 場景、`engine.js` 動作與年度結算、`scoring.js` 評分與平行人生、`quests.js` 任務、`bots.js` 電腦對手、`match.js` 對局與排名、`records.js` 成就戰績、`content.js` 題庫、`products.js` 保障商品
+- `src/game/` 規則引擎:`properties.js` 地產、`cards.js` 手牌、`tags.js` 人生標籤、`starts.js` 開局年齡、`prologueCards.js` 成長篇卡池、`coach.js` 教練提示、`banter.js` 對手台詞、`endings.js` 結局、`glossary.js` 小辭典、`minigames.js` 小遊戲設定、`prologue.js` 成長篇、`core.js` 狀態與建議、`scenes.js` 場景、`engine.js` 動作與年度結算、`scoring.js` 評分與平行人生、`quests.js` 任務、`bots.js` 電腦對手、`match.js` 對局與排名、`records.js` 成就戰績、`content.js` 題庫、`products.js` 保障商品
 - `src/three/BoardScene.js` 3D 棋盤;`src/sfx.js` 音效
 - `src/components/` 棋盤、規劃面板、事件卡、結算頁(平行人生對照圖)
 - `server/` Express + Gemini 代理與提示詞(`prompts.js`)

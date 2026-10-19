@@ -8,7 +8,7 @@ import {
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
 import { PRODUCT_ORDER, totalPremium } from './products.js'
-import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup } from './prologue.js'
+import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './prologue.js'
 import { propById, upgradeCost } from './properties.js'
 
 export const PERSONAS = [
@@ -39,9 +39,9 @@ export const PERSONAS = [
 ]
 
 // ---------- 成長篇(自動)----------
-function botLifeSetup(p, seed, length, opponents) {
+function botLifeSetup(p, seed, length, opponents, startAge = 22) {
   let l = createLife({ name: p.name, look: p.look, style: STYLES.find((x) => x.id === 'steady').title }, seed)
-  l = beginLife(l)
+  l = startAge > 22 ? skipLife(l, startAge) : beginLife(l)
   let guard = 0
   while (!l.done && guard++ < 40) {
     const sc = l.scene
@@ -64,8 +64,8 @@ function botLifeSetup(p, seed, length, opponents) {
   return lifeToSetup(l, pick.id, length, opponents)
 }
 
-export function createBotGame(p, seed, length) {
-  const setup = botLifeSetup(p, seed, length, 0)
+export function createBotGame(p, seed, length, startAge = 22) {
+  const setup = botLifeSetup(p, seed, length, 0, startAge)
   return createGame(setup, seed)
 }
 

@@ -12,7 +12,7 @@ export function createMatch(humanState, opponents, seed) {
   chosen.forEach((p, i) => {
     players.push({
       id: p.id, human: false, persona: p, name: p.name, title: p.title, look: p.look,
-      s: createBotGame(p, seed * 7 + i * 101 + 13, humanState.length),
+      s: createBotGame(p, seed * 7 + i * 101 + 13, humanState.length, humanState.player.startAge || 22),
     })
   })
   return { players, round: 0 }

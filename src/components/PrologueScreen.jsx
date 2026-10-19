@@ -21,7 +21,7 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
         <Avatar look={life.look} size={64} />
         <div>
           <div className="muted">{life.name} 的成長篇</div>
-          <h1>{life.done ? '22 歲:踏入社會' : `${life.age} 歲`}</h1>
+          <h1>{life.done ? (life.startAge > 22 ? `${life.startAge} 歲:你的人生起點` : '22 歲:踏入社會') : `${life.age} 歲`}</h1>
         </div>
         <div className="pro-fam">{life.family}</div>
       </header>
@@ -53,8 +53,8 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
 
       {life.done && (
         <div className="card grad">
-          <h2>畢業了!選擇你的第一份工作</h2>
-          <p className="muted">你念的是「{MAJORS[life.major || 'work'].title}」。學業 {Math.round(life.stats.study)},財商 {Math.round(life.stats.finance)}。接下來的人生,才正要開始。</p>
+          <h2>{life.startAge > 22 ? `${life.startAge} 歲了,你現在做什麼工作?` : '畢業了!選擇你的第一份工作'}</h2>
+          <p className="muted">{life.startAge > 22 ? '選好職業後,系統會依你的家境與職業,模擬你從 22 歲走到現在的人生:伴侶、孩子、房子、既有保障與資產。' : `你念的是「${MAJORS[life.major || 'work'].title}」。學業 ${Math.round(life.stats.study)},財商 ${Math.round(life.stats.finance)}。接下來的人生,才正要開始。`}</p>
           {life.tags.length > 0 && (
             <div className="life-tag-list">
               <b>🏷️ 你的人生標籤(會一起帶進棋盤)</b>

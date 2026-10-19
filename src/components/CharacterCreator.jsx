@@ -1,3 +1,4 @@
+import { START_AGES } from '../game/starts.js'
 import { useState } from 'react'
 import Avatar from './Avatar.jsx'
 import { STYLES, LOOKS, defaultLook, ASPIRATIONS, BACKGROUNDS, randomName } from '../game/careers.js'
@@ -6,13 +7,14 @@ import { wan } from '../game/format.js'
 const pick = (a) => a[Math.floor(Math.random() * a.length)]
 
 export default function CharacterCreator({ onStart, onBack }) {
-  const go = (skip) => onStart({ name: name.trim() || randomName(), look, style: STYLES.find((x) => x.id === style).title, aspiration, bgId: birth === 'pick' ? bgId : null }, skip)
+  const go = (skip) => onStart({ name: name.trim() || randomName(), look, style: STYLES.find((x) => x.id === style).title, aspiration, bgId: birth === 'pick' ? bgId : null, startAge }, skip || startAge > 22)
   const [name, setName] = useState('')
   const [look, setLook] = useState(defaultLook())
   const [style, setStyle] = useState('steady')
   const [aspiration, setAspiration] = useState('wealth')
   const [birth, setBirth] = useState('random')
   const [bgId, setBgId] = useState('normal')
+  const [startAge, setStartAge] = useState(22)
   const set = (k, v) => setLook((l) => ({ ...l, [k]: v }))
 
   function randomize() {
@@ -73,6 +75,17 @@ export default function CharacterCreator({ onStart, onBack }) {
             </div>
           </section>
           <section className="card">
+            <h3>從幾歲開始玩?</h3>
+            <p className="muted small">不同的起點,面對的風險完全不同。30、40 歲會直接進入棋盤,並依你的家境與職業模擬出「前面的人生」。</p>
+            <div className="opts three">
+              {START_AGES.map((x) => (
+                <button key={x.age} type="button" className={`opt ${startAge === x.age ? 'on' : ''}`} onClick={() => setStartAge(x.age)} aria-pressed={startAge === x.age}>
+                  <span className="opt-ico" aria-hidden>{x.icon}</span><span className="opt-t">{x.title}</span><span className="opt-b">{x.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="card">
             <h3>出生的家庭</h3>
             <div className="pills big">
               <button type="button" className={birth === 'random' ? 'on' : ''} aria-pressed={birth === 'random'} onClick={() => setBirth('random')}>🎲 命運抽籤(8 種家境)</button>
@@ -98,8 +111,8 @@ export default function CharacterCreator({ onStart, onBack }) {
             <div className="start-bar">
               <div className="start-sum"><b>{name || '你'}</b>,準備好出生了嗎?</div>
               <div className="start-btns">
-                <button className="btn primary huge" onClick={() => go(false)}>從出生開始 →</button>
-                <button className="btn huge2" onClick={() => go(true)}>🎲 直接進入大富翁棋盤</button>
+                {startAge === 22 && <button className="btn primary huge" onClick={() => go(false)}>從出生開始 →</button>}
+                <button className={`btn ${startAge === 22 ? 'huge2' : 'primary huge'}`} onClick={() => go(true)}>🎲 {startAge === 22 ? '直接進入大富翁棋盤' : `從 ${startAge} 歲進入棋盤 →`}</button>
               </div>
             </div>
           </section>

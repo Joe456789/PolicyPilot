@@ -17,9 +17,9 @@ export const QUEST_POOL = [
     progress: (s) => s.promotions,
   },
   {
-    id: 'income2x', icon: '🏆', tag: 'fin', asp: ['career'], title: '年收入成長到起薪的 2 倍', target: 2,
+    id: 'income2x', icon: '🏆', tag: 'fin', asp: ['career'], title: '年收入成長到開局時的 2 倍', target: 2,
     desc: '收入成長,保障也要跟著升級。',
-    progress: (s) => Math.round((s.income / s.career.income) * 10) / 10,
+    progress: (s) => Math.round((s.income / (s.startIncome || s.career.income)) * 10) / 10,
   },
   {
     id: 'trips', icon: '🧳', tag: 'fin', asp: ['travel'], title: '完成 3 次旅行', target: 3,
@@ -107,9 +107,11 @@ export const QUEST_POOL = [
   },
 ]
 
-export function drawQuests(seed, career, years, aspiration) {
+export function drawQuests(seed, career, years, aspiration, ctx = {}) {
   const rng = new Rng(seed ^ 0x51f3, 0)
   const ok = (q) => !(years < 20 && q.id === 'home') && !(years < 14 && ['kids', 'promos'].includes(q.id))
+    && !(ctx.house && ['home', 'family'].includes(q.id)) && !(ctx.age >= 38 && q.id === 'home')
+    && !(ctx.dependents >= 2 && q.id === 'kids') && !(ctx.partner && ctx.house && q.id === 'family')
   const pool = QUEST_POOL.filter(ok)
   const picked = []
   const take = (list) => {
@@ -121,7 +123,7 @@ export function drawQuests(seed, career, years, aspiration) {
   while (picked.length < 3) take(pool)
   return picked.map((q) => ({
     id: q.id,
-    goal: q.dynamic === 'wealth' ? Math.round((career.income * years * 0.45) / 1000000) * 1000000 : null,
+    goal: q.dynamic === 'wealth' ? Math.round((Math.max(career.income * years * 0.45, Math.max(0, ctx.nw0 || 0) * 1.5 + career.income * years * 0.25)) / 1000000) * 1000000 : null,
   }))
 }
 

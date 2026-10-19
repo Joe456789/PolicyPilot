@@ -37,9 +37,9 @@ export const STYLES = [
 ]
 
 export const LENGTHS = [
-  { id: 'short', years: 12, title: '短局', blurb: '約 12 年(22 → 34 歲),適合快速體驗。' },
-  { id: 'standard', years: 20, title: '標準', blurb: '約 20 年(22 → 42 歲),會經歷結婚、買房、育兒。' },
-  { id: 'long', years: 30, title: '完整人生', blurb: '約 30 年(22 → 52 歲),連父母長照與退休規劃都會遇到。' },
+  { id: 'short', years: 12, title: '短局', blurb: '約 12 年,適合快速體驗。' },
+  { id: 'standard', years: 20, title: '標準', blurb: '約 20 年,會經歷結婚、買房、育兒等人生大事。' },
+  { id: 'long', years: 30, title: '完整人生', blurb: '約 30 年,連父母長照與退休規劃都會遇到。' },
 ]
 
 export const LOOKS = {

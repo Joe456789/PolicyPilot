@@ -22,6 +22,7 @@ import {
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
+import { adultStart } from './game/starts.js'
 import { PROPERTIES } from './game/properties.js'
 import { BOARD } from './game/engine.js'
 import { recordGame } from './game/records.js'
@@ -125,6 +126,8 @@ export default function App() {
         name: params.get('name') || '小明', look: { ...defaultLook(), top: LOOKS.tops[1] }, career: params.get('career') || 'office',
         background: params.get('bg') || 'normal', style: params.get('style') || '穩健型', length: params.get('len') || 'standard',
       }
+      const age = Number(params.get('age') || 22)
+      if (age > 22) setup.start = adultStart({ age, bgId: setup.background, careerId: setup.career, seed: seedOf() })
       startAdult(setup, Number(params.get('opp') ?? 2))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,7 +142,8 @@ export default function App() {
   function startLife(setup, skip = false) {
     sfx.unlock()
     const created = createLife(setup, seedOf())
-    const l = skip ? skipLife(created) : beginLife(created)
+    const startAge = setup.startAge || 22
+    const l = skip ? skipLife(created, startAge) : beginLife(created)
     setLife(l)
     setScreen('prologue')
     if (!skip) requestLifeAi(l)
@@ -596,7 +600,7 @@ export default function App() {
         <PlanModal
           s={g}
           coach={coach}
-          title={g.turn === 0 ? `開局規劃:${g.player.name} · 22 歲` : `${g.age} 歲 · 年度規劃`}
+          title={g.turn === 0 ? `開局規劃:${g.player.name} · ${g.age} 歲` : `${g.age} 歲 · 年度規劃`}
           onCoverage={(id, t) => commit(0, setCoverage(human(), id, t))}
           onTrade={(cls, d) => commit(0, trade(human(), cls, d))}
           onBorrow={(a) => commit(0, borrow(human(), a))}

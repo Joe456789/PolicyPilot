@@ -73,9 +73,11 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
   const style = STYLES.find((x) => x.id === setup.style) || STYLES[1]
   const length = LENGTHS.find((l) => l.id === setup.length) || LENGTHS[1]
   const st = setup.start || null
-  const income = Math.round((career.income * (st?.incomeBoost ?? 1)) / 1000) * 1000
+  const income = Math.round((career.income * (st?.incomeBoost ?? 1) * (st?.growthMult ?? 1)) / 1000) * 1000
+  const startAge = st?.age ?? 22
   const startCash = st ? st.cash : bg.cash
   const startLoan = st ? st.loan : bg.loan
+  const nw0 = startCash - startLoan + (st?.assets ? Object.values(st.assets).reduce((a, b) => a + b, 0) : 0) + (st?.houseObj ? st.houseObj.value - st.houseObj.balance : st?.house || 0)
   const s = {
     seed,
     rngN: 0,
@@ -93,13 +95,15 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
       education: st?.education || null,
       major: st?.majorTitle || null,
       stats: st?.stats || null,
+      startAge,
+      intro: st?.intro || null,
     },
     career,
     length: length.id,
     years: length.years,
     turn: 0,
     phase: 'plan',
-    age: 22,
+    age: startAge,
     pos: 0,
     dice: null,
     cash: startCash,
@@ -116,16 +120,17 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     cardsUsed: 0,
     cardsGot: 0,
     hospitalTurns: 0,
-    car: false,
+    car: !!st?.car,
     trips: 0,
     promotions: 0,
-    house: st?.house ? { price: st.house, value: st.house, balance: 0, rate: 0.022, payment: 0, yearsLeft: 0 } : null,
+    house: st?.houseObj || (st?.house ? { price: st.house, value: st.house, balance: 0, rate: 0.022, payment: 0, yearsLeft: 0 } : null),
     income,
-    expense: Math.round((income * (st ? st.expenseRatio : bg.expenseRatio)) / 1000) * 1000,
-    partner: null,
-    dependents: 0,
+    expense: Math.round((income * (st ? st.expenseRatio : bg.expenseRatio) * (st?.partner ? 1.4 : 1) + (st?.dependents || 0) * 180000) / 1000) * 1000,
+    startIncome: income,
+    partner: st?.partner ? { income: st.partnerIncome } : null,
+    dependents: st?.dependents || 0,
     health: st ? st.health : 100,
-    coverage: { ...EMPTY_COVERAGE },
+    coverage: { ...EMPTY_COVERAGE, ...(st?.coverage || {}) },
     blocked: {},
     seen: {},
     effects: [],
@@ -135,7 +140,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     checkupYears: 0,
     panicSells: 0,
     crashesHeld: 0,
-    quests: drawQuests(seed, career, length.years, setup.aspiration),
+    quests: drawQuests(seed, { ...career, income }, length.years, setup.aspiration, { age: startAge, nw0, house: !!(st?.houseObj || st?.house), partner: !!st?.partner, dependents: st?.dependents || 0 }),
     questDone: {},
     quizRight: 0,
     quizTotal: 0,
@@ -150,7 +155,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     ended: null,
     flash: null,
     pendingStage: false,
-    startNetWorth: startCash - startLoan + (st?.assets ? Object.values(st.assets).reduce((a, b) => a + b, 0) : 0) + (st?.house || 0),
+    startNetWorth: nw0,
   }
   applyTagsAtStart(s, st?.tags)
   s.startNetWorth += s.cash - startCash

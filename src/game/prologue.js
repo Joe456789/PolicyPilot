@@ -5,6 +5,7 @@ import { BACKGROUNDS, CAREERS } from './careers.js'
 import { clamp, round1k } from './core.js'
 import { TAGS, TAG_IDS } from './tags.js'
 import { SLOTS } from './prologueCards.js'
+import { adultStart } from './starts.js'
 
 const MAJORS = {
   stem: { id: 'stem', icon: '🔬', title: '理工', careers: ['engineer', 'office'] },
@@ -191,6 +192,18 @@ const tagIncome = (tags) => tags.reduce((a, id) => a * (TAGS[id]?.income || 1), 
 // 22 歲:把成長篇結果轉成成人階段的起點。
 export function lifeToSetup(life, careerId, length, opponents) {
   const bg = BACKGROUNDS.find((b) => b.id === life.bgId)
+  if ((life.startAge || 22) > 22) {
+    const a = adultStart({ age: life.startAge, bgId: life.bgId, careerId, seed: life.seed })
+    return {
+      name: life.name, look: life.look, career: careerId, background: bg.id, style: life.style, aspiration: life.aspiration, length, opponents,
+      start: {
+        ...a,
+        parentsInsured: life.parentsInsured, stats: { ...life.stats }, incomeBoost: 1,
+        education: '大學', majorTitle: MAJORS[life.major || 'biz'].title,
+        house: 0,
+      },
+    }
+  }
   return {
     name: life.name,
     look: life.look,
@@ -219,14 +232,15 @@ export function lifeToSetup(life, careerId, length, opponents) {
 }
 
 // 直接進入棋盤:略過 0~21 歲的成長篇,只保留出生抽籤的結果(家境與家人保障)。
-export function skipLife(state) {
+export function skipLife(state, startAge = 22) {
   const life = structuredClone(state)
-  life.age = 22
+  life.age = startAge
+  life.startAge = startAge
   life.step = SLOTS.length
   life.done = true
   life.scene = null
   life.major = 'biz'
   life.edu = '大學'
-  life.stats = { health: 92, study: 55, social: 50, finance: 45 }
+  life.stats = { health: startAge >= 40 ? 84 : startAge >= 30 ? 90 : 92, study: 55, social: 50, finance: startAge >= 40 ? 65 : startAge >= 30 ? 55 : 45 }
   return life
 }

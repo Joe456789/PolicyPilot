@@ -581,3 +581,4 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .feed li.say span:last-child { font-style: italic; color: #3d4b5c; }
 .feed li.say { background: #f6f3ff; border-radius: 10px; }
 .ai-mark { font-style: normal; color: #7a49d8; }
+.intro-box { margin: 0 0 10px; background: #fff7e0; border-color: #f0d9a8; color: #5c4400; }
