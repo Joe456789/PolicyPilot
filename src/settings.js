@@ -13,6 +13,7 @@ export function loadSettings() {
     if (raw && typeof raw === 'object') s = { ...s, ...raw }
     else if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) s.reduceMotion = true
   } catch { /* 忽略 */ }
+  try { const q = new URLSearchParams(window.location.search).get('lang'); if (q === 'en' || q === 'zh') s.lang = q } catch { /* 忽略 */ }
   return s
 }
 
