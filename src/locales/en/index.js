@@ -6,5 +6,6 @@ import coach from './coach.js'
 import ui1 from './ui1.js'
 import ui2 from './ui2.js'
 import settings from './settings.js'
+import extra from './extra.js'
 
-export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings }
+export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra }

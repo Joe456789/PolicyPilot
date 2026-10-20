@@ -881,3 +881,5 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 :root[data-style="anime"] .hcard { border: 2px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); }
 :root[data-style="anime"] .quests li.done { background: var(--tint-green); }
 :root[data-style="anime"] .quests li.done .q-v { animation: numBump 0.6s ease; }
+.resume-box { display: grid; justify-items: center; gap: 6px; margin: 4px 0 14px; }
+.resume-box small { color: var(--muted); }

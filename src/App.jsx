@@ -25,6 +25,7 @@ import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
 import { t, useLang, getLang } from './i18n.js'
+import { saveGame, loadSave, clearSave } from './save.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -218,6 +219,31 @@ function GameApp() {
     setScreen('game')
     setPlanOpen(true)
   }
+
+  // 繼續上次的人生(自動存檔)
+  function resumeGame() {
+    const d = loadSave()
+    if (!d) return
+    sfx.unlock()
+    playersRef.current = d.players
+    banterTurns.current.clear()
+    banterAi.current = {}
+    setPlayers(d.players)
+    setGameKey((k) => k + 1)
+    setActiveIdx(0)
+    setFeed(d.feed || [])
+    setCoach(!!d.coach)
+    setStage(null); setAiText(null); setSceneReady(false); setYearOpen(false); setRanks(null); setFresh([]); setBusy(false)
+    setScreen('game')
+    setPlanOpen(false)
+  }
+
+  // 每年開始規劃時自動存檔;結束後清掉存檔
+  useEffect(() => {
+    if (screen !== 'game' || !g) return
+    if (g.phase === 'plan' && !busy) saveGame({ players, feed, coach })
+    if (g.phase === 'ended') clearSave()
+  }, [screen, g?.turn, g?.phase, busy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onPickCareer(careerId) {
     sfx.fanfare()
@@ -493,7 +519,7 @@ function GameApp() {
   }, [players])
   const quests = useMemo(() => (g ? evalQuests(g) : []), [g])
   const showScene = scene && g && ((g.phase === 'scene' && sceneReady) || g.phase === 'result')
-  const tokenPlayers = useMemo(() => players.map((p) => ({ look: p.look, name: p.name, pos: 0 })), [gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  const tokenPlayers = useMemo(() => players.map((p) => ({ look: p.look, name: p.name, pos: p.s.pos || 0 })), [gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleMute() {
     const m = !muted
@@ -507,7 +533,7 @@ function GameApp() {
   }
 
   // ---------- 畫面 ----------
-  if (screen === 'title') return <Title aiInfo={aiInfo} onStart={() => setScreen('create')} onRecords={() => setScreen('records')} />
+  if (screen === 'title') return <Title aiInfo={aiInfo} onStart={() => setScreen('create')} onRecords={() => setScreen('records')} save={loadSave()} onResume={resumeGame} />
   if (screen === 'records') return <RecordsScreen onBack={() => setScreen('title')} />
   if (screen === 'create') return <CharacterCreator onStart={startLife} onBack={() => setScreen('title')} />
   if (screen === 'prologue' && life) {
@@ -627,7 +653,7 @@ function GameApp() {
   )
 }
 
-function Title({ aiInfo, onStart, onRecords }) {
+function Title({ aiInfo, onStart, onRecords, save, onResume }) {
   const hero = useArt()('title_hero')
   const looks = [
     { ...defaultLook(), style: 'short', top: LOOKS.tops[0], extra: 'headphones' },
@@ -650,6 +676,12 @@ function Title({ aiInfo, onStart, onRecords }) {
           {t('想從 0 歲出生開始也可以,或是直接進入棋盤。金額與保險給付由規則引擎精算,劇情與學習回饋由 AI 依你的處境產生。')}
         </p>
         <div className="title-avatars">{looks.map((l, i) => <Avatar key={i} look={l} size={72} />)}</div>
+        {save && (
+          <div className="resume-box">
+            <button className="btn primary huge" onClick={onResume}>▶ {t('繼續上次的人生')}</button>
+            <small>{t('{name} · {age} 歲 · 第 {turn} / {years} 年 · {n} 位對手', { name: save.meta.name, age: save.meta.age, turn: Math.min(save.meta.turn + 1, save.meta.years), years: save.meta.years, n: save.meta.opponents })}</small>
+          </div>
+        )}
         <div className="title-btns">
           <button className="btn primary huge" onClick={onStart}>{t('開始新的人生')}</button>
           <button className="btn huge2" onClick={onRecords}>🏅 {t('成就與戰績')}</button>
