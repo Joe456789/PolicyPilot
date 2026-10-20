@@ -20,12 +20,13 @@ import {
   computeScore, evalQuests, directorInfo, applyAiScene, propAction,
 } from './game/engine.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
-import { PERSONAS, botPlan, botAct } from './game/bots.js'
+import { PERSONAS, botPlan, botAct, botChoose, botStars } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
 import { t, useLang, getLang } from './i18n.js'
 import { saveGame, loadSave, clearSave } from './save.js'
+import AutopilotMenu from './components/AutopilotMenu.jsx'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -72,6 +73,7 @@ function GameApp() {
   const [use3d, setUse3d] = useState(() => { try { return localStorage.getItem('policypilot.2d') !== '1' } catch { return true } })
   const [muted, setMuted] = useState(sfx.isMuted())
   const [botFast, setBotFast] = useState(false)
+  const [auto, setAuto] = useState(null) // 電腦託管:{ persona, left }
   const [drawer, setDrawer] = useState(null)
   const [toast, setToast] = useState(null)
   const [popups, setPopups] = useState([])
@@ -244,6 +246,43 @@ function GameApp() {
     if (g.phase === 'plan' && !busy) saveGame({ players, feed, coach })
     if (g.phase === 'ended') clearSave()
   }, [screen, g?.turn, g?.phase, busy]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------- 電腦託管 ----------
+  // 每一步都走和玩家自己操作同一條路(onRoll / onChoose / onContinue…),只是由 bot 的決策函式代按。
+  const autoRef = useRef(null)
+  autoRef.current = auto
+  function stopAuto(msg) {
+    setAuto(null)
+    if (msg) showToast({ icon: '🤖', title: t('電腦託管結束'), text: msg, tone: '' }, 2200)
+  }
+  function startAuto(personaId, years) {
+    sfx.unlock()
+    setAuto({ persona: personaId, left: years })
+  }
+  useEffect(() => {
+    if (!auto || screen !== 'game' || !g || busy || stage || askOpen) return
+    const slow = !botFast
+    const wait = yearOpen ? (slow ? 1600 : 200) : g.phase === 'scene' && g.scene?.kind === 'minigame' ? 250 : slow ? 1000 : 150
+    const id = setTimeout(() => {
+      const persona = PERSONAS.find((p) => p.id === auto.persona) || PERSONAS[0]
+      if (planOpen) return setPlanOpen(false)
+      if (yearOpen) return onYearNext()
+      const cur = human()
+      if (cur.phase === 'ended') return
+      if (cur.phase === 'plan') {
+        if (auto.left <= 0) return stopAuto(t('換你操作了。'))
+        commit(0, botPlan(cur, persona, { keep: true }))
+        return onRoll()
+      }
+      if (cur.phase === 'scene' && sceneReady) {
+        if (cur.scene.kind === 'minigame') return onMinigameDone({ stars: botStars(cur, persona) })
+        return onChoose(botChoose(cur, persona))
+      }
+      if (cur.phase === 'result') { setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
+    }, wait)
+    return () => clearTimeout(id)
+  }, [auto, screen, g?.phase, g?.turn, g?.scene?.picked, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (screen !== 'game' || g?.phase === 'ended') setAuto(null) }, [screen, g?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onPickCareer(careerId) {
     sfx.fanfare()
@@ -560,7 +599,7 @@ function GameApp() {
 
   const centerSlot = (
     <div className="center-actions">
-      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
+      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage || !!auto} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
     </div>
   )
 
@@ -575,6 +614,7 @@ function GameApp() {
           <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title={t('音效')}>{muted ? <VolumeX size={18} aria-hidden /> : <Volume2 size={18} aria-hidden />}</button>
           {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title={t('對手回合快轉')}><FastForward size={16} aria-hidden /> {t('快轉')}</button>}
           <button className="btn ghost" onClick={toggle3d} title={t('切換 2D / 3D')}>{use3d ? <Box size={16} aria-hidden /> : <Grid2x2 size={16} aria-hidden />} {use3d ? '3D' : '2D'}</button>
+          <AutopilotMenu active={!!auto} left={auto?.left} defaultPersona={g.player.style === '冒險型' ? 'balanced' : 'steady'} disabled={g.phase !== 'plan' || busy || planOpen} onStart={startAuto} onStop={() => stopAuto()} /> {/* i18n-ignore:'冒險型' 是比對用的內部值 */}
           <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>{t('教練提示')}</span></label>
           <button className="btn ghost" onClick={() => setScreen('create')}><RotateCcw size={15} aria-hidden /> {t('重新開始')}</button>
         </div>
@@ -593,16 +633,17 @@ function GameApp() {
               <Avatar look={g.player.look} size={30} ring={false} />
               <span><b>{t('{age} 歲', { age: g.age })}</b> · {t('第 {n} / {m} 年', { n: Math.min(g.turn + 1, g.years), m: g.years })}{players.length > 1 && activeIdx > 0 ? ` · ${t('{name}的回合', { name: players[activeIdx].name })}` : ''}</span>
             </div>
+            {auto && <div className="auto-chip" role="status"><i className="pulse" aria-hidden /> {Number.isFinite(auto.left) ? t('電腦託管中 · 還剩 {n} 年', { n: Math.max(0, auto.left) }) : t('電腦託管中 · 到結束')} <button onClick={() => stopAuto()}>{t('接手')}</button></div>}
             <Toast toast={toast} />
             <Popups items={popups} />
             {use3d && (
               <div className="action-bar">
-                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
-                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button>
+                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage || !!auto} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
+                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button>
                 <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> {t('問理專')}</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>

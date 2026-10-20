@@ -71,7 +71,7 @@ export function createBotGame(p, seed, length, startAge = 22) {
 }
 
 // ---------- 年度規劃 ----------
-function applyCoverage(s, p) {
+function applyCoverage(s, p, keep = false) {
   const rec = recommended(s)
   const hi = householdIncome(s)
   let target = { ...rec }
@@ -88,7 +88,7 @@ function applyCoverage(s, p) {
     // 保費上限:避免買到破產
     const trial = { ...s.coverage, [id]: want }
     if (want > cur && totalPremium(trial, s.age) / hi > 0.17) continue
-    if (want !== cur) s = setCoverage(s, id, want)
+    if (want !== cur && !(keep && want < cur)) s = setCoverage(s, id, want)
   }
   return s
 }
@@ -109,8 +109,9 @@ function applyInvest(s, p) {
   return s
 }
 
-export function botPlan(s, p) {
-  s = applyCoverage(s, p)
+// keep:代玩家託管時用,只會補強保障,不會把玩家原本買的降級
+export function botPlan(s, p, { keep = false } = {}) {
+  s = applyCoverage(s, p, keep)
   if (p.love > 0.3) for (const id of Object.keys(s.props)) if (!s.props[id].insured && s.ap > 0) s = propAction(s, id, 'insure')
   s = applyInvest(s, p)
   return s

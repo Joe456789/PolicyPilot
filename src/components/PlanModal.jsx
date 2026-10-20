@@ -1,3 +1,4 @@
+import MarketChart from './MarketChart.jsx'
 import { Shield, TrendingUp, Building2, Landmark } from 'lucide-react'
 import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
@@ -100,6 +101,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
                     <ul>{coachInvest(s).map((x, i) => <li key={i} className={`tone-${x.tone}`}>{x.text}</li>)}</ul>
                   </div>
                 )}
+                <MarketChart history={s.history} startAge={s.age} />
                 <div className="step-row">
                   <span>{t('每次金額')}</span>
                   {STEPS.map((v) => <button key={v} className={step === v ? 'on' : ''} onClick={() => setStep(v)}>{wan(v, 0)}</button>)}
