@@ -1,3 +1,4 @@
+import AnimNum from './AnimNum.jsx'
 import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import { wan } from '../game/format.js'
@@ -21,7 +22,7 @@ export function Leaderboard({ rows, activeId }) {
                 <div className="rk-n">{r.name}{r.human && <em>你</em>}{delta && <i className={delta === '▲' ? 'up' : 'down'}>{delta}</i>}</div>
                 <div className="rk-s">{r.bankrupt ? '💥 破產出局' : r.dead ? '已退場' : `${r.age} 歲 · 淨資產 ${wan(r.net)}`}</div>
               </div>
-              <div className="rk-sc">{r.total}<small>分</small></div>
+              <div className="rk-sc"><AnimNum value={r.total} delta={false} /><small>分</small></div>
             </li>
           )
         })}

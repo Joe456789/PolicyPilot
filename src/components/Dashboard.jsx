@@ -4,13 +4,14 @@ import Avatar from './Avatar.jsx'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, holdingsTotal, houseEquity, netWorth, householdIncome } from '../game/engine.js'
 import { wan, signed } from '../game/format.js'
+import AnimNum from './AnimNum.jsx'
 import { propById, rentOf } from '../game/properties.js'
 
-function Stat({ label, value, tone, sub }) {
+function Stat({ label, value, tone, sub, num, fmt }) {
   return (
     <div className={`stat ${tone || ''}`}>
       <div className="stat-l">{label}</div>
-      <div className="stat-v">{value}</div>
+      <div className="stat-v">{num != null ? <AnimNum value={num} format={fmt} /> : value}</div>
       {sub && <div className="stat-s">{sub}</div>}
     </div>
   )
@@ -48,10 +49,10 @@ export default function Dashboard({ s }) {
       </div>
 
       <div className="stats">
-        <Stat label="淨資產" value={wan(nw)} tone={nw < 0 ? 'bad' : 'ok'} />
-        <Stat label="現金" value={wan(s.cash)} sub={`約 ${months.toFixed(1)} 個月生活費`} tone={months < 3 ? 'warn' : ''} />
+        <Stat label="淨資產" num={nw} fmt={(v) => wan(v)} value={wan(nw)} tone={nw < 0 ? 'bad' : 'ok'} />
+        <Stat label="現金" num={s.cash} fmt={(v) => wan(v)} value={wan(s.cash)} sub={`約 ${months.toFixed(1)} 個月生活費`} tone={months < 3 ? 'warn' : ''} />
         <Stat label="家庭年收入" value={wan(householdIncome(s), 0)} sub={`年支出 ${wan(s.expense + (s.house ? s.house.payment : 0), 0)}`} />
-        <Stat label="貸款" value={wan(s.loan)} tone={s.loan > 0 ? 'bad' : ''} sub={s.loan ? '年利率約 7%' : ''} />
+        <Stat label="貸款" num={s.loan} fmt={(v) => wan(v)} value={wan(s.loan)} tone={s.loan > 0 ? 'bad' : ''} sub={s.loan ? '年利率約 7%' : ''} />
       </div>
 
       <div className="assets">

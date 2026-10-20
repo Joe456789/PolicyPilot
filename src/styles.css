@@ -738,3 +738,88 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 :root[data-theme="dark"] .faller { background: rgba(34, 50, 70, 0.9); color: var(--ink); }
 :root[data-theme="dark"] .title-card h1 { background: linear-gradient(100deg, #34d399, #7fe0b4 55%, #ffd166); -webkit-background-clip: text; background-clip: text; }
 :where(h1, h2, h3, h4, h5) { color: var(--ink); }
+
+/* ---------- 動漫風格(設定可關閉):粗描邊、漫畫陰影、星芒、數字跳動 ---------- */
+:root { --ol: #1f2a37; --ol-shadow: rgba(31, 42, 55, 0.2); }
+:root[data-theme="dark"] { --ol: #04080d; --ol-shadow: rgba(0, 0, 0, 0.55); }
+.animnum { position: relative; display: inline-block; transition: color 0.2s; }
+.animnum.bump-up { color: var(--green-text); animation: numBump 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.animnum.bump-down { color: var(--red-text); animation: numBump 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes numBump { 0% { transform: scale(1); } 35% { transform: scale(1.22) rotate(-2deg); } 100% { transform: scale(1); } }
+.animnum-d { position: absolute; left: 100%; top: -4px; margin-left: 6px; font-style: normal; font-size: 0.62em; font-weight: 900; white-space: nowrap; padding: 1px 6px; border-radius: 8px; border: 2px solid var(--ol); animation: numFloat 1.3s ease-out forwards; pointer-events: none; z-index: 5; }
+.animnum-d.up { background: #d9f7e8; color: #0a6b43; } .animnum-d.down { background: #ffe1e1; color: #a12626; }
+@keyframes numFloat { 0% { opacity: 0; transform: translateY(8px) scale(0.6); } 15% { opacity: 1; transform: translateY(-2px) scale(1.15); } 70% { opacity: 1; transform: translateY(-10px); } 100% { opacity: 0; transform: translateY(-18px); } }
+
+:root[data-style="anime"] body {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.07) 1.3px, transparent 1.6px) 0 0 / 14px 14px,
+    radial-gradient(1200px 500px at 10% -10%, var(--bg-a) 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, var(--bg-b) 0%, transparent 55%),
+    var(--cream);
+}
+:root[data-style="anime"][data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1.3px, transparent 1.6px) 0 0 / 14px 14px,
+    radial-gradient(1200px 500px at 10% -10%, var(--bg-a) 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, var(--bg-b) 0%, transparent 55%),
+    var(--cream);
+}
+:root[data-style="anime"] .card, :root[data-style="anime"] .modal, :root[data-style="anime"] .panel, :root[data-style="anime"] .title-card {
+  border: 2.5px solid var(--ol); box-shadow: 5px 5px 0 var(--ol-shadow);
+}
+:root[data-style="anime"] .modal { animation: animePop 0.38s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes animePop { 0% { opacity: 0; transform: scale(0.82) rotate(-1.2deg); } 100% { opacity: 1; transform: none; } }
+:root[data-style="anime"] .btn, :root[data-style="anime"] .seg-pill, :root[data-style="anime"] .opt {
+  border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+}
+:root[data-style="anime"] .btn:hover:not(:disabled), :root[data-style="anime"] .opt:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ol-shadow); }
+:root[data-style="anime"] .btn:active:not(:disabled), :root[data-style="anime"] .opt:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ol-shadow); }
+:root[data-style="anime"] .btn.ghost { border-color: transparent; box-shadow: none; }
+:root[data-style="anime"] .btn.ghost:hover:not(:disabled) { box-shadow: none; transform: none; background: var(--surface-2); }
+:root[data-style="anime"] .btn.primary { background: linear-gradient(180deg, #19b57a 0%, var(--green) 55%, #00794b 100%); border-color: var(--ol); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+:root[data-style="anime"] .btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #22c586 0%, #00a066 55%, #00864f 100%); }
+:root[data-style="anime"] .action-bar .btn.primary { animation: dicePulse 1.8s ease-in-out infinite; }
+@keyframes dicePulse { 0%, 100% { box-shadow: 3px 3px 0 var(--ol-shadow), 0 0 0 0 rgba(255, 209, 102, 0.0); } 50% { box-shadow: 3px 3px 0 var(--ol-shadow), 0 0 0 8px rgba(255, 209, 102, 0.45); } }
+:root[data-style="anime"] .choice { border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); transition: transform 0.08s, box-shadow 0.08s, background 0.15s; }
+:root[data-style="anime"] .choice:hover { transform: translate(-2px, -2px) rotate(-0.3deg); box-shadow: 6px 6px 0 var(--ol-shadow); background: var(--tint-amber); }
+:root[data-style="anime"] .choice:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ol-shadow); }
+:root[data-style="anime"] .choice.pick-best { background: var(--tint-green); }
+:root[data-style="anime"] .tabs button { border: 2.5px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); }
+:root[data-style="anime"] .prod, :root[data-style="anime"] .asset, :root[data-style="anime"] .stat { border: 2px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); }
+
+/* 事件卡:漫畫分鏡的標籤、星芒、標題螢光筆 */
+:root[data-style="anime"] .card-kind { transform: skewX(-10deg); border: 2px solid var(--ol); border-radius: 6px; box-shadow: 2px 2px 0 var(--ol-shadow); letter-spacing: 1px; font-weight: 900; }
+:root[data-style="anime"] .card-ico { position: relative; width: 120px; height: 120px; margin: 4px auto; display: grid; place-items: center; font-size: 64px; isolation: isolate; }
+:root[data-style="anime"] .card-ico::before { content: ''; position: absolute; inset: -6px; z-index: -1; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 190, 60, 0.75) 0 7deg, rgba(255, 255, 255, 0) 7deg 15deg); -webkit-mask: radial-gradient(circle, #000 52%, transparent 70%); mask: radial-gradient(circle, #000 52%, transparent 70%); animation: burstSpin 14s linear infinite; }
+:root[data-style="anime"] .card-ico::after { content: ''; position: absolute; inset: 14px; z-index: -1; border-radius: 50%; background: var(--surface); border: 3px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); }
+@keyframes burstSpin { to { transform: rotate(360deg); } }
+:root[data-style="anime"] .card-art { border: 3px solid var(--ol); box-shadow: 5px 5px 0 var(--ol-shadow); }
+:root[data-style="anime"] .card-title { font-weight: 900; background: linear-gradient(transparent 64%, rgba(255, 209, 102, 0.6) 64%); display: inline-block; padding: 0 8px; line-height: 1.35; }
+:root[data-style="anime"] .card-pop .card-title, :root[data-style="anime"] .modal .card-title { display: block; background: none; }
+:root[data-style="anime"] .card-title::after { content: ' ✦'; color: #f5a524; font-size: 0.7em; }
+:root[data-style="anime"] .ending-art { border: 3px solid var(--ol); box-shadow: 4px 4px 0 var(--ol-shadow); }
+
+/* 版面:標題列、棋盤外框、年份標籤 */
+:root[data-style="anime"] .topbar { border-bottom: 3px solid var(--ol); background: var(--surface); }
+:root[data-style="anime"] .brand { font-weight: 900; font-style: italic; letter-spacing: 1px; text-shadow: 2px 2px 0 rgba(255, 209, 102, 0.8); }
+:root[data-style="anime"] .gstage { border: 3px solid var(--ol); box-shadow: 6px 6px 0 var(--ol-shadow); }
+:root[data-style="anime"] .year-chip { border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); font-weight: 800; }
+:root[data-style="anime"] .board-rank li.me { border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); background: var(--tint-amber); }
+:root[data-style="anime"] .board-rank li.active { animation: activeGlow 1.4s ease-in-out infinite; }
+@keyframes activeGlow { 50% { box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.7); } }
+:root[data-style="anime"] .toast { border: 2.5px solid var(--ol); box-shadow: 4px 4px 0 var(--ol-shadow); animation: animePop 0.3s cubic-bezier(0.2, 1.5, 0.4, 1); }
+:root[data-style="anime"] .settings-fab { border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); }
+
+/* 標題頁:放射線背景與貼紙感 */
+:root[data-style="anime"] .screen.title::before { content: ''; position: fixed; inset: 0; z-index: -1; background: repeating-conic-gradient(from 0deg at 50% 38%, rgba(255, 209, 102, 0.18) 0 5deg, transparent 5deg 12deg); animation: burstSpin 90s linear infinite; }
+:root[data-style="anime"] .title-card h1 { -webkit-text-stroke: 0; filter: drop-shadow(3px 3px 0 var(--ol)); }
+:root[data-style="anime"] .title-badge { transform: rotate(-2deg); border: 2px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); font-weight: 900; }
+:root[data-style="anime"] .title-hero { border: 3px solid var(--ol); box-shadow: 6px 6px 0 var(--ol-shadow); }
+
+/* 結算:評級「蓋章」 */
+:root[data-style="anime"] .res-h h1 { text-shadow: 3px 3px 0 rgba(255, 209, 102, 0.85); font-weight: 900; }
+:root[data-style="anime"] .score svg text:nth-of-type(2) { animation: stampIn 0.7s cubic-bezier(0.2, 1.8, 0.4, 1) 0.4s both; transform-origin: 65px 80px; }
+@keyframes stampIn { 0% { opacity: 0; transform: scale(3) rotate(-18deg); } 100% { opacity: 1; transform: none; } }
+:root[data-style="anime"] .lines .line { border-bottom: 2px dashed var(--line); }
+:root[data-style="anime"] .lines .line b { font-weight: 900; }
+.game3 .topbar { padding-right: 62px; }

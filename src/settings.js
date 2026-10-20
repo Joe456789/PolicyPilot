@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { sfx } from './sfx.js'
 
 const KEY = 'policypilot.settings'
-export const DEFAULTS = { theme: 'auto', scale: 1, reduceMotion: false, colorblind: false, volume: 0.8 }
+export const DEFAULTS = { theme: 'auto', scale: 1, reduceMotion: false, colorblind: false, volume: 0.8, anime: true }
 
 export function loadSettings() {
   let s = { ...DEFAULTS }
@@ -22,6 +22,7 @@ export function applySettings(s) {
   root.dataset.theme = s.theme === 'auto' ? (systemDark() ? 'dark' : 'light') : s.theme
   root.dataset.motion = s.reduceMotion ? 'reduce' : 'full'
   root.dataset.cb = s.colorblind ? '1' : '0'
+  root.dataset.style = s.anime ? 'anime' : 'soft'
   document.body.style.zoom = s.scale === 1 ? '' : String(s.scale)
   sfx.setVolume(s.volume)
 }

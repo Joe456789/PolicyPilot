@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap } from 'lucide-react'
+import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap } from 'lucide-react'
 import { useSettings } from '../settings.js'
 import { sfx } from '../sfx.js'
 import { resetTutorial } from './Tutorial.jsx'
@@ -68,6 +68,7 @@ export default function SettingsLayer() {
                 onChange={(e) => set({ volume: Number(e.target.value) })} onPointerUp={() => sfx.coin()} />
             </section>
             <section className="set-list">
+              <Toggle icon={Zap} title="動漫風格" desc="粗描邊、漫畫陰影、星芒與數字跳動;關掉會變回柔和風格" checked={s.anime} onChange={(v) => set({ anime: v })} />
               <Toggle icon={Sparkles} title="減少動畫" desc="關閉彈跳、閃光與轉場,適合容易暈眩的人" checked={s.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
               <Toggle icon={Eye} title="色盲友善配色" desc="把紅綠對比改成藍橘配色,增減數字也會加上符號" checked={s.colorblind} onChange={(v) => set({ colorblind: v })} />
             </section>
