@@ -1,6 +1,7 @@
 // 音效:全部用 WebAudio 即時合成,不需要任何音檔。第一次使用者操作後才會發聲。
 let ctx = null
 let muted = false
+let vol = 0.8
 try { muted = localStorage.getItem('policypilot.muted') === '1' } catch { /* 忽略 */ }
 
 function ac() {
@@ -22,7 +23,7 @@ function tone(freq, dur, { type = 'sine', gain = 0.12, delay = 0, slide = 0 } = 
   o.frequency.setValueAtTime(freq, t0)
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t0 + dur)
   g.gain.setValueAtTime(0.0001, t0)
-  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01)
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * vol * 1.25), t0 + 0.01)
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
   o.connect(g).connect(c.destination)
   o.start(t0)
@@ -42,13 +43,14 @@ function noise(dur, { gain = 0.1, delay = 0, hp = 800 } = {}) {
   f.type = 'highpass'
   f.frequency.value = hp
   const g = c.createGain()
-  g.gain.value = gain
+  g.gain.value = gain * vol * 1.25
   src.connect(f).connect(g).connect(c.destination)
   src.start(t0)
 }
 
 export const sfx = {
   isMuted: () => muted,
+  setVolume(v) { vol = Math.min(1, Math.max(0, Number(v) || 0)) },
   setMuted(v) {
     muted = v
     try { localStorage.setItem('policypilot.muted', v ? '1' : '0') } catch { /* 忽略 */ }

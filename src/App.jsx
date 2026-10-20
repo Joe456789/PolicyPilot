@@ -22,6 +22,7 @@ import {
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
+import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
 import { PROPERTIES } from './game/properties.js'
@@ -37,7 +38,7 @@ const params = new URLSearchParams(location.search)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 let uid = 0
 
-export default function App() {
+function GameApp() {
   const [screen, setScreen] = useState('title')
   const [aiInfo, setAiInfo] = useState({ ai: false })
   // 成長篇
@@ -655,5 +656,14 @@ function Title({ aiInfo, onStart, onRecords }) {
         <div className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`}>{aiInfo.ai ? '✨ AI 編劇與教練已連線' : '離線備援模式(使用內建題庫)'}</div>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <>
+      <GameApp />
+      <SettingsLayer />
+    </>
   )
 }
