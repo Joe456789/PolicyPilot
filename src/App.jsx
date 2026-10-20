@@ -327,7 +327,7 @@ function GameApp() {
     else delete document.body.dataset.demo
     return () => { delete document.body.dataset.demo }
   }, [!!demo])
-  useEffect(() => { if (screen !== 'game' || g?.phase === 'ended') setAuto(null) }, [screen, g?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (autoRef.current && (screen !== 'game' || (g?.phase === 'ended' && !demo))) setAuto(null) }, [screen, g?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onPickCareer(careerId) {
     sfx.fanfare()
