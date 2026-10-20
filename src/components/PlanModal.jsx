@@ -1,3 +1,4 @@
+import { Shield, TrendingUp, Building2, Landmark } from 'lucide-react'
 import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
 import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
@@ -37,8 +38,8 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
         {s.turn === 0 && s.player.intro && <div className="note-box intro-box">📖 <b>你的起點:</b>{s.player.intro}</div>}
 
         <div className="tabs" role="tablist">
-          {[['cover', '🛡️ 保障'], ['invest', '📈 理財'], ['assets', '🏘️ 資產'], ['loan', '🏦 貸款']].map(([k, n]) => (
-            <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>
+          {[['cover', '保障', Shield], ['invest', '理財', TrendingUp], ['assets', '資產', Building2], ['loan', '貸款', Landmark]].map(([k, n, Icon]) => (
+            <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><Icon size={17} aria-hidden /> {n}</button>
           ))}
         </div>
 

@@ -865,3 +865,19 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .journey-emoji { font-size: 64px; line-height: 1.1; }
 @keyframes sceneSlide { from { opacity: 0; transform: translateY(40px) rotate(6deg) scale(0.7); } to { opacity: 1; transform: rotate(-2deg); } }
 .journey-skip { position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 8px 14px; border: 2.5px solid #1f2a37; border-radius: 12px; background: #fff; font-weight: 800; box-shadow: 3px 3px 0 rgba(31, 42, 55, 0.25); }
+.btn svg, .tabs button svg, .mbar button svg, .brand svg { vertical-align: -0.2em; flex: none; }
+.action-bar .btn, .mbar button, .tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; }
+
+/* 動漫風 HUD:警示發光、血條光澤 */
+:root[data-style="anime"] .stat.bad { animation: warnGlow 1.6s ease-in-out infinite; border-color: var(--red); }
+:root[data-style="anime"] .stat.warn { animation: warnGlowAmber 2s ease-in-out infinite; }
+@keyframes warnGlow { 50% { box-shadow: 3px 3px 0 var(--ol-shadow), 0 0 0 4px rgba(229, 72, 77, 0.35); } }
+@keyframes warnGlowAmber { 50% { box-shadow: 3px 3px 0 var(--ol-shadow), 0 0 0 4px rgba(245, 165, 36, 0.4); } }
+:root[data-style="anime"] .health-bar { border: 2px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); }
+:root[data-style="anime"] .health-bar i { position: relative; overflow: hidden; }
+:root[data-style="anime"] .health-bar i::after { content: ''; position: absolute; inset: 0 0 55% 0; background: rgba(255, 255, 255, 0.4); }
+:root[data-style="anime"] .progress-bar { border: 2px solid var(--ol); }
+:root[data-style="anime"] .hcard { border: 2px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); }
+:root[data-style="anime"] .quests li.done { background: var(--tint-green); }
+:root[data-style="anime"] .quests li.done .q-v { animation: numBump 0.6s ease; }

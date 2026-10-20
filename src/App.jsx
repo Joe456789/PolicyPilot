@@ -23,6 +23,7 @@ import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSe
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
 import Tutorial from './components/Tutorial.jsx'
+import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -529,23 +530,23 @@ function GameApp() {
 
   const centerSlot = (
     <div className="center-actions">
-      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? '🛌 住院休養(跳過這回合)' : '🎲 擲骰子'}</button>
+      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> 住院休養(跳過這回合)</> : <><Dices size={22} aria-hidden /> 擲骰子</>}</button>
     </div>
   )
 
   return (
     <div className={`game3 ${shake ? 'shake' : ''}`}>
       <header className="topbar">
-        <div className="brand"><span aria-hidden>🎲</span> 保險大富翁</div>
+        <div className="brand"><Dices size={22} aria-hidden /> 保險大富翁</div>
         <div className="topbar-r">
           <span className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`} title={aiInfo.ai ? `Gemini(${aiInfo.model})` : '未設定金鑰,使用內建題庫與規則式教練'}>
             {aiInfo.ai ? (aiInfo.mock ? '✨ AI(模擬)' : '✨ AI 已連線') : '離線備援模式'}
           </span>
-          <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title="音效">{muted ? '🔇' : '🔊'}</button>
-          {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title="對手回合快轉">⏩ 快轉</button>}
-          <button className="btn ghost" onClick={toggle3d} title="切換 2D / 3D">{use3d ? '3D' : '2D'}</button>
+          <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title="音效">{muted ? <VolumeX size={18} aria-hidden /> : <Volume2 size={18} aria-hidden />}</button>
+          {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title="對手回合快轉"><FastForward size={16} aria-hidden /> 快轉</button>}
+          <button className="btn ghost" onClick={toggle3d} title="切換 2D / 3D">{use3d ? <Box size={16} aria-hidden /> : <Grid2x2 size={16} aria-hidden />} {use3d ? '3D' : '2D'}</button>
           <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>教練提示</span></label>
-          <button className="btn ghost" onClick={() => setScreen('create')}>重新開始</button>
+          <button className="btn ghost" onClick={() => setScreen('create')}><RotateCcw size={15} aria-hidden /> 重新開始</button>
         </div>
       </header>
 
@@ -566,12 +567,12 @@ function GameApp() {
             <Popups items={popups} />
             {use3d && (
               <div className="action-bar">
-                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? '🛌 住院休養(跳過這回合)' : '🎲 擲骰子'}</button>
-                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button>
-                <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}>💬 問理專</button>
+                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> 住院休養(跳過這回合)</> : <><Dices size={22} aria-hidden /> 擲骰子</>}</button>
+                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> 規劃與理財</button>
+                <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> 問理專</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}>🛡️ 規劃與理財</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 問理專</button></div>}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> 規劃與理財</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 問理專</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>
@@ -586,8 +587,8 @@ function GameApp() {
 
       {!wide && (
         <nav className="mbar" aria-label="面板">
-          <button onClick={() => setDrawer('status')}>📊 狀態</button>
-          <button onClick={() => setDrawer('rank')}>🏁 排名與任務</button>
+          <button onClick={() => setDrawer('status')}><BarChart3 size={18} aria-hidden /> 狀態</button>
+          <button onClick={() => setDrawer('rank')}><Flag size={18} aria-hidden /> 排名與任務</button>
         </nav>
       )}
       <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title="我的狀態"><Dashboard s={g} /></Drawer>
