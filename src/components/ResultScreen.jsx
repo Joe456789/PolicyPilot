@@ -78,7 +78,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
       <header className="res-h">
         <Avatar look={s.player.look} size={72} />
         <div>
-          <div className="muted">{s.player.name} · {s.player.title} · {t('{from} → {to} 歲的人生結算', { from: s.history[0]?.age ?? 22, to: s.age })}</div>
+          <div className="muted">{s.player.name} · {t(s.player.title)} · {t('{from} → {to} 歲的人生結算', { from: s.history[0]?.age ?? 22, to: s.age })}</div>
           <h1>{t(coach?.headline || score.archetype)}</h1>
         </div>
       </header>

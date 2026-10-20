@@ -13,7 +13,7 @@ export default function PrintReport({ s, score, ending, coach, report, data, rec
       <header className="pr-head">
         <div>
           <h1>{t('保險大富翁・學習報告')}</h1>
-          <p>{s.player.name} · {s.player.title} · {t('{from} → {to} 歲', { from: s.history[0]?.age ?? 22, to: s.age })} · {today}</p>
+          <p>{s.player.name} · {t(s.player.title)} · {t('{from} → {to} 歲', { from: s.history[0]?.age ?? 22, to: s.age })} · {today}</p>
         </div>
         <div className="pr-score"><b>{score.total}</b><span>{t('{grade} 級', { grade: score.grade })}</span></div>
       </header>
