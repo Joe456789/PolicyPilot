@@ -208,7 +208,7 @@ export default {
   '你還沒有這處資產。': "You don't own this property yet.",
   '今年的行動點已用完(每年 2 點)。': "You're out of action points this year (2 per year).",
   '已經是最高等級。': 'Already at the top level.',
-  '現金與可變現資產都用完了,缺口 {n} 萬。年底前補不上就破產出局!': "Cash and sellable assets are all used up, leaving a {n} 萬 shortfall. If you can't cover it by year-end, you're bankrupt and out!",
+  '現金與可變現資產都用完了,缺口 {n} 萬。年底前補不上就破產出局!': "Cash and sellable assets are all used up, leaving a shortfall of {n} 萬. If you can't cover it by year-end, you're bankrupt and out!",
   '醫療': 'Medical',
   '重大傷病': 'Critical illness',
   '失能': 'Disability',

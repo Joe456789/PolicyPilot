@@ -129,7 +129,7 @@ app.post('/api/ask', (req, res) => {
   const question = S(req.body?.question, 200).trim()
   const context = S(req.body?.context, 400)
   if (question.length < 2) return res.status(400).json({ ok: false, error: 'too_short' })
-  const refs = lookupGlossary(question, 3)
+  const refs = lookupGlossary(question, 3, lang)
   handle(
     res,
     async () => {
