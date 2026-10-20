@@ -422,6 +422,50 @@ export class BoardScene {
   }
 
   // ---------- 資產格標記:誰擁有、等級、有沒有保險 ----------
+  // 地產格貼上 Gemini 插圖:map = { 格子編號: 圖片網址 }。載入失敗就維持原本的表情符號貼圖。
+  setArt(map) {
+    for (const [k, url] of Object.entries(map || {})) {
+      const i = Number(k)
+      const tile = this.board[i]
+      const decal = this.tileDecals[i]
+      if (!tile?.prop || !decal) continue
+      const img = new Image()
+      img.onload = () => {
+        if (this.disposed) return
+        const pr = PROPERTIES.find((x) => x.id === tile.prop)
+        const tex = canvasTex(256, 256, (g, w, h) => {
+          g.fillStyle = '#' + TYPE_COLOR.property.toString(16).padStart(6, '0')
+          g.fillRect(0, 0, w, 16)
+          // 圖片(置中裁成 228x140,圓角)
+          const x = 14, y = 24, bw = 228, bh = 140
+          g.save()
+          g.beginPath()
+          g.roundRect(x, y, bw, bh, 16)
+          g.clip()
+          const sc = Math.max(bw / img.width, bh / img.height)
+          g.drawImage(img, x + (bw - img.width * sc) / 2, y + (bh - img.height * sc) / 2, img.width * sc, img.height * sc)
+          g.restore()
+          g.fillStyle = '#374151'
+          g.textAlign = 'center'
+          g.textBaseline = 'alphabetic'
+          g.font = '800 31px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
+          g.fillText(tile.label, w / 2, 202)
+          g.fillStyle = '#b45309'
+          g.font = '800 27px "Noto Sans TC",sans-serif'
+          g.fillText(`${Math.round(pr.price / 10000)} 萬`, w / 2, 238)
+          g.fillStyle = '#9ca3af'
+          g.font = '600 15px sans-serif'
+          g.textAlign = 'left'
+          g.fillText(String(i), 8, 40)
+        })
+        decal.material.map?.dispose?.()
+        decal.material.map = tex
+        decal.material.needsUpdate = true
+      }
+      img.src = url
+    }
+  }
+
   setOwners(map) {
     this.propMarkers = this.propMarkers || {}
     const colors = [0xffc107, 0xe5484d, 0x3b82f6, 0xa855f7]

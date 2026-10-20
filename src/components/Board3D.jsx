@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { BoardScene } from '../three/BoardScene.js'
 import { BOARD } from '../game/engine.js'
+import { loadArt } from '../art.js'
 
 // React 包裝:把 3D 場景的動作(擲骰、移動、聚焦)以 Promise 介面交給 App 編排。
 const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep }, ref) {
@@ -23,6 +24,12 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     sc.setPlayers(latest.current.players.map((p) => ({ look: p.look, name: p.name, pos: p.pos })))
     sc.overview()
     sc.setOwners(latest.current.owners || {})
+    // 地產格貼上 Gemini 插圖(有圖才貼,沒有就維持表情符號)
+    loadArt().then((m) => {
+      const map = {}
+      BOARD.forEach((tile, i) => { if (tile.prop && m['prop_' + tile.prop]) map[i] = `/art/${m['prop_' + tile.prop]}` })
+      if (Object.keys(map).length) sc.setArt(map)
+    })
     return () => { sc.dispose(); scene.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
