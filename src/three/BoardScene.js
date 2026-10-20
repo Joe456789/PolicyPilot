@@ -273,7 +273,7 @@ export class BoardScene {
         s.position.set(k * 1.6 - 2.4, Math.random() * 0.6, Math.random() * 1.2)
         g.add(s)
       }
-      g.position.set(-45 + i * 15, 16 + Math.random() * 7, -26 + Math.random() * 22)
+      g.position.set(-45 + i * 15, 22 + Math.random() * 9, -34 + Math.random() * 26)
       g.scale.setScalar(1 + Math.random() * 0.8)
       this.scene.add(g)
       this.clouds.push({ g, v: 0.5 + Math.random() * 0.6 })
@@ -872,7 +872,11 @@ export class BoardScene {
     this.tweens = this.tweens.filter((t) => !t.done)
 
     // 雲飄動、車輛繞行、有棋子的格子微微浮起
-    for (const c of this.clouds || []) { c.g.position.x += c.v * dt; if (c.g.position.x > 60) c.g.position.x = -60 }
+    for (const c of this.clouds || []) {
+      c.g.position.x += c.v * dt
+      if (c.g.position.x > 60) c.g.position.x = -60
+      c.g.visible = c.g.position.distanceTo(this.camera.position) > 22 // 鏡頭穿過雲層時不要被擋住
+    }
     for (const c of this.cars || []) {
       const L = 6 * S - 1.2
       c.t = (c.t + dt * 2.4) % L

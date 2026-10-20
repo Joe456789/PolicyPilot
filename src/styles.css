@@ -928,3 +928,26 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 @media (max-width: 720px) {
   .auto-pop { position: fixed; left: 12px; right: 12px; top: 70px; width: auto; max-height: 78vh; overflow: auto; }
 }
+
+/* ---------- 展示模式字幕列 ---------- */
+.demo-bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 85; width: min(940px, calc(100vw - 24px)); display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; align-items: center; background: var(--ink); color: var(--paper); border-radius: 20px; padding: 12px 14px; box-shadow: 0 14px 40px rgba(0, 0, 0, .4); border: 2px solid var(--amber); }
+.demo-badge { background: var(--amber); color: #3b2300; font-weight: 900; border-radius: 999px; padding: 5px 12px; font-size: 13.5px; white-space: nowrap; }
+.demo-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.demo-text b { font-size: 16px; }
+.demo-text span { font-size: 14px; line-height: 1.5; opacity: .92; }
+.demo-prog { grid-column: 1 / -1; position: relative; height: 18px; border-radius: 999px; background: rgba(255, 255, 255, .16); overflow: hidden; }
+.demo-prog i { position: absolute; inset: 0 auto 0 0; background: #6ee7a8; transition: width .6s; }
+.demo-prog small { position: relative; display: block; text-align: center; font-size: 11.5px; font-weight: 700; color: #06281a; line-height: 18px; mix-blend-mode: normal; }
+.demo-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.demo-btns .btn.ghost { color: var(--paper); border-color: rgba(255, 255, 255, .4); background: transparent; min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.demo-btns .btn.ghost.on { background: rgba(255, 255, 255, .18); }
+body[data-demo="1"] .overlay { padding-bottom: 170px; }
+body[data-demo="1"] .modal { max-height: calc(100dvh - 200px); }
+body[data-demo="1"] .toast { top: 100px; }
+@media (max-width: 720px) {
+  .demo-bar { grid-template-columns: 1fr; bottom: 6px; padding: 10px; }
+  .demo-text span { font-size: 12.5px; }
+  .demo-btns { justify-content: flex-start; }
+  body[data-demo="1"] .overlay { padding-bottom: 240px; }
+  body[data-demo="1"] .modal { max-height: calc(100dvh - 270px); }
+}

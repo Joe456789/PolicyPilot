@@ -27,6 +27,8 @@ import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dice
 import { t, useLang, getLang } from './i18n.js'
 import { saveGame, loadSave, clearSave } from './save.js'
 import AutopilotMenu from './components/AutopilotMenu.jsx'
+import DemoBar from './components/DemoBar.jsx'
+import { demoCaption, DEMO_SEED, DEMO_YEARS } from './game/demoScript.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -74,6 +76,7 @@ function GameApp() {
   const [muted, setMuted] = useState(sfx.isMuted())
   const [botFast, setBotFast] = useState(false)
   const [auto, setAuto] = useState(null) // 電腦託管:{ persona, left }
+  const [demo, setDemo] = useState(null) // 展示模式:{ paused, fast, done }
   const [drawer, setDrawer] = useState(null)
   const [toast, setToast] = useState(null)
   const [popups, setPopups] = useState([])
@@ -132,6 +135,7 @@ function GameApp() {
   // ---------- 啟動 ----------
   useEffect(() => {
     aiHealth().then(setAiInfo)
+    if (params.get('demo')) { startDemo(); return }
     if (params.get('auto')) {
       const setup = {
         name: params.get('name') || t('小明'), look: { ...defaultLook(), top: LOOKS.tops[1] }, career: params.get('career') || 'office',
@@ -200,8 +204,8 @@ function GameApp() {
   }
 
   // ---------- 進入棋盤 ----------
-  function startAdult(setup, opp) {
-    const seed = seedOf()
+  function startAdult(setup, opp, seedOverride) {
+    const seed = seedOverride ?? seedOf()
     const h = createGame(setup, seed)
     const m = createMatch(h, opp, seed)
     playersRef.current = m.players
@@ -243,8 +247,8 @@ function GameApp() {
   // 每年開始規劃時自動存檔;結束後清掉存檔
   useEffect(() => {
     if (screen !== 'game' || !g) return
-    if (g.phase === 'plan' && !busy) saveGame({ players, feed, coach })
-    if (g.phase === 'ended') clearSave()
+    if (g.phase === 'plan' && !busy && !demo) saveGame({ players, feed, coach })
+    if (g.phase === 'ended' && !demo) clearSave()
   }, [screen, g?.turn, g?.phase, busy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- 電腦託管 ----------
@@ -255,17 +259,47 @@ function GameApp() {
     setAuto(null)
     if (msg) showToast({ icon: '🤖', title: t('電腦託管結束'), text: msg, tone: '' }, 2200)
   }
+  const planBotted = useRef(false)
+  function startDemo() {
+    sfx.unlock()
+    const setup = {
+      name: t('小明'), look: { ...defaultLook(), top: LOOKS.tops[1] }, career: 'office', background: 'normal', // i18n-ignore
+      style: '穩健型', length: 'short', // i18n-ignore:'穩健型' 是比對用的內部值
+    }
+    planBotted.current = false
+    setDemo({ paused: false, fast: false, done: false })
+    setBotFast(false)
+    setCoach(true)
+    startAdult(setup, 2, DEMO_SEED)
+    setAuto({ persona: 'balanced', left: Infinity })
+  }
+  function exitDemo() {
+    setDemo(null)
+    setAuto(null)
+    setBotFast(false)
+    setCoach(false)
+    setStage(null)
+    setYearOpen(false)
+    setScreen('title')
+  }
   function startAuto(personaId, years) {
+    planBotted.current = false
     sfx.unlock()
     setAuto({ persona: personaId, left: years })
   }
   useEffect(() => {
-    if (!auto || screen !== 'game' || !g || busy || stage || askOpen) return
+    if (!auto || screen !== 'game' || !g || busy || stage || askOpen || demo?.paused) return
     const slow = !botFast
-    const wait = yearOpen ? (slow ? 1600 : 200) : g.phase === 'scene' && g.scene?.kind === 'minigame' ? 250 : slow ? 1000 : 150
+    const dw = demo && slow ? 1.8 : 1 // 展示模式放慢一點,讓觀眾看得清楚
+    const wait = (yearOpen ? (slow ? 1600 : 200) : g.phase === 'scene' && g.scene?.kind === 'minigame' ? (demo && slow ? 1500 : 250) : slow ? 1000 : 150) * dw
     const id = setTimeout(() => {
       const persona = PERSONAS.find((p) => p.id === auto.persona) || PERSONAS[0]
-      if (planOpen) return setPlanOpen(false)
+      if (planOpen) {
+        // 先讓電腦理專在規劃視窗裡配置好(觀眾看得到),下一拍再關掉視窗
+        if (!planBotted.current) { planBotted.current = true; commit(0, botPlan(human(), persona, { keep: true })); return }
+        planBotted.current = false
+        return setPlanOpen(false)
+      }
       if (yearOpen) return onYearNext()
       const cur = human()
       if (cur.phase === 'ended') return
@@ -281,7 +315,18 @@ function GameApp() {
       if (cur.phase === 'result') { setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
     }, wait)
     return () => clearTimeout(id)
-  }, [auto, screen, g?.phase, g?.turn, g?.scene?.picked, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [auto, demo?.paused, screen, g, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 展示模式:階段回顧停留一會兒就自動關閉;body 加標記讓視窗讓出字幕列的位置
+  useEffect(() => {
+    if (!demo || demo.paused || !stage || stage.loading) return undefined
+    const id = setTimeout(() => closeStage(), demo.fast ? 4500 : 9000)
+    return () => clearTimeout(id)
+  }, [demo, stage]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (demo) document.body.dataset.demo = '1'
+    else delete document.body.dataset.demo
+    return () => { delete document.body.dataset.demo }
+  }, [!!demo])
   useEffect(() => { if (screen !== 'game' || g?.phase === 'ended') setAuto(null) }, [screen, g?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onPickCareer(careerId) {
@@ -542,7 +587,8 @@ function GameApp() {
       hadCritical: cats.includes('critical'), hadDisability: cats.includes('disability'),
       ending: computeEnding(h, score),
     }
-    const { fresh: fr } = recordGame(ctx)
+    const fr = demo ? [] : recordGame(ctx).fresh // 展示模式的對局不計入成就與戰績
+    if (demo) setDemo((d) => d && { ...d, done: true })
     setRanks(rk)
     setFresh(fr)
     setScreen('result')
@@ -572,7 +618,7 @@ function GameApp() {
   }
 
   // ---------- 畫面 ----------
-  if (screen === 'title') return <Title aiInfo={aiInfo} onStart={() => setScreen('create')} onRecords={() => setScreen('records')} save={loadSave()} onResume={resumeGame} />
+  if (screen === 'title') return <Title aiInfo={aiInfo} onDemo={startDemo} onStart={() => setScreen('create')} onRecords={() => setScreen('records')} save={loadSave()} onResume={resumeGame} />
   if (screen === 'records') return <RecordsScreen onBack={() => setScreen('title')} />
   if (screen === 'create') return <CharacterCreator onStart={startLife} onBack={() => setScreen('title')} />
   if (screen === 'prologue' && life) {
@@ -594,7 +640,12 @@ function GameApp() {
   }
   if (!g) return null
   if (screen === 'result') {
-    return <ResultScreen s={g} aiOn={aiInfo.ai} ranks={ranks} fresh={fresh} onAgain={() => setScreen('create')} onRecords={() => setScreen('records')} />
+    return (
+      <>
+        <ResultScreen s={g} aiOn={aiInfo.ai} ranks={ranks} fresh={fresh} onAgain={() => setScreen('create')} onRecords={() => setScreen('records')} />
+        {demo && <DemoBar caption={demoCaption({ ended: true })} done onExit={exitDemo} onRestart={startDemo} />}
+      </>
+    )
   }
 
   const centerSlot = (
@@ -614,7 +665,7 @@ function GameApp() {
           <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title={t('音效')}>{muted ? <VolumeX size={18} aria-hidden /> : <Volume2 size={18} aria-hidden />}</button>
           {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title={t('對手回合快轉')}><FastForward size={16} aria-hidden /> {t('快轉')}</button>}
           <button className="btn ghost" onClick={toggle3d} title={t('切換 2D / 3D')}>{use3d ? <Box size={16} aria-hidden /> : <Grid2x2 size={16} aria-hidden />} {use3d ? '3D' : '2D'}</button>
-          <AutopilotMenu active={!!auto} left={auto?.left} defaultPersona={g.player.style === '冒險型' ? 'balanced' : 'steady'} disabled={g.phase !== 'plan' || busy || planOpen} onStart={startAuto} onStop={() => stopAuto()} /> {/* i18n-ignore:'冒險型' 是比對用的內部值 */}
+          {!demo && <AutopilotMenu active={!!auto} left={auto?.left} defaultPersona={g.player.style === '冒險型' ? 'balanced' : 'steady'} disabled={g.phase !== 'plan' || busy || planOpen} onStart={startAuto} onStop={() => stopAuto()} />}{/* i18n-ignore:'冒險型' 是比對用的內部值 */}
           <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>{t('教練提示')}</span></label>
           <button className="btn ghost" onClick={() => setScreen('create')}><RotateCcw size={15} aria-hidden /> {t('重新開始')}</button>
         </div>
@@ -633,7 +684,7 @@ function GameApp() {
               <Avatar look={g.player.look} size={30} ring={false} />
               <span><b>{t('{age} 歲', { age: g.age })}</b> · {t('第 {n} / {m} 年', { n: Math.min(g.turn + 1, g.years), m: g.years })}{players.length > 1 && activeIdx > 0 ? ` · ${t('{name}的回合', { name: players[activeIdx].name })}` : ''}</span>
             </div>
-            {auto && <div className="auto-chip" role="status"><i className="pulse" aria-hidden /> {Number.isFinite(auto.left) ? t('電腦託管中 · 還剩 {n} 年', { n: Math.max(0, auto.left) }) : t('電腦託管中 · 到結束')} <button onClick={() => stopAuto()}>{t('接手')}</button></div>}
+            {auto && !demo && <div className="auto-chip" role="status"><i className="pulse" aria-hidden /> {Number.isFinite(auto.left) ? t('電腦託管中 · 還剩 {n} 年', { n: Math.max(0, auto.left) }) : t('電腦託管中 · 到結束')} <button onClick={() => stopAuto()}>{t('接手')}</button></div>}
             <Toast toast={toast} />
             <Popups items={popups} />
             {use3d && (
@@ -687,14 +738,26 @@ function GameApp() {
       )}
       {showScene && scene.kind === 'minigame' && g.phase === 'scene' && <MiniGameModal key={scene.defId + g.turn} game={scene.base.game} s={g} onDone={onMinigameDone} />}
       {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} tips={coach && g.phase === 'scene' ? coachScene(g, scene) : null} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
-      <Tutorial enabled={g.turn === 0 && !params.get('auto') && !params.get('notut')} planOpen={planOpen} />
+      <Tutorial enabled={g.turn === 0 && !params.get('auto') && !params.get('notut') && !demo} planOpen={planOpen} />
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
+      {demo && (
+        <DemoBar
+          caption={demoCaption({
+            stage: !!stage, yearOpen, oppTurn: activeIdx > 0 && busy, turn: g.turn, phase: g.phase, kind: g.scene?.kind, aiScene: !!aiText,
+            payout: g.phase === 'result' && g.scene?.result ? g.scene.result.lines.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0) : 0,
+          })}
+          year={Math.min(g.turn + 1, g.years)} years={g.years || DEMO_YEARS} paused={demo.paused} fast={demo.fast}
+          onPause={() => setDemo((d) => ({ ...d, paused: !d.paused }))}
+          onFast={() => { setBotFast(!demo.fast); setDemo((d) => ({ ...d, fast: !d.fast })) }}
+          onExit={exitDemo}
+        />
+      )}
       {stage && <StageModal data={stage.data} fromAi={stage.fromAi} loading={stage.loading} onClose={closeStage} age={g.age} />}
     </div>
   )
 }
 
-function Title({ aiInfo, onStart, onRecords, save, onResume }) {
+function Title({ aiInfo, onStart, onRecords, save, onResume, onDemo }) {
   const hero = useArt()('title_hero')
   const looks = [
     { ...defaultLook(), style: 'short', top: LOOKS.tops[0], extra: 'headphones' },
@@ -726,6 +789,7 @@ function Title({ aiInfo, onStart, onRecords, save, onResume }) {
         <div className="title-btns">
           <button className="btn primary huge" onClick={onStart}>{t('開始新的人生')}</button>
           <button className="btn huge2" onClick={onRecords}>🏅 {t('成就與戰績')}</button>
+          <button className="btn huge2" onClick={onDemo}>🎬 {t('展示模式')}</button>
         </div>
         <ol className="how">
           <li><b>{t('1 創角')}</b>{t('可從出生開始,或直接進棋盤')}</li>
