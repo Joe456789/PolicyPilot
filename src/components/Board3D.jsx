@@ -2,9 +2,11 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { BoardScene } from '../three/BoardScene.js'
 import { BOARD } from '../game/engine.js'
 import { loadArt } from '../art.js'
+import { t, useLang, getLang } from '../i18n.js'
 
 // React 包裝:把 3D 場景的動作(擲骰、移動、聚焦)以 Promise 介面交給 App 編排。
 const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep }, ref) {
+  useLang()
   const host = useRef(null)
   const scene = useRef(null)
   const latest = useRef({ players, onStep })
@@ -15,7 +17,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     try {
       sc = new BoardScene(host.current, BOARD)
     } catch (e) {
-      console.warn('3D 初始化失敗,改用 2D 棋盤', e)
+      console.warn('3D 初始化失敗,改用 2D 棋盤', e) // i18n-ignore
       onFail?.()
       return undefined
     }
@@ -34,6 +36,15 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 語言切換:用新語言重畫格子貼圖與出售牌
+  const lang = getLang()
+  const builtLang = useRef(lang)
+  useEffect(() => {
+    if (builtLang.current === lang) return
+    builtLang.current = lang
+    scene.current?.refreshLabels?.()
+  }, [lang])
+
   const ownersSig = JSON.stringify(owners || {})
   useEffect(() => { scene.current?.setOwners(owners || {}) }, [ownersSig]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -50,7 +61,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     },
   }))
 
-  return <div className="board3d" ref={host} role="img" aria-label="3D 遊戲棋盤" />
+  return <div className="board3d" ref={host} role="img" aria-label={t('3D 遊戲棋盤')} />
 })
 
 export default Board3D

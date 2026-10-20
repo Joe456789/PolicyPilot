@@ -3,8 +3,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import { aiStatus, generateJson } from './gemini.js'
-import { SYSTEM, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt, banterPrompt } from './prompts.js'
+import { systemFor, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt, banterPrompt } from './prompts.js'
 import { lookupGlossary } from '../src/game/glossary.js'
+import { normLang, strFor } from './lang.js'
 import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach, mockBanter } from './mock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -58,7 +59,7 @@ async function handle(res, real, mock) {
   }
 }
 
-const cleanChar = (c = {}) => ({ name: str(c.name, 12), career: str(c.career, 12), background: str(c.background, 12), style: str(c.style, 8) })
+const cleanChar = (c = {}, S = str) => ({ name: S(c.name, 12), career: S(c.career, 12), background: S(c.background, 12), style: S(c.style, 8) })
 const cleanBrief = (b = {}) => ({
   age: num(b.age, 30),
   dependents: num(b.dependents),
@@ -69,154 +70,168 @@ const cleanBrief = (b = {}) => ({
 })
 
 app.post('/api/narrate', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const { scene = {}, character, brief } = req.body || {}
   const sc = {
-    kind: str(scene.kind, 20), cat: str(scene.cat, 20), title: str(scene.title, 40), story: str(scene.story, 300),
-    choices: (Array.isArray(scene.choices) ? scene.choices : []).slice(0, 4).map((c) => ({ label: str(c.label, 60), hint: str(c.hint, 60) })),
+    kind: S(scene.kind, 20), cat: S(scene.cat, 20), title: S(scene.title, 40), story: S(scene.story, 300),
+    choices: (Array.isArray(scene.choices) ? scene.choices : []).slice(0, 4).map((c) => ({ label: S(c.label, 60), hint: S(c.hint, 60) })),
   }
-  const ch = cleanChar(character)
+  const ch = cleanChar(character, S)
   const br = cleanBrief(brief)
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: narratePrompt({ scene: sc, character: ch, brief: br }), maxTokens: 900 })
+      const out = await generateJson({ system: systemFor(lang), prompt: narratePrompt({ scene: sc, character: ch, brief: br, lang }), maxTokens: 900 })
       if (!out || !Array.isArray(out.choices) || out.choices.length !== sc.choices.length) {
         throw Object.assign(new Error('bad narrate shape'), { code: 'bad_shape' })
       }
       return {
-        title: str(out.title, 30), story: str(out.story, 260),
-        choices: out.choices.map((c) => ({ label: str(c.label, 40), hint: str(c.hint, 50) })),
-        lesson: str(out.lesson, 100),
+        title: S(out.title, 30), story: S(out.story, 260),
+        choices: out.choices.map((c) => ({ label: S(c.label, 40), hint: S(c.hint, 50) })),
+        lesson: S(out.lesson, 100),
       }
     },
-    () => mockNarrate(sc, ch),
+    () => mockNarrate(sc, ch, lang),
   )
 })
 
 const STYLES = ['frugal', 'standard', 'premium', 'risky']
 app.post('/api/director', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const { info = {}, character, brief, recent = [] } = req.body || {}
-  const inf = { cat: str(info.cat, 20), catName: str(info.catName, 20), severity: Math.min(4, Math.max(1, num(info.severity, 2))), needs: str(info.needs, 80) }
-  const ch = cleanChar(character)
+  const inf = { cat: S(info.cat, 20), catName: S(info.catName, 20), severity: Math.min(4, Math.max(1, num(info.severity, 2))), needs: S(info.needs, 80) }
+  const ch = cleanChar(character, S)
   const br = cleanBrief(brief)
-  const rc = (Array.isArray(recent) ? recent : []).slice(0, 6).map((x) => str(x, 20))
+  const rc = (Array.isArray(recent) ? recent : []).slice(0, 6).map((x) => S(x, 20))
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: directorPrompt({ info: inf, character: ch, brief: br, recent: rc }), maxTokens: 900 })
+      const out = await generateJson({ system: systemFor(lang), prompt: directorPrompt({ info: inf, character: ch, brief: br, recent: rc, lang }), maxTokens: 900 })
       const choices = Array.isArray(out?.choices) ? out.choices.slice(0, 3) : []
       const styles = choices.map((c) => c.style)
       if (!out?.story || choices.length < 2 || !styles.every((x) => STYLES.includes(x)) || new Set(styles).size !== styles.length) {
         throw Object.assign(new Error('bad director shape'), { code: 'bad_shape' })
       }
       return {
-        title: str(out.title, 30), story: str(out.story, 260), lesson: str(out.lesson, 100),
-        choices: choices.map((c) => ({ label: str(c.label, 40), hint: str(c.hint, 50), style: c.style })),
+        title: S(out.title, 30), story: S(out.story, 260), lesson: S(out.lesson, 100),
+        choices: choices.map((c) => ({ label: S(c.label, 40), hint: S(c.hint, 50), style: c.style })),
       }
     },
-    () => mockDirector(inf, ch),
+    () => mockDirector(inf, ch, lang),
   )
 })
 
 app.post('/api/ask', (req, res) => {
-  const question = str(req.body?.question, 200).trim()
-  const context = str(req.body?.context, 400)
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
+  const question = S(req.body?.question, 200).trim()
+  const context = S(req.body?.context, 400)
   if (question.length < 2) return res.status(400).json({ ok: false, error: 'too_short' })
   const refs = lookupGlossary(question, 3)
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: askPrompt({ question, context, refs }), maxTokens: 700, temperature: 0.6 })
+      const out = await generateJson({ system: systemFor(lang), prompt: askPrompt({ question, context, refs, lang }), maxTokens: 700, temperature: 0.6 })
       if (!out?.answer) throw Object.assign(new Error('bad ask shape'), { code: 'bad_shape' })
-      return { answer: str(out.answer, 600), followups: (out.followups || []).slice(0, 2).map((x) => str(x, 40)) }
+      return { answer: S(out.answer, 600), followups: (out.followups || []).slice(0, 2).map((x) => S(x, 40)) }
     },
-    () => mockAsk(question),
+    () => mockAsk(question, lang),
   )
 })
 
 app.post('/api/advisor', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const { character, analysis = {}, brief } = req.body || {}
   const an = {
-    gaps: (analysis.gaps || []).slice(0, 5).map((g) => ({ text: str(g.text, 120) })),
+    gaps: (analysis.gaps || []).slice(0, 5).map((g) => ({ text: S(g.text, 120) })),
     emergencyMonths: num(analysis.emergencyMonths),
     premiumRatio: num(analysis.premiumRatio),
   }
-  const ch = cleanChar(character)
+  const ch = cleanChar(character, S)
   const br = cleanBrief(brief)
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: advisorPrompt({ character: ch, analysis: an, brief: br }), maxTokens: 500 })
+      const out = await generateJson({ system: systemFor(lang), prompt: advisorPrompt({ character: ch, analysis: an, brief: br, lang }), maxTokens: 500 })
       if (!out?.message) throw Object.assign(new Error('bad advisor shape'), { code: 'bad_shape' })
-      return { message: str(out.message, 400) }
+      return { message: S(out.message, 400) }
     },
-    () => mockAdvisor(an, ch),
+    () => mockAdvisor(an, ch, lang),
   )
 })
 
 app.post('/api/stage', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const report = req.body?.report
   if (!report || typeof report !== 'object') return res.status(400).json({ ok: false, error: 'bad_request' })
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: stagePrompt({ report }), maxTokens: 1200, temperature: 0.8 })
+      const out = await generateJson({ system: systemFor(lang), prompt: stagePrompt({ report, lang }), maxTokens: 1200, temperature: 0.8 })
       if (!out?.analysis || !Array.isArray(out.next)) throw Object.assign(new Error('bad stage shape'), { code: 'bad_shape' })
       return {
-        title: str(out.title, 30),
-        analysis: str(out.analysis, 420),
-        strengths: (out.strengths || []).slice(0, 2).map((x) => str(x, 80)),
-        risks: (out.risks || []).slice(0, 3).map((x) => str(x, 100)),
-        next: out.next.slice(0, 3).map((x) => str(x, 100)),
+        title: S(out.title, 30),
+        analysis: S(out.analysis, 420),
+        strengths: (out.strengths || []).slice(0, 2).map((x) => S(x, 80)),
+        risks: (out.risks || []).slice(0, 3).map((x) => S(x, 100)),
+        next: out.next.slice(0, 3).map((x) => S(x, 100)),
       }
     },
-    () => mockStage(report),
+    () => mockStage(report, lang),
   )
 })
 
 app.post('/api/coach', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const report = req.body?.report
   if (!report || typeof report !== 'object') return res.status(400).json({ ok: false, error: 'bad_request' })
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: coachPrompt({ report }), maxTokens: 1800, temperature: 0.8 })
+      const out = await generateJson({ system: systemFor(lang), prompt: coachPrompt({ report, lang }), maxTokens: 1800, temperature: 0.8 })
       if (!out?.summary || !Array.isArray(out.lessons)) throw Object.assign(new Error('bad coach shape'), { code: 'bad_shape' })
       return {
-        headline: str(out.headline, 40), summary: str(out.summary, 400),
-        lessons: out.lessons.slice(0, 4).map((x) => str(x, 140)),
-        gaps: (out.gaps || []).slice(0, 3).map((x) => str(x, 140)),
-        scripts: (out.scripts || []).slice(0, 3).map((x) => ({ scenario: str(x.scenario, 50), say: str(x.say, 260) })),
-        compliance: str(out.compliance, 160),
-        epilogue: str(out.epilogue, 300),
+        headline: S(out.headline, 40), summary: S(out.summary, 400),
+        lessons: out.lessons.slice(0, 4).map((x) => S(x, 140)),
+        gaps: (out.gaps || []).slice(0, 3).map((x) => S(x, 140)),
+        scripts: (out.scripts || []).slice(0, 3).map((x) => ({ scenario: S(x.scenario, 50), say: S(x.say, 260) })),
+        compliance: S(out.compliance, 160),
+        epilogue: S(out.epilogue, 300),
       }
     },
-    () => mockCoach(report),
+    () => mockCoach(report, lang),
   )
 })
 
 app.post('/api/banter', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
   const raw = Array.isArray(req.body?.bots) ? req.body.bots.slice(0, 3) : []
   if (!raw.length) return res.status(400).json({ ok: false, error: 'bad_request' })
   const bots = raw.map((b) => ({
-    id: str(b.id, 16), name: str(b.name, 12), persona: str(b.persona, 60), age: num(b.age), rank: num(b.rank), players: num(b.players),
-    netWorthWan: num(b.netWorthWan), coverage: str(b.coverage, 20), properties: num(b.properties),
+    id: S(b.id, 16), name: S(b.name, 12), persona: S(b.persona, 60), age: num(b.age), rank: num(b.rank), players: num(b.players),
+    netWorthWan: num(b.netWorthWan), coverage: S(b.coverage, 20), properties: num(b.properties),
   }))
-  const recent = (Array.isArray(req.body?.recent) ? req.body.recent : []).slice(0, 8).map((x) => str(x, 60))
-  const human = str(req.body?.human, 10) || '玩家'
+  const recent = (Array.isArray(req.body?.recent) ? req.body.recent : []).slice(0, 8).map((x) => S(x, 60))
+  const human = S(req.body?.human, 10) || (lang === 'en' ? 'Player' : '玩家') // i18n-ignore
   handle(
     res,
     async () => {
-      const out = await generateJson({ system: SYSTEM, prompt: banterPrompt({ bots, recent, human }), maxTokens: 900, temperature: 0.95 })
+      const out = await generateJson({ system: systemFor(lang), prompt: banterPrompt({ bots, recent, human, lang }), maxTokens: 900, temperature: 0.95 })
       const lines = {}
       for (const b of bots) {
         const arr = out?.lines?.[b.id]
-        if (Array.isArray(arr)) lines[b.id] = arr.slice(0, 4).map((x) => str(x, 40)).filter(Boolean)
+        if (Array.isArray(arr)) lines[b.id] = arr.slice(0, 4).map((x) => S(x, 40)).filter(Boolean)
       }
       if (!Object.keys(lines).length) throw Object.assign(new Error('bad banter shape'), { code: 'bad_shape' })
       return { lines }
     },
-    () => mockBanter(bots),
+    () => mockBanter(bots, lang),
   )
 })
 
@@ -230,5 +245,5 @@ if (fs.existsSync(dist)) {
 const port = Number(process.env.PORT || 8080)
 app.listen(port, () => {
   const st = aiStatus()
-  console.log(`[server] http://localhost:${port}  AI=${st.ai ? (st.mock ? 'mock' : st.model) : 'off(使用離線備援)'}`)
+  console.log(`[server] http://localhost:${port}  AI=${st.ai ? (st.mock ? 'mock' : st.model) : 'off(使用離線備援)'}`) // i18n-ignore
 })

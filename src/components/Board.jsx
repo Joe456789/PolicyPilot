@@ -1,5 +1,6 @@
 import { BOARD } from '../game/engine.js'
 import Avatar from './Avatar.jsx'
+import { t } from '../i18n.js'
 
 // 2D 備援棋盤:裝置不支援 WebGL 或使用者關閉 3D 時使用。8x8 環形,外圈 28 格。
 function coord(i) {
@@ -11,7 +12,7 @@ function coord(i) {
 
 export default function Board({ tokens, centerSlot, owners = {} }) {
   return (
-    <div className="board" role="group" aria-label="遊戲棋盤(2D)">
+    <div className="board" role="group" aria-label={t('遊戲棋盤(2D)')}>
       {BOARD.map((tile, i) => {
         const { r, c } = coord(i)
         return (
@@ -19,13 +20,13 @@ export default function Board({ tokens, centerSlot, owners = {} }) {
             <span className="tile-n">{i === 0 ? '' : i}</span>
             {owners[i] && <span className={`tile-own o${owners[i].ownerIdx}`} title={`Lv${owners[i].level}`}>Lv{owners[i].level}</span>}
             <span className="tile-ico" aria-hidden>{tile.icon}</span>
-            <span className="tile-lbl">{tile.label}</span>
+            <span className="tile-lbl">{t(tile.label)}</span>
           </div>
         )
       })}
       <div className="board-center">
         <div className="center-inner">
-          <div className="center-logo">保險大富翁</div>
+          <div className="center-logo">{t('保險大富翁')}</div>
           {centerSlot}
         </div>
       </div>

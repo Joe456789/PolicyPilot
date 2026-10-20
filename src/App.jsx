@@ -24,7 +24,7 @@ import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
-import { useLang } from './i18n.js'
+import { t, useLang, getLang } from './i18n.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -39,6 +39,9 @@ import { ai, aiHealth } from './ai.js'
 
 const params = new URLSearchParams(location.search)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+// 引號與冒號:中文用全形,英文用一般符號
+const quote = (x) => (getLang() === 'en' ? `\u201c${x}\u201d` : `「${x}」`)
+const colon = () => (getLang() === 'en' ? ': ' : ':')
 let uid = 0
 
 function GameApp() {
@@ -103,8 +106,8 @@ function GameApp() {
     if (aiLine) delete banterAi.current[pl.id][slot]
     const text = aiLine || offlineLine(pl.persona.id, kind, salt)
     if (!text) return
-    setFeed((f) => [{ id: ++uid, icon: '💬', who: pl.name, text: `「${text}」`, tone: 'say', ai: !!aiLine }, ...f].slice(0, 12))
-    if (!quiet) showToastRef.current?.({ icon: '💬', title: pl.name, text: `「${text}」${aiLine ? ' ✨' : ''}`, tone: '' }, 2300)
+    setFeed((f) => [{ id: ++uid, icon: '💬', who: t(pl.name), text: quote(t(text)), tone: 'say', ai: !!aiLine }, ...f].slice(0, 12))
+    if (!quiet) showToastRef.current?.({ icon: '💬', title: t(pl.name), text: `${quote(t(text))}${aiLine ? ' ✨' : ''}`, tone: '' }, 2300)
   }, [])
 
   // 過路費與拍賣:把一個玩家剛做完的選擇,對其他玩家造成的影響處理掉
@@ -117,7 +120,7 @@ function GameApp() {
       setFeed((f) => [...notes.map((n) => ({ id: ++uid, icon: n.icon, who: n.who, text: n.text, tone: n.tone })), ...f].slice(0, 12))
       const n = notes[0]
       showToastRef.current?.({ icon: n.icon, title: `${n.who}`, text: n.text, tone: n.tone }, 1800)
-      const oi = playersRef.current.findIndex((p) => p.name === n.who)
+      const oi = playersRef.current.findIndex((p) => p.name === n.who || t(p.name) === n.who)
       if (n.icon === '💰' && oi > 0) setTimeout(() => say(oi, 'toll_collect'), 1900)
     }
   }, [say])
@@ -128,8 +131,8 @@ function GameApp() {
     aiHealth().then(setAiInfo)
     if (params.get('auto')) {
       const setup = {
-        name: params.get('name') || '小明', look: { ...defaultLook(), top: LOOKS.tops[1] }, career: params.get('career') || 'office',
-        background: params.get('bg') || 'normal', style: params.get('style') || '穩健型', length: params.get('len') || 'standard',
+        name: params.get('name') || t('小明'), look: { ...defaultLook(), top: LOOKS.tops[1] }, career: params.get('career') || 'office',
+        background: params.get('bg') || 'normal', style: params.get('style') || '穩健型', length: params.get('len') || 'standard', // i18n-ignore:'穩健型' 是比對用的內部值
       }
       const age = Number(params.get('age') || 22)
       if (age > 22) setup.start = adultStart({ age, bgId: setup.background, careerId: setup.career, seed: seedOf() })
@@ -159,7 +162,7 @@ function GameApp() {
     if (!aiInfo.ai || !l.scene) return
     const my = ++token.current
     setLifeLoading(true)
-    const fake = { player: { name: l.name, title: '學生', background: l.family, style: l.style }, age: l.age, dependents: 0, partner: null, house: null, cash: l.cash, expense: 300000, loan: l.loan }
+    const fake = { player: { name: l.name, title: t('學生'), background: l.family, style: l.style }, age: l.age, dependents: 0, partner: null, house: null, cash: l.cash, expense: 300000, loan: l.loan }
     const out = await ai.narrate(l.scene, fake)
     if (my !== token.current) return
     setLifeLoading(false)
@@ -222,10 +225,10 @@ function GameApp() {
   }
 
   // ---------- 提示 / 特效 ----------
-  const showToast = useCallback(async (t, ms = 1700) => {
-    setToast(t)
+  const showToast = useCallback(async (msg, ms = 1700) => {
+    setToast(msg)
     await sleep(ms)
-    setToast((cur) => (cur === t ? null : cur))
+    setToast((cur) => (cur === msg ? null : cur))
   }, [])
   showToastRef.current = showToast
   const popup = useCallback((text, kind, x = 50) => {
@@ -243,7 +246,7 @@ function GameApp() {
     const sum = (a) => a.reduce((x, l) => x + l.amount, 0)
     let k = 0
     if (cover.length) {
-      popup(`🛡️ 理賠 +${wan(sum(cover))}`, 'cover', 50 + (k++ % 2) * 8)
+      popup(t('🛡️ 理賠 +{amt}', { amt: wan(sum(cover)) }), 'cover', 50 + (k++ % 2) * 8)
       sfx.claim()
       setBurst((b) => b + 1)
     }
@@ -334,7 +337,7 @@ function GameApp() {
     }
     if (base.kind === 'advisor') return { ...base, story: `${base.story} ${advisorFallback(base.base.analysis, g.player)}` }
     return base
-  }, [g, aiText])
+  }, [g, aiText, getLang()]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function onChoose(i) {
     sfx.click()
@@ -362,7 +365,7 @@ function GameApp() {
     for (const q of ng.newQuests || []) {
       sfx.quest()
       setBurst((b) => b + 1)
-      showToast({ icon: '🎯', title: `任務達成:${q.title}`, tone: 'good' }, 2200)
+      showToast({ icon: '🎯', title: t('任務達成:{title}', { title: q.title }), tone: 'good' }, 2200)
     }
   }
 
@@ -406,12 +409,12 @@ function GameApp() {
       const res = s.scene.result.lines
       const cover = res.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0)
       const loss = res.filter((l) => l.amount < 0 && l.kind !== 'lesson').reduce((a, l) => a + l.amount, 0)
-      const note = cover > 0 ? `保險理賠 ${wan(cover)}` : loss < 0 ? `支出 ${wan(-loss)}` : '平安度過'
+      const note = cover > 0 ? t('保險理賠 {amt}', { amt: wan(cover) }) : loss < 0 ? t('支出 {amt}', { amt: wan(-loss) }) : t('平安度過')
       const tone = cover > 0 ? 'good' : loss < -150000 ? 'bad' : ''
-      const item = { id: ++uid, icon: sc.icon, who: pl.name, text: `「${sc.title}」${note}`, tone }
+      const item = { id: ++uid, icon: sc.icon, who: t(pl.name), text: `${quote(sc.title)}${getLang() === 'en' ? ' ' : ''}${note}`, tone }
       setFeed((f) => [item, ...f].slice(0, 12))
       if (!botFast) {
-        showToast({ icon: sc.icon, title: `${pl.name}:${sc.title}`, text: note, tone }, 1100)
+        showToast({ icon: sc.icon, title: `${t(pl.name)}${colon()}${sc.title}`, text: note, tone }, 1100)
         if (cover > 0) sfx.claim(); else if (loss < -150000) sfx.bad()
       }
       const rankBefore = rank(playersRef.current).find((r) => r.id === pl.id).rank
@@ -426,9 +429,9 @@ function GameApp() {
       const kind = classifyBanter({ sc, cover, loss, bankrupt: s.ended?.reason === 'bankrupt', bought, rankNow: mine, rankBefore, human: humanBehind })
       if (kind) setTimeout(() => say(i, kind, botFast), botFast ? 0 : 900)
       if (s.ended?.reason === 'bankrupt') {
-        const bi = { id: ++uid, icon: '💥', who: pl.name, text: `${s.ended.age} 歲破產出局!資金斷裂、資產被拍賣`, tone: 'bad' }
+        const bi = { id: ++uid, icon: '💥', who: t(pl.name), text: t('{age} 歲破產出局!資金斷裂、資產被拍賣', { age: s.ended.age }), tone: 'bad' }
         setFeed((f) => [bi, ...f].slice(0, 12))
-        showToast({ icon: '💥', title: `${pl.name} 破產出局`, text: '現金見底、資產被拍賣', tone: 'bad' }, 2200)
+        showToast({ icon: '💥', title: t('{name} 破產出局', { name: pl.name }), text: t('現金見底、資產被拍賣'), tone: 'bad' }, 2200)
         sfx.bad()
       }
       if (!botFast) await sleep(500)
@@ -449,7 +452,7 @@ function GameApp() {
     const rows = rank(cur)
     const bots = cur.slice(1).filter((p) => p.s.phase !== 'ended').map((p) => {
       const r = rows.find((x) => x.id === p.id)
-      return { id: p.id, name: p.name, persona: `${p.persona.title}:${p.persona.blurb}`, age: p.s.age, rank: r.rank, players: rows.length, netWorthWan: Math.round(r.net / 10000), coverage: `${Object.values(p.s.coverage).filter(Boolean).length} 項`, properties: Object.keys(p.s.props || {}).length }
+      return { id: p.id, name: t(p.name), persona: `${t(p.persona.title)}${colon()}${t(p.persona.blurb)}`, age: p.s.age, rank: r.rank, players: rows.length, netWorthWan: Math.round(r.net / 10000), coverage: t('{n} 項', { n: Object.values(p.s.coverage).filter(Boolean).length }), properties: Object.keys(p.s.props || {}).length }
     })
     if (!bots.length) return
     const recent = feedRef.current.filter((f) => f.tone !== 'say').slice(0, 6).map((f) => `${f.who}${f.text}`)
@@ -531,23 +534,23 @@ function GameApp() {
 
   const centerSlot = (
     <div className="center-actions">
-      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> 住院休養(跳過這回合)</> : <><Dices size={22} aria-hidden /> 擲骰子</>}</button>
+      <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
     </div>
   )
 
   return (
     <div className={`game3 ${shake ? 'shake' : ''}`}>
       <header className="topbar">
-        <div className="brand"><Dices size={22} aria-hidden /> 保險大富翁</div>
+        <div className="brand"><Dices size={22} aria-hidden /> {t('保險大富翁')}</div>
         <div className="topbar-r">
-          <span className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`} title={aiInfo.ai ? `Gemini(${aiInfo.model})` : '未設定金鑰,使用內建題庫與規則式教練'}>
-            {aiInfo.ai ? (aiInfo.mock ? '✨ AI(模擬)' : '✨ AI 已連線') : '離線備援模式'}
+          <span className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`} title={aiInfo.ai ? `Gemini(${aiInfo.model})` : t('未設定金鑰,使用內建題庫與規則式教練')}>
+            {aiInfo.ai ? (aiInfo.mock ? t('✨ AI(模擬)') : t('✨ AI 已連線')) : t('離線備援模式')}
           </span>
-          <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title="音效">{muted ? <VolumeX size={18} aria-hidden /> : <Volume2 size={18} aria-hidden />}</button>
-          {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title="對手回合快轉"><FastForward size={16} aria-hidden /> 快轉</button>}
-          <button className="btn ghost" onClick={toggle3d} title="切換 2D / 3D">{use3d ? <Box size={16} aria-hidden /> : <Grid2x2 size={16} aria-hidden />} {use3d ? '3D' : '2D'}</button>
-          <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>教練提示</span></label>
-          <button className="btn ghost" onClick={() => setScreen('create')}><RotateCcw size={15} aria-hidden /> 重新開始</button>
+          <button className="btn ghost" onClick={toggleMute} aria-pressed={muted} title={t('音效')}>{muted ? <VolumeX size={18} aria-hidden /> : <Volume2 size={18} aria-hidden />}</button>
+          {players.length > 1 && <button className={`btn ghost ${botFast ? 'on' : ''}`} onClick={() => setBotFast((v) => !v)} aria-pressed={botFast} title={t('對手回合快轉')}><FastForward size={16} aria-hidden /> {t('快轉')}</button>}
+          <button className="btn ghost" onClick={toggle3d} title={t('切換 2D / 3D')}>{use3d ? <Box size={16} aria-hidden /> : <Grid2x2 size={16} aria-hidden />} {use3d ? '3D' : '2D'}</button>
+          <label className="switch"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} /><span>{t('教練提示')}</span></label>
+          <button className="btn ghost" onClick={() => setScreen('create')}><RotateCcw size={15} aria-hidden /> {t('重新開始')}</button>
         </div>
       </header>
 
@@ -562,18 +565,18 @@ function GameApp() {
           <div className="stage-hud">
             <div className="year-chip">
               <Avatar look={g.player.look} size={30} ring={false} />
-              <span><b>{g.age} 歲</b> · 第 {Math.min(g.turn + 1, g.years)} / {g.years} 年{players.length > 1 && activeIdx > 0 ? ` · ${players[activeIdx].name}的回合` : ''}</span>
+              <span><b>{t('{age} 歲', { age: g.age })}</b> · {t('第 {n} / {m} 年', { n: Math.min(g.turn + 1, g.years), m: g.years })}{players.length > 1 && activeIdx > 0 ? ` · ${t('{name}的回合', { name: players[activeIdx].name })}` : ''}</span>
             </div>
             <Toast toast={toast} />
             <Popups items={popups} />
             {use3d && (
               <div className="action-bar">
-                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? '住院休養' : '擲骰子'}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> 住院休養(跳過這回合)</> : <><Dices size={22} aria-hidden /> 擲骰子</>}</button>
-                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> 規劃與理財</button>
-                <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> 問理專</button>
+                <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
+                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button>
+                <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> {t('問理專')}</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> 規劃與理財</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 問理專</button></div>}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>
@@ -587,13 +590,13 @@ function GameApp() {
       </div>
 
       {!wide && (
-        <nav className="mbar" aria-label="面板">
-          <button onClick={() => setDrawer('status')}><BarChart3 size={18} aria-hidden /> 狀態</button>
-          <button onClick={() => setDrawer('rank')}><Flag size={18} aria-hidden /> 排名與任務</button>
+        <nav className="mbar" aria-label={t('面板')}>
+          <button onClick={() => setDrawer('status')}><BarChart3 size={18} aria-hidden /> {t('狀態')}</button>
+          <button onClick={() => setDrawer('rank')}><Flag size={18} aria-hidden /> {t('排名與任務')}</button>
         </nav>
       )}
-      <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title="我的狀態"><Dashboard s={g} /></Drawer>
-      <Drawer open={drawer === 'rank'} onClose={() => setDrawer(null)} title="排名與任務">
+      <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title={t('我的狀態')}><Dashboard s={g} /></Drawer>
+      <Drawer open={drawer === 'rank'} onClose={() => setDrawer(null)} title={t('排名與任務')}>
         {rows.length > 1 && <Leaderboard rows={rows} activeId={players[activeIdx]?.id} />}
         <QuestPanel quests={quests} />
         <Feed items={feed} />
@@ -605,8 +608,8 @@ function GameApp() {
         <PlanModal
           s={g}
           coach={coach}
-          title={g.turn === 0 ? `開局規劃:${g.player.name} · ${g.age} 歲` : `${g.age} 歲 · 年度規劃`}
-          onCoverage={(id, t) => commit(0, setCoverage(human(), id, t))}
+          title={g.turn === 0 ? t('開局規劃:{name} · {age} 歲', { name: g.player.name, age: g.age }) : t('{age} 歲 · 年度規劃', { age: g.age })}
+          onCoverage={(id, tier) => commit(0, setCoverage(human(), id, tier))}
           onTrade={(cls, d) => commit(0, trade(human(), cls, d))}
           onBorrow={(a) => commit(0, borrow(human(), a))}
           onRepay={(a) => commit(0, repay(human(), a))}
@@ -636,28 +639,28 @@ function Title({ aiInfo, onStart, onRecords }) {
     <div className="screen title">
       <div className="title-card">
         {hero && <img className="title-hero" src={hero} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
-        <div className="title-badge">Cardif InsurHack 2026 · 題目 1-1</div>
-        <h1>保險大富翁</h1>
-        <p className="title-sub">財務人生模擬遊戲 · Financial Life Simulator</p>
+        <div className="title-badge">{t('Cardif InsurHack 2026 · 題目 1-1')}</div>
+        <h1>{t('保險大富翁')}</h1>
+        <p className="title-sub">{t('財務人生模擬遊戲 · Financial Life Simulator')}</p>
         <p className="title-desc">
-          擲骰子、走格子、抽事件卡,和電腦對手一起在 3D 棋盤上走完人生。
+          {t('擲骰子、走格子、抽事件卡,和電腦對手一起在 3D 棋盤上走完人生。')}
           <br />
-          途中會遇到結婚、買房、投資、意外與市場起伏,還有各種保險小遊戲:配對翻牌、防詐騙、命運輪盤……
+          {t('途中會遇到結婚、買房、投資、意外與市場起伏,還有各種保險小遊戲:配對翻牌、防詐騙、命運輪盤……')}
           <br />
-          想從 0 歲出生開始也可以,或是直接進入棋盤。金額與保險給付由規則引擎精算,劇情與學習回饋由 AI 依你的處境產生。
+          {t('想從 0 歲出生開始也可以,或是直接進入棋盤。金額與保險給付由規則引擎精算,劇情與學習回饋由 AI 依你的處境產生。')}
         </p>
         <div className="title-avatars">{looks.map((l, i) => <Avatar key={i} look={l} size={72} />)}</div>
         <div className="title-btns">
-          <button className="btn primary huge" onClick={onStart}>開始新的人生</button>
-          <button className="btn huge2" onClick={onRecords}>🏅 成就與戰績</button>
+          <button className="btn primary huge" onClick={onStart}>{t('開始新的人生')}</button>
+          <button className="btn huge2" onClick={onRecords}>🏅 {t('成就與戰績')}</button>
         </div>
         <ol className="how">
-          <li><b>1 創角</b>可從出生開始,或直接進棋盤</li>
-          <li><b>2 規劃</b>配置保障、投資與貸款</li>
-          <li><b>3 大富翁</b>擲骰、事件卡、小遊戲、對手排名</li>
-          <li><b>4 結算</b>平行人生對照與 AI 教練</li>
+          <li><b>{t('1 創角')}</b>{t('可從出生開始,或直接進棋盤')}</li>
+          <li><b>{t('2 規劃')}</b>{t('配置保障、投資與貸款')}</li>
+          <li><b>{t('3 大富翁')}</b>{t('擲骰、事件卡、小遊戲、對手排名')}</li>
+          <li><b>{t('4 結算')}</b>{t('平行人生對照與 AI 教練')}</li>
         </ol>
-        <div className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`}>{aiInfo.ai ? '✨ AI 編劇與教練已連線' : '離線備援模式(使用內建題庫)'}</div>
+        <div className={`ai-pill ${aiInfo.ai ? '' : 'dim'}`}>{aiInfo.ai ? t('✨ AI 編劇與教練已連線') : t('離線備援模式(使用內建題庫)')}</div>
       </div>
     </div>
   )

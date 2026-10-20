@@ -12,7 +12,7 @@ export async function generateJson({ system, prompt, temperature = 0.9, maxToken
   if (process.env.GEMINI_MOCK === '1') return null // 由呼叫端提供 mock
   const key = process.env.GEMINI_API_KEY
   if (!key) {
-    const e = new Error('GEMINI_API_KEY 未設定')
+    const e = new Error('GEMINI_API_KEY 未設定') // i18n-ignore:伺服器日誌
     e.code = 'no_key'
     throw e
   }

@@ -1,4 +1,6 @@
 // 以 SVG 程式繪製的角色頭像:不依賴外部圖檔,放大不會糊,也能依角色資料換色。
+import { t } from '../i18n.js'
+
 export default function Avatar({ look, size = 96, ring = true, title }) {
   const { skin, hair, style, top, accent, extra } = look
   const id = `av-${style}-${top.replace('#', '')}`
@@ -8,7 +10,7 @@ export default function Avatar({ look, size = 96, ring = true, title }) {
       width={size}
       height={size}
       role="img"
-      aria-label={title || '角色頭像'}
+      aria-label={title || t('角色頭像')}
       style={{ display: 'block' }}
     >
       <defs>

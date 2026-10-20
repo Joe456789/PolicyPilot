@@ -1,3 +1,5 @@
+import { t } from '../i18n.js'
+
 // 對手的對話:每個個性有一套離線台詞(零成本、永遠可用);Gemini 可選擇性地替換成更貼近戰況的句子。
 // 台詞只表現「個性」與「反應」,不改變任何數字。
 export const BANTER = {
@@ -63,7 +65,7 @@ export function classifyBanter({ sc, cover, loss, bankrupt, bought, rankNow, ran
 export function offlineLine(personaId, kind, salt = 0) {
   const lines = BANTER[personaId]?.[kind] || BANTER.balanced[kind]
   if (!lines?.length) return null
-  return lines[Math.abs(salt) % lines.length]
+  return t(lines[Math.abs(salt) % lines.length])
 }
 
 // 事件是否值得說話:重要事件一定說,其他事件約 35% 機率,避免洗版

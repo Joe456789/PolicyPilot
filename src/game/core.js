@@ -4,6 +4,7 @@ import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremiu
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
 import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
+import { t, getLang } from '../i18n.js'
 
 // 8x8 環形棋盤:28 格。8 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
 import { PROPERTIES, propById } from './properties.js'
@@ -12,41 +13,41 @@ const P = (id) => {
   return { type: 'property', label: p.name, icon: p.icon, prop: id }
 }
 export const BOARD = [
-  { type: 'start', label: '年度起點', icon: '🏁' },
+  { type: 'start', label: '年度起點', icon: '🏁' }, // i18n-ignore
   P('wanhua'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' },
-  { type: 'event', label: '生活事件', icon: '🎴' },
+  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
+  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
   P('banqiao'),
-  { type: 'market', label: '市場行情', icon: '📊' },
-  { type: 'minigame', label: '小遊戲', icon: '🎮' },
-  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
+  { type: 'market', label: '市場行情', icon: '📊' }, // i18n-ignore
+  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
+  { type: 'milestone', label: '人生里程碑', icon: '🌟' }, // i18n-ignore
   P('qingpu'),
-  { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' },
-  { type: 'event', label: '生活事件', icon: '🎴' },
-  { type: 'tax', label: '年度報稅', icon: '🧾' },
+  { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' }, // i18n-ignore
+  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
+  { type: 'tax', label: '年度報稅', icon: '🧾' }, // i18n-ignore
   P('zhubei'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' },
-  { type: 'hospital', label: '醫院', icon: '🏥' },
+  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
+  { type: 'hospital', label: '醫院', icon: '🏥' }, // i18n-ignore
   P('qiqi'),
-  { type: 'minigame', label: '小遊戲', icon: '🎮' },
-  { type: 'milestone', label: '人生里程碑', icon: '🌟' },
-  { type: 'bank', label: '銀行', icon: '🏦' },
+  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
+  { type: 'milestone', label: '人生里程碑', icon: '🌟' }, // i18n-ignore
+  { type: 'bank', label: '銀行', icon: '🏦' }, // i18n-ignore
   P('tainan'),
-  { type: 'event', label: '生活事件', icon: '🎴' },
-  { type: 'market', label: '市場行情', icon: '📊' },
+  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
+  { type: 'market', label: '市場行情', icon: '📊' }, // i18n-ignore
   P('kaohsiung'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' },
+  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
   P('hualien'),
-  { type: 'minigame', label: '小遊戲', icon: '🎮' },
-  { type: 'event', label: '生活事件', icon: '🎴' },
-  { type: 'shop', label: '理財商城', icon: '🛒' },
+  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
+  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
+  { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
 ]
 
 export const ASSETS = {
-  deposit: { id: 'deposit', name: '定存', icon: '🏦', risk: '極低', blurb: '幾乎不波動,年報酬約 1.5%,但追不上通膨。' },
-  bond: { id: 'bond', name: '債券基金', icon: '📜', risk: '低', blurb: '波動較小,年報酬約 3%,景氣差時也會小跌。' },
-  stock: { id: 'stock', name: '股票型 ETF', icon: '📈', risk: '中高', blurb: '長期平均約 6% 到 7%,但單年可能大漲大跌。' },
-  spec: { id: 'spec', name: '熱門個股', icon: '🔥', risk: '極高', blurb: '漲跌幅度是大盤的 1.5 倍以上,可能翻倍也可能腰斬。' },
+  deposit: { id: 'deposit', name: '定存', icon: '🏦', risk: '極低', blurb: '幾乎不波動,年報酬約 1.5%,但追不上通膨。' }, // i18n-ignore
+  bond: { id: 'bond', name: '債券基金', icon: '📜', risk: '低', blurb: '波動較小,年報酬約 3%,景氣差時也會小跌。' }, // i18n-ignore
+  stock: { id: 'stock', name: '股票型 ETF', icon: '📈', risk: '中高', blurb: '長期平均約 6% 到 7%,但單年可能大漲大跌。' }, // i18n-ignore
+  spec: { id: 'spec', name: '熱門個股', icon: '🔥', risk: '極高', blurb: '漲跌幅度是大盤的 1.5 倍以上,可能翻倍也可能腰斬。' }, // i18n-ignore
 }
 export const ASSET_ORDER = ['deposit', 'bond', 'stock', 'spec']
 
@@ -82,7 +83,7 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     seed,
     rngN: 0,
     player: {
-      name: (setup.name || '你').slice(0, 8),
+      name: (setup.name || t('你')).slice(0, getLang() === 'en' ? 14 : 8),
       look: setup.look || defaultLook(),
       careerId: career.id,
       title: career.title,
@@ -199,7 +200,7 @@ export function cover(s) {
     const proceeds = Math.round(pr.value * FORCED_SALE) - (pr.mortgage ? pr.mortgage.balance : 0)
     s.cash += proceeds
     delete s.props[id]
-    s.year.events.push({ title: `現金見底,被迫低價拍賣地產「${propById(id).name}」`, kind: 'event', cat: 'forced', icon: '🏚️' })
+    s.year.events.push({ title: t('現金見底,被迫低價拍賣地產「{name}」', { name: propById(id).name }), kind: 'event', cat: 'forced', icon: '🏚️' })
     s.year.forced = (s.year.forced || 0) + 1
   }
   if (s.cash < 0 && s.house) {
@@ -207,7 +208,7 @@ export function cover(s) {
     s.cash += Math.round(h.value * FORCED_SALE) - h.balance
     s.house = null
     s.coverage.home = 0
-    s.year.events.push({ title: '現金見底,被迫賣掉自己的房子', kind: 'event', cat: 'forced', icon: '🏚️' })
+    s.year.events.push({ title: t('現金見底,被迫賣掉自己的房子'), kind: 'event', cat: 'forced', icon: '🏚️' })
     s.year.forced = (s.year.forced || 0) + 1
   }
 }
@@ -281,7 +282,7 @@ export function analyzeGaps(s) {
         need,
         severity: sev[id] * (need - have),
         blocked: !canIncrease(s, id),
-        text: `${PRODUCTS[id].name}:目前「${PRODUCTS[id].tiers[have].label}」,建議至少「${PRODUCTS[id].tiers[need].label}」`,
+        text: t('{name}:目前「{have}」,建議至少「{need}」', { name: PRODUCTS[id].name, have: PRODUCTS[id].tiers[have].label, need: PRODUCTS[id].tiers[need].label }),
       })
     }
   }

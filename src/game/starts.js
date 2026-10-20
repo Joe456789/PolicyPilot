@@ -3,14 +3,15 @@
 import { Rng } from './rng.js'
 import { BACKGROUNDS, CAREERS } from './careers.js'
 import { clamp, round1k } from './core.js'
+import { t, getLang } from '../i18n.js'
 
 export const START_AGES = [
-  { age: 22, icon: '🎓', title: '22 歲・社會新鮮人', blurb: '一切從零開始:學貸、第一份工作,結婚買房育兒都還沒發生。最完整的人生。' },
-  { age: 30, icon: '💼', title: '30 歲・職場中堅', blurb: '已經工作 8 年:可能有伴侶、孩子與房貸,保障開始不夠用。' },
-  { age: 40, icon: '🏡', title: '40 歲・家庭責任期', blurb: '上有老、下有小:房貸、教養費、父母健康一起來,最考驗保障與現金流。' },
+  { age: 22, icon: '🎓', title: '22 歲・社會新鮮人', blurb: '一切從零開始:學貸、第一份工作,結婚買房育兒都還沒發生。最完整的人生。' }, // i18n-ignore
+  { age: 30, icon: '💼', title: '30 歲・職場中堅', blurb: '已經工作 8 年:可能有伴侶、孩子與房貸,保障開始不夠用。' }, // i18n-ignore
+  { age: 40, icon: '🏡', title: '40 歲・家庭責任期', blurb: '上有老、下有小:房貸、教養費、父母健康一起來,最考驗保障與現金流。' }, // i18n-ignore
 ]
 
-const wanOf = (n) => `${Math.round(n / 10000)} 萬`
+const wanOf = (n) => `${Math.round(n / 10000)} 萬` // i18n-ignore:數字 + 萬,t() 會在英文模式換成 NT$
 
 export function adultStart({ age, bgId, careerId, seed }) {
   const bg = BACKGROUNDS.find((b) => b.id === bgId) || BACKGROUNDS[2]
@@ -72,14 +73,16 @@ export function adultStart({ age, bgId, careerId, seed }) {
   const parentsSupport = poor ? true : older ? rng.next() < 0.3 : rng.next() < 0.1
 
   const parts = [
-    `${age} 歲,${career.title}`,
-    partner ? '已婚' : '單身',
-    dependents ? `扶養 ${dependents} 個孩子` : '沒有孩子',
-    house ? (house.balance > 0 ? `有房貸(餘額約 ${wanOf(house.balance)})` : '有一間自己的房子') : '還租房子',
-    car ? '有車' : null,
-    Object.keys(coverage).length ? `已投保 ${Object.keys(coverage).length} 張保單` : '幾乎沒有商業保險',
+    t('{age} 歲,{title}', { age, title: career.title }),
+    partner ? t('已婚') : t('單身'),
+    dependents ? t('扶養 {n} 個孩子', { n: dependents }) : t('沒有孩子'),
+    house ? (house.balance > 0 ? t('有房貸(餘額約 {amt})', { amt: wanOf(house.balance) }) : t('有一間自己的房子')) : t('還租房子'),
+    car ? t('有車') : null,
+    Object.keys(coverage).length ? t('已投保 {n} 張保單', { n: Object.keys(coverage).length }) : t('幾乎沒有商業保險'),
   ].filter(Boolean)
-  const intro = `${parts.join('、')}。這些年的累積:現金約 ${wanOf(cash)}、投資約 ${wanOf(stock + bond + deposit)}${loan ? `、貸款約 ${wanOf(loan)}` : ''}。接下來,看你怎麼把保障補齊。`
+  const intro = t('{parts}。這些年的累積:現金約 {cash}、投資約 {invest}{loan}。接下來,看你怎麼把保障補齊。', {
+    parts: parts.join(getLang() === 'en' ? ', ' : '、'), cash: wanOf(cash), invest: wanOf(stock + bond + deposit), loan: loan ? t('、貸款約 {amt}', { amt: wanOf(loan) }) : '',
+  })
 
   const tags = []
   if (poor) tags.push('survivor')

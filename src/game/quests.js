@@ -1,6 +1,7 @@
 // 人生任務:每局抽 3 個目標(至少 1 個和保險有關),邊玩邊看進度。
 import { Rng } from './rng.js'
 import { holdingsTotal } from './core.js'
+import { t } from '../i18n.js'
 
 const kinds = (s) => ['deposit', 'bond', 'stock', 'spec'].filter((k) => s.hold[k] > 0).length
 
@@ -134,8 +135,8 @@ export function evalQuests(s) {
     const value = Math.min(def.target, def.progress(s, q))
     const latched = s.questDone[q.id] != null
     const done = latched || (value >= def.target && (!def.final || ended))
-    const title = q.goal ? `淨資產達到 ${Math.round(q.goal / 10000)} 萬` : def.title
-    return { id: q.id, icon: def.icon, tag: def.tag, title, desc: def.desc, value, target: def.target, done, final: !!def.final }
+    const title = q.goal ? t('淨資產達到 {n} 萬', { n: Math.round(q.goal / 10000) }) : t(def.title)
+    return { id: q.id, icon: def.icon, tag: def.tag, title, desc: t(def.desc), value, target: def.target, done, final: !!def.final }
   })
 }
 

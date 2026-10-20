@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Share2, Download, Image as ImageIcon } from 'lucide-react'
 import { wan } from '../game/format.js'
 import { TAGS } from '../game/tags.js'
+import { t, useLang, getLang } from '../i18n.js'
 
 const W = 1080, H = 1350
-const FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
+const FONT_ZH = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
+// 英文用較窄的無襯線字體(玩家名字若是中文,後面仍有中文字體備援)
+const FONT_EN = '"Inter","Segoe UI","Helvetica Neue",Arial,"Noto Sans TC","PingFang TC",sans-serif'
+
+// 設定字體;英文模式下文字太長就縮小(shrink-to-fit),中文維持原樣
+function fitFont(g, text, weight, px, maxW, family, minPx = 16) {
+  const en = getLang() === 'en'
+  let size = px
+  g.font = `${weight} ${size}px ${family}`
+  if (!en) return
+  while (size > minPx && g.measureText(text).width > maxW) { size -= 1; g.font = `${weight} ${size}px ${family}` }
+}
 
 function loadImg(url) {
   return new Promise((res) => {
@@ -19,6 +31,7 @@ function loadImg(url) {
 function rr(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r) }
 
 async function drawCard({ s, score, ending, headline, rank, players, questsDone, netWorth, artUrl }) {
+  const FONT = getLang() === 'en' ? FONT_EN : FONT_ZH
   const c = document.createElement('canvas')
   c.width = W; c.height = H
   const g = c.getContext('2d')
@@ -39,10 +52,11 @@ async function drawCard({ s, score, ending, headline, rank, players, questsDone,
   g.fillStyle = '#fffdf7'; rr(g, 54, 54, W - 124, H - 120, 54); g.fill()
   g.lineWidth = 8; g.strokeStyle = '#1f2a37'; rr(g, 54, 54, W - 124, H - 120, 54); g.stroke()
 
+  const MAXW = 900
   g.textAlign = 'center'; g.fillStyle = '#0a6b43'; g.font = `900 46px ${FONT}`
-  g.fillText('保險大富翁', W / 2 - 8, 140)
-  g.fillStyle = '#6b7280'; g.font = `600 26px ${FONT}`
-  g.fillText('財務人生模擬遊戲 · Cardif InsurHack 2026', W / 2 - 8, 184)
+  g.fillText(t('保險大富翁'), W / 2 - 8, 140)
+  g.fillStyle = '#6b7280'
+  { const txt = t('財務人生模擬遊戲 · Cardif InsurHack 2026'); fitFont(g, txt, 600, 26, MAXW, FONT); g.fillText(txt, W / 2 - 8, 184) }
 
   // 結局圖
   const img = await loadImg(artUrl)
@@ -63,42 +77,42 @@ async function drawCard({ s, score, ending, headline, rank, players, questsDone,
 
   // 結局名稱
   g.fillStyle = '#b45309'; g.font = `800 28px ${FONT}`
-  g.fillText(`你的結局 · ${ending.rarity}`, W / 2 - 8, 680)
-  g.fillStyle = '#1f2a37'; g.font = `900 78px ${FONT}`
-  g.fillText(ending.title, W / 2 - 8, 764)
-  g.fillStyle = '#4b5563'; g.font = `600 30px ${FONT}`
-  g.fillText(`${s.player.name} · ${s.player.title} · ${s.history[0]?.age ?? 22}→${s.age} 歲`, W / 2 - 8, 820)
-  g.fillStyle = '#0a6b43'; g.font = `800 34px ${FONT}`
-  g.fillText(`「${headline}」`, W / 2 - 8, 876)
+  g.fillText(t('你的結局 · {rarity}', { rarity: t(ending.rarity) }), W / 2 - 8, 680)
+  g.fillStyle = '#1f2a37'
+  { const txt = t(ending.title); fitFont(g, txt, 900, 78, MAXW, FONT, 34); g.fillText(txt, W / 2 - 8, 764) }
+  g.fillStyle = '#4b5563'
+  { const txt = `${s.player.name} · ${t(s.player.title)} · ${t('{from}→{to} 歲', { from: s.history[0]?.age ?? 22, to: s.age })}`; fitFont(g, txt, 600, 30, MAXW, FONT); g.fillText(txt, W / 2 - 8, 820) }
+  g.fillStyle = '#0a6b43'
+  { const txt = t('「{headline}」', { headline: t(headline) }); fitFont(g, txt, 800, 34, MAXW, FONT, 20); g.fillText(txt, W / 2 - 8, 876) }
 
   // 分數圓 + 數據
   g.save(); g.translate(250, 1010)
   g.lineWidth = 22; g.strokeStyle = '#e7e2d4'; g.beginPath(); g.arc(0, 0, 100, 0, Math.PI * 2); g.stroke()
   g.strokeStyle = '#00915a'; g.lineCap = 'round'; g.beginPath(); g.arc(0, 0, 100, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * score.total) / 100); g.stroke()
   g.fillStyle = '#1f2a37'; g.font = `900 78px ${FONT}`; g.textAlign = 'center'; g.fillText(String(score.total), 0, 18)
-  g.fillStyle = '#00915a'; g.font = `800 32px ${FONT}`; g.fillText(`${score.grade} 級`, 0, 62)
+  g.fillStyle = '#00915a'; g.font = `800 32px ${FONT}`; g.fillText(t('{grade} 級', { grade: score.grade }), 0, 62)
   g.restore()
 
-  const stats = [['淨資產', wan(netWorth)], ['人生任務', `${questsDone}/3`], ...(rank ? [['最終排名', `${rank} / ${players}`]] : [['健康', String(Math.round(s.health))]])]
+  const stats = [[t('淨資產'), wan(netWorth)], [t('人生任務'), `${questsDone}/3`], ...(rank ? [[t('最終排名'), `${rank} / ${players}`]] : [[t('健康'), String(Math.round(s.health))]])]
   stats.forEach(([k, v], n) => {
     const x = 430, y = 950 + n * 74
-    g.textAlign = 'left'; g.fillStyle = '#6b7280'; g.font = `700 28px ${FONT}`; g.fillText(k, x, y)
-    g.fillStyle = '#1f2a37'; g.font = `900 42px ${FONT}`; g.fillText(v, x + 190, y + 2)
+    g.textAlign = 'left'; g.fillStyle = '#6b7280'; g.font = `700 28px ${FONT}`; fitFont(g, k, 700, 28, 175, FONT, 18); g.fillText(k, x, y)
+    g.fillStyle = '#1f2a37'; fitFont(g, v, 900, 42, 1026 - (x + 190), FONT, 24); g.fillText(v, x + 190, y + 2)
   })
 
   // 標籤
-  const tags = (s.tags || []).slice(0, 4).map((id) => `${TAGS[id].icon} ${TAGS[id].title}`)
+  const tags = (s.tags || []).slice(0, 4).map((id) => `${TAGS[id].icon} ${t(TAGS[id].title)}`)
   g.textAlign = 'left'; let tx = 120
   g.font = `700 26px ${FONT}`
-  for (const t of tags) {
-    const w = g.measureText(t).width + 36
+  for (const tg of tags) {
+    const w = g.measureText(tg).width + 36
     if (tx + w > W - 130) break
     g.fillStyle = '#f3ecff'; rr(g, tx, 1170, w, 48, 24); g.fill()
-    g.fillStyle = '#5b34a8'; g.fillText(t, tx + 18, 1203)
+    g.fillStyle = '#5b34a8'; g.fillText(tg, tx + 18, 1203)
     tx += w + 12
   }
   g.textAlign = 'center'; g.fillStyle = '#9ca3af'; g.font = `600 22px ${FONT}`
-  g.fillText('金額與保險給付由規則引擎計算 · 劇情與回饋由 AI 生成', W / 2 - 8, 1262)
+  { const txt = t('金額與保險給付由規則引擎計算 · 劇情與回饋由 AI 生成'); fitFont(g, txt, 600, 22, MAXW, FONT, 14); g.fillText(txt, W / 2 - 8, 1262) }
   return c
 }
 
@@ -107,6 +121,8 @@ export default function ShareCard({ s, score, ending, headline, rank, players, q
   const [url, setUrl] = useState(null)
   const [busy, setBusy] = useState(false)
   const [blob, setBlob] = useState(null)
+  const lang = useLang()
+  const firstLang = useRef(lang)
 
   async function make() {
     setBusy(true)
@@ -117,21 +133,29 @@ export default function ShareCard({ s, score, ending, headline, rank, players, q
       setUrl(URL.createObjectURL(b))
     } finally { setBusy(false) }
   }
-  const file = () => new File([blob], `保險大富翁-${s.player.name}.png`, { type: 'image/png' })
+  // 語言切換後,已產生的成績卡用新語言重畫
+  useEffect(() => {
+    if (firstLang.current === lang) return
+    firstLang.current = lang
+    if (url) make()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
+  const fileName = t('保險大富翁-{name}.png', { name: s.player.name })
+  const file = () => new File([blob], fileName, { type: 'image/png' })
   const canShare = typeof navigator !== 'undefined' && navigator.canShare && blob && navigator.canShare({ files: [file()] })
 
   return (
     <section className="card sharecard">
-      <h3><ImageIcon size={18} aria-hidden /> 我的人生成績卡</h3>
-      <p className="muted small">產生一張可以分享、也可以放進簡報的成績卡(圖片在你的瀏覽器裡生成,不會上傳)。</p>
-      {!url && <button className="btn primary" onClick={make} disabled={busy}>{busy ? '產生中…' : '產生成績卡'}</button>}
+      <h3><ImageIcon size={18} aria-hidden /> {t('我的人生成績卡')}</h3>
+      <p className="muted small">{t('產生一張可以分享、也可以放進簡報的成績卡(圖片在你的瀏覽器裡生成,不會上傳)。')}</p>
+      {!url && <button className="btn primary" onClick={make} disabled={busy}>{busy ? t('產生中…') : t('產生成績卡')}</button>}
       {url && (
         <div className="share-out">
-          <img src={url} alt="人生成績卡預覽" />
+          <img src={url} alt={t('人生成績卡預覽')} />
           <div className="share-btns">
-            <a className="btn primary" href={url} download={`保險大富翁-${s.player.name}.png`}><Download size={16} aria-hidden /> 下載圖片</a>
-            {canShare && <button className="btn" onClick={() => navigator.share({ files: [file()], title: '我的保險大富翁人生' }).catch(() => {})}><Share2 size={16} aria-hidden /> 分享</button>}
-            <button className="btn ghost" onClick={make}>重新產生</button>
+            <a className="btn primary" href={url} download={fileName}><Download size={16} aria-hidden /> {t('下載圖片')}</a>
+            {canShare && <button className="btn" onClick={() => navigator.share({ files: [file()], title: t('我的保險大富翁人生') }).catch(() => {})}><Share2 size={16} aria-hidden /> {t('分享')}</button>}
+            <button className="btn ghost" onClick={make}>{t('重新產生')}</button>
           </div>
         </div>
       )}

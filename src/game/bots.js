@@ -10,28 +10,29 @@ import {
 import { PRODUCT_ORDER, totalPremium } from './products.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './prologue.js'
 import { propById, upgradeCost } from './properties.js'
+import { t } from '../i18n.js'
 
 export const PERSONAS = [
   {
-    id: 'steady', name: '林穩健', title: '穩健理財派', blurb: '保障先到位、資產分散、不追高。',
+    id: 'steady', name: '林穩健', title: '穩健理財派', blurb: '保障先到位、資產分散、不追高。', // i18n-ignore
     look: { skin: LOOKS.skins[1], hair: LOOKS.hairs[3], style: 'bob', top: LOOKS.tops[1], accent: '#d9f2e5', extra: 'glasses' },
     cover: 'rec', skip: [], buffer: 8, invest: { deposit: 0.4, bond: 0.4, stock: 0.2, spec: 0 }, investFrac: 0.7, loans: false,
     panic: false, risk: 0.1, love: 0.8, quiz: 0.8, study: 'study',
   },
   {
-    id: 'allin', name: '阿宏', title: '梭哈冒險家', blurb: '覺得保險是浪費錢,什麼都想投資賺。',
+    id: 'allin', name: '阿宏', title: '梭哈冒險家', blurb: '覺得保險是浪費錢,什麼都想投資賺。', // i18n-ignore
     look: { skin: LOOKS.skins[2], hair: LOOKS.hairs[0], style: 'messy', top: LOOKS.tops[6], accent: '#ffe3c2', extra: 'beanie' },
     cover: 'late', skip: ['critical', 'disability', 'life', 'accident', 'annuity', 'ltc', 'home'], buffer: 1, invest: { deposit: 0, bond: 0, stock: 0.5, spec: 0.5 }, investFrac: 0.95, loans: true,
     panic: true, risk: 1, love: 0, quiz: 0.45, study: 'social',
   },
   {
-    id: 'insured', name: '保險控小美', title: '保險至上派', blurb: '什麼險都想買,但很少拿錢去投資。',
+    id: 'insured', name: '保險控小美', title: '保險至上派', blurb: '什麼險都想買,但很少拿錢去投資。', // i18n-ignore
     look: { skin: LOOKS.skins[0], hair: LOOKS.hairs[1], style: 'ponytail', top: LOOKS.tops[2], accent: '#ffe0e9', extra: 'none' },
     cover: 'max', skip: [], buffer: 5, invest: { deposit: 0.7, bond: 0.3, stock: 0, spec: 0 }, investFrac: 0.5, loans: false,
     panic: false, risk: 0, love: 1, quiz: 0.7, study: 'study',
   },
   {
-    id: 'balanced', name: '陳平衡', title: '平衡工程師', blurb: '核心保障加定期定額,理性但偶爾追熱門。',
+    id: 'balanced', name: '陳平衡', title: '平衡工程師', blurb: '核心保障加定期定額,理性但偶爾追熱門。', // i18n-ignore
     look: { skin: LOOKS.skins[1], hair: LOOKS.hairs[0], style: 'side', top: LOOKS.tops[5], accent: '#cfd8dc', extra: 'headphones' },
     cover: 'core', skip: ['annuity', 'ltc'], buffer: 4, invest: { deposit: 0.1, bond: 0.2, stock: 0.6, spec: 0.1 }, investFrac: 0.85, loans: false,
     panic: false, risk: 0.4, love: 0.5, quiz: 0.65, study: 'study',
@@ -40,7 +41,7 @@ export const PERSONAS = [
 
 // ---------- 成長篇(自動)----------
 function botLifeSetup(p, seed, length, opponents, startAge = 22) {
-  let l = createLife({ name: p.name, look: p.look, style: STYLES.find((x) => x.id === 'steady').title }, seed)
+  let l = createLife({ name: t(p.name), look: p.look, style: STYLES.find((x) => x.id === 'steady').title }, seed)
   l = startAge > 22 ? skipLife(l, startAge) : beginLife(l)
   let guard = 0
   while (!l.done && guard++ < 40) {

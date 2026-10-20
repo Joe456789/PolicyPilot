@@ -1,3 +1,5 @@
+import { t } from '../i18n.js'
+
 // 創角選項。所有人物與數字皆為教學用的虛構假設(NT$,年度)。
 export const CAREERS = [
   { id: 'office', icon: '💼', title: '上班族', blurb: '企劃行政,穩定加薪,勞保健保齊全。', income: 560000, growth: 0.03, vol: 0.03, laborIns: true, risk: 'low' },
@@ -28,7 +30,8 @@ export const ASPIRATIONS = [
 ]
 
 const NAME_POOL = ['小明', '小美', '阿凱', '小薇', '阿傑', '雅婷', '志豪', '佳穎', '宗翰', '怡君', '冠宇', '品妍', '承恩', '子晴', '柏翰', '思穎', '建宏', '郁婷', '彥廷', '心怡', '家豪', '詩涵', '俊傑', '依婷', '宥辰', '語彤', '昱廷', '芷瑄', '浩然', '欣怡']
-export const randomName = () => NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]
+// 英文模式:名字經字典翻成英文名(同一個隨機索引,中文模式結果不變)
+export const randomName = () => t(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)])
 
 export const STYLES = [
   { id: 'bold', icon: '🔥', title: '冒險型', blurb: '相信「富貴險中求」,愛追高風險。' },

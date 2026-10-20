@@ -73,7 +73,7 @@ for (const file of files) {
 }
 // 4) 英文值裡不應該還有中文(「萬」「歲」除外的單位提示不允許,金額請用 數字 + 萬)
 for (const [k, v] of Object.entries(EN)) {
-  if (!only && typeof v === 'string' && CJK.test(v.replace(/(\d[\d,.]*)\s*萬/g, ''))) problems.push(`locales 英文值含中文:${k.slice(0, 30)} → ${v.slice(0, 40)}`)
+  if (!only && typeof v === 'string' && CJK.test(v.replace(/(\d[\d,.]*|\{\w+\})\s*萬/g, ''))) problems.push(`locales 英文值含中文:${k.slice(0, 30)} → ${v.slice(0, 40)}`)
   if (!only && typeof v === 'string' && ph(k) !== ph(v)) problems.push(`locales 佔位不一致:${k.slice(0, 40)}`)
 }
 if (scan) {

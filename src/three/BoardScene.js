@@ -3,6 +3,8 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { PROPERTIES } from '../game/properties.js'
+import { t, getLang } from '../i18n.js'
+import { wan } from '../game/format.js'
 
 const N = 28
 const S = 2 // 一格的邊長
@@ -65,6 +67,34 @@ function canvasTex(w, h, draw) {
   tex.anisotropy = 4
   return tex
 }
+
+const FONT_CJK = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
+const FONT_EN = '"Inter","Segoe UI","Helvetica Neue",Arial,sans-serif'
+// 英文模式用較窄的字體;中文維持原樣
+const labelFont = (weight, px, zhFam = FONT_CJK) => `${weight} ${px}px ${getLang() === 'en' ? FONT_EN : zhFam}`
+
+// 畫文字;英文模式下太長就縮小字體(shrink-to-fit),必要時拆成兩行。中文維持原本的單行畫法。
+function fillFit(g, text, x, y, maxW, weight, px, minPx = 12, zhFam = FONT_CJK) {
+  g.font = labelFont(weight, px, zhFam)
+  if (getLang() !== 'en') { g.fillText(text, x, y); return }
+  let size = px
+  while (size > minPx && g.measureText(text).width > maxW) { size -= 1; g.font = labelFont(weight, size, zhFam) }
+  if (g.measureText(text).width <= maxW || !text.includes(' ')) { g.fillText(text, x, y); return }
+  // 還是太長:拆兩行
+  const words = text.split(' ')
+  let best = 1, bestDiff = Infinity
+  for (let k = 1; k < words.length; k++) {
+    const d = Math.abs(g.measureText(words.slice(0, k).join(' ')).width - g.measureText(words.slice(k).join(' ')).width)
+    if (d < bestDiff) { bestDiff = d; best = k }
+  }
+  const two = [words.slice(0, best).join(' '), words.slice(best).join(' ')]
+  let sz = size
+  while (sz > minPx && Math.max(...two.map((l) => g.measureText(l).width)) > maxW) { sz -= 1; g.font = labelFont(weight, sz, zhFam) }
+  g.fillText(two[0], x, y - sz * 0.55)
+  g.fillText(two[1], x, y + sz * 0.5)
+}
+
+const priceText = (price) => (getLang() === 'en' ? wan(price) : `${Math.round(price / 10000)} 萬`) // i18n-ignore
 
 export class BoardScene {
   constructor(container, board) {
@@ -265,14 +295,65 @@ export class BoardScene {
     })
   }
 
+  // 一般格子貼圖(表情符號 + 名稱 + 價格);img 有值時是地產插圖版
+  drawTileTex(i, img) {
+    const tile = this.board[i]
+    const color = TYPE_COLOR[tile.type] || 0x999999
+    if (img) {
+      const pr = PROPERTIES.find((x) => x.id === tile.prop)
+      return canvasTex(256, 256, (g, w, h) => {
+        g.fillStyle = '#' + TYPE_COLOR.property.toString(16).padStart(6, '0')
+        g.fillRect(0, 0, w, 16)
+        // 圖片(置中裁成 228x140,圓角)
+        const x = 14, y = 24, bw = 228, bh = 140
+        g.save()
+        g.beginPath()
+        g.roundRect(x, y, bw, bh, 16)
+        g.clip()
+        const sc = Math.max(bw / img.width, bh / img.height)
+        g.drawImage(img, x + (bw - img.width * sc) / 2, y + (bh - img.height * sc) / 2, img.width * sc, img.height * sc)
+        g.restore()
+        g.fillStyle = '#374151'
+        g.textAlign = 'center'
+        g.textBaseline = 'alphabetic'
+        fillFit(g, t(tile.label), w / 2, 202, 236, 800, 31, 15)
+        g.fillStyle = '#b45309'
+        fillFit(g, priceText(pr.price), w / 2, 238, 236, 800, 27, 16, '"Noto Sans TC",sans-serif')
+        g.fillStyle = '#9ca3af'
+        g.font = '600 15px sans-serif'
+        g.textAlign = 'left'
+        g.fillText(String(i), 8, 40)
+      })
+    }
+    return canvasTex(160, 160, (g, w, h) => {
+      g.fillStyle = '#' + color.toString(16).padStart(6, '0')
+      g.fillRect(0, 0, w, 16)
+      g.font = '78px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText(tile.icon, w / 2, 70)
+      g.fillStyle = '#374151'
+      fillFit(g, t(tile.label), w / 2, tile.prop ? 124 : 132, 150, 800, 26, 12)
+      if (tile.prop) {
+        const pr = PROPERTIES.find((x) => x.id === tile.prop)
+        g.fillStyle = '#b45309'
+        fillFit(g, priceText(pr.price), w / 2, 150, 150, 800, 21, 12, '"Noto Sans TC",sans-serif')
+      }
+      g.fillStyle = '#9ca3af'
+      g.font = '600 14px sans-serif'
+      g.textAlign = 'left'
+      g.fillText(i === 0 ? '' : String(i), 8, 34)
+    })
+  }
+
   buildTiles() {
     this.tileMeshes = []
     this.tileDecals = []
+    this.artImgs = {}
     const geo = new RoundedBoxGeometry(S - 0.14, 0.26, S - 0.14, 3, 0.07)
     const decalGeo = new THREE.PlaneGeometry(S - 0.34, S - 0.34)
-    this.board.forEach((t, i) => {
+    this.board.forEach((tile, i) => {
       const p = tileXZ(i)
-      const color = TYPE_COLOR[t.type] || 0x999999
       const mat = new THREE.MeshStandardMaterial({ color: 0xfffdf5, roughness: 0.55 })
       const m = new THREE.Mesh(geo, mat)
       m.position.set(p.x, 0.43, p.z)
@@ -280,27 +361,7 @@ export class BoardScene {
       m.receiveShadow = true
       this.scene.add(m)
       // 色條(格子外側邊)
-      const tex = canvasTex(160, 160, (g, w, h) => {
-        g.fillStyle = '#' + color.toString(16).padStart(6, '0')
-        g.fillRect(0, 0, w, 16)
-        g.font = '78px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
-        g.textAlign = 'center'
-        g.textBaseline = 'middle'
-        g.fillText(t.icon, w / 2, 70)
-        g.fillStyle = '#374151'
-        g.font = '800 26px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
-        g.fillText(t.label, w / 2, t.prop ? 124 : 132)
-        if (t.prop) {
-          const pr = PROPERTIES.find((x) => x.id === t.prop)
-          g.fillStyle = '#b45309'
-          g.font = '800 21px "Noto Sans TC",sans-serif'
-          g.fillText(`${Math.round(pr.price / 10000)} 萬`, w / 2, 150)
-        }
-        g.fillStyle = '#9ca3af'
-        g.font = '600 14px sans-serif'
-        g.textAlign = 'left'
-        g.fillText(i === 0 ? '' : String(i), 8, 34)
-      })
+      const tex = this.drawTileTex(i, null)
       const decal = new THREE.Mesh(decalGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true }))
       decal.rotation.x = -Math.PI / 2
       decal.position.set(p.x, 0.565, p.z)
@@ -432,32 +493,8 @@ export class BoardScene {
       const img = new Image()
       img.onload = () => {
         if (this.disposed) return
-        const pr = PROPERTIES.find((x) => x.id === tile.prop)
-        const tex = canvasTex(256, 256, (g, w, h) => {
-          g.fillStyle = '#' + TYPE_COLOR.property.toString(16).padStart(6, '0')
-          g.fillRect(0, 0, w, 16)
-          // 圖片(置中裁成 228x140,圓角)
-          const x = 14, y = 24, bw = 228, bh = 140
-          g.save()
-          g.beginPath()
-          g.roundRect(x, y, bw, bh, 16)
-          g.clip()
-          const sc = Math.max(bw / img.width, bh / img.height)
-          g.drawImage(img, x + (bw - img.width * sc) / 2, y + (bh - img.height * sc) / 2, img.width * sc, img.height * sc)
-          g.restore()
-          g.fillStyle = '#374151'
-          g.textAlign = 'center'
-          g.textBaseline = 'alphabetic'
-          g.font = '800 31px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'
-          g.fillText(tile.label, w / 2, 202)
-          g.fillStyle = '#b45309'
-          g.font = '800 27px "Noto Sans TC",sans-serif'
-          g.fillText(`${Math.round(pr.price / 10000)} 萬`, w / 2, 238)
-          g.fillStyle = '#9ca3af'
-          g.font = '600 15px sans-serif'
-          g.textAlign = 'left'
-          g.fillText(String(i), 8, 40)
-        })
+        this.artImgs[i] = img
+        const tex = this.drawTileTex(i, img)
         decal.material.map?.dispose?.()
         decal.material.map = tex
         decal.material.needsUpdate = true
@@ -466,7 +503,22 @@ export class BoardScene {
     }
   }
 
+  // 語言切換後,用目前語言重畫所有格子貼圖、出售牌(以及保留地產插圖)
+  refreshLabels() {
+    if (this.disposed) return
+    this.tileDecals.forEach((decal, i) => {
+      const tex = this.drawTileTex(i, this.artImgs[i] || null)
+      decal.material.map?.dispose?.()
+      decal.material.map = tex
+      decal.material.needsUpdate = true
+    })
+    // 出售牌文字:讓 setOwners 重畫所有「無人持有」的標記
+    for (const cur of Object.values(this.propMarkers || {})) if (cur.sig === 'free') cur.sig = 'stale'
+    this.setOwners(this.lastOwners || {})
+  }
+
   setOwners(map) {
+    this.lastOwners = map
     this.propMarkers = this.propMarkers || {}
     const colors = [0xffc107, 0xe5484d, 0x3b82f6, 0xa855f7]
     this.board.forEach((tile, i) => {
@@ -481,7 +533,7 @@ export class BoardScene {
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8), new THREE.MeshStandardMaterial({ color: 0x6b7280 }))
         pole.position.y = 0.55
         const sign = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.34, 0.05), new THREE.MeshStandardMaterial({
-          map: canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#e5484d'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '800 38px "Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('出售', w / 2, h / 2 + 2) }),
+          map: canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#e5484d'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; fillFit(c, t('出售'), w / 2, h / 2 + 2, 116, 800, 38, 18, '"Noto Sans TC",sans-serif') }),
         }))
         sign.position.set(0.31, 1.0, 0)
         g.add(pole, sign)

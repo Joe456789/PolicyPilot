@@ -1,5 +1,7 @@
 // 手牌:最多持有 3 張,條件成立時自動生效(用完即消失)。
 // 保障卡替你擋下壞事,機會卡讓好事放大;抽到的時候要想一想:留著等對的時機。
+import { t } from '../i18n.js'
+
 export const MAX_CARDS = 3
 
 export const CARDS = {
@@ -51,16 +53,16 @@ export function giveCard(s, rng, id, add) {
   let pick = id
   if (id === 'random' || id === 'protect') {
     const pool = CARD_IDS.filter((c) => !hasCard(s, c) && (id !== 'protect' || CARDS[c].kind === '保障卡') && (c !== 'rent_boost' || Object.keys(s.props || {}).length > 0))
-    if (!pool.length) { add('你的手牌已經很齊全,這次沒有新的卡', 0, 'note'); return null }
+    if (!pool.length) { add(t('你的手牌已經很齊全,這次沒有新的卡'), 0, 'note'); return null }
     pick = rng.pick(pool)
   }
-  if (hasCard(s, pick)) { add(`你已經有「${CARDS[pick].name}」了`, 0, 'note'); return null }
+  if (hasCard(s, pick)) { add(t('你已經有「{name}」了', { name: CARDS[pick].name }), 0, 'note'); return null }
   if (s.cards.length >= MAX_CARDS) {
     const old = s.cards.shift()
-    add(`手牌已滿,換掉最舊的「${CARDS[old].name}」`, 0, 'note')
+    add(t('手牌已滿,換掉最舊的「{name}」', { name: CARDS[old].name }), 0, 'note')
   }
   s.cards.push(pick)
   s.cardsGot = (s.cardsGot || 0) + 1
-  add(`獲得卡片:${CARDS[pick].icon} ${CARDS[pick].name}`, 0, 'cover')
+  add(t('獲得卡片:{icon} {name}', { icon: CARDS[pick].icon, name: CARDS[pick].name }), 0, 'cover')
   return pick
 }

@@ -1,54 +1,68 @@
+import EN from '../locales/en/index.js'
+import { getLang } from '../i18n.js'
+
 // 保險與投資觀念小辭典:離線問答的資料來源,也是 AI 問答的「參考資料」(避免憑空編造)。
 // 內容為教學用簡化說明,實際商品以條款、核保與最新法規為準。
 export const GLOSSARY = [
-  { k: ['醫療險', '實支實付', '住院'], title: '醫療險(實支實付)', text: '依實際的醫療收據,補貼住院、手術等健保之外的自費項目。它補的是「醫療費用」,不是收入損失。遊戲裡的醫療險給付約為醫療費用的 70%,每次有上限。' },
-  { k: ['重大傷病', '重疾', '重大疾病', '癌症險'], title: '重大傷病險與癌症險', text: '確診符合條件的重大傷病(如癌症、中風)時一次給付一筆錢,用來補貼治療期間的收入中斷與長期開銷。癌症險專門針對癌症,可與重大傷病險疊加。重點是先看你一旦收入中斷,現金能撐多久。' },
-  { k: ['失能', '所得補償'], title: '失能所得補償險', text: '因傷病無法工作時,依年收入比例給付,補的是「無法賺錢」的損失。收入是家庭主要來源、或自由工作者(沒有雇主保障)特別需要。' },
-  { k: ['壽險', '身故', '保額'], title: '定期壽險與保額估算', text: '萬一不幸,留給家人的保障。保額的算法:家人未來的生活費 + 房貸與負債 − 已有的資產。單身沒有扶養責任時,需求較低;結婚、生子、買房後要提高。' },
-  { k: ['長照', '長期照顧'], title: '長照險', text: '自己需要長期照顧時,定期給付以補貼看護與機構費用。年紀越大保費越高,年輕時規劃較划算,但也要衡量其他保障的優先順序。' },
-  { k: ['意外險', '傷害險'], title: '意外險', text: '因意外受傷、失能或身故時給付。保費較低,但只涵蓋「意外」,不包含疾病。經常騎車、外出的人較需要。' },
-  { k: ['住院日額', '日額'], title: '住院日額險', text: '住院期間每天給付固定金額,補貼看護、營養品、請假的雜支。通常搭配實支實付醫療險,各補不同的缺口。' },
-  { k: ['火險', '地震險', '住宅'], title: '住宅火險與地震險', text: '保護房屋本身的損失。買房後別只看房貸,颱風、淹水、火災與地震都可能造成大額損失,而房貸不會因此消失。' },
-  { k: ['汽車險', '第三人責任', '車體'], title: '汽車險', text: '第三人責任險補貼撞傷他人的賠償,車體險補貼自己的修車費。有車就要考慮,因為賠償金額可能遠超過你的存款。' },
-  { k: ['旅平險', '旅遊'], title: '旅遊平安險', text: '旅途中受傷、行李遺失、班機取消時給付。保費低,是低成本的保障。' },
-  { k: ['投資型', '投資型保單', '連結'], title: '投資型保單', text: '保費一部分買保障,其餘進入投資帳戶,價值隨市場波動,投資風險由自己承擔,而且前幾年的費用通常較高。它同時做兩件事,但不一定兩件都做得最划算,買之前要看清楚費用與帳戶試算。' },
-  { k: ['儲蓄險', '年金', '還本'], title: '儲蓄險與年金險', text: '以固定年繳累積資金,中途解約可能有損失。適合當作「不會被花掉的長期儲蓄」,但報酬通常不高,也不能取代保障型保險。' },
-  { k: ['保費', '預算', '比例'], title: '保費要占多少收入?', text: '一般建議保費約占年收入的 10% 到 15%。太低可能保障不足,太高會壓縮生活與儲蓄。先補最大的風險缺口,再談其他。' },
-  { k: ['緊急預備金', '預備金', '備用金'], title: '緊急預備金', text: '建議保留 3 到 6 個月的生活費。收入中斷或突發支出時,才不用賣資產或借錢。這也是保險之外,第一道防線。' },
-  { k: ['核保', '健康告知', '加費', '除外'], title: '核保與健康告知', text: '投保時保險公司會評估你的健康狀況。罹患重大疾病後,再投保可能被加費、除外或拒保,所以保障要趁健康時規劃。' },
-  { k: ['等待期', '免責', '除外責任'], title: '等待期與除外責任', text: '有些保險在投保後有一段等待期,期間內發生的事不理賠;條款中也會列出不理賠的情形。看懂這些,才不會理賠時才發現落差。' },
-  { k: ['理賠', '申請', '文件'], title: '理賠怎麼申請?', text: '通常需要診斷證明、醫療收據、理賠申請書與身分文件。保留好單據,理賠才順利。實際文件以保險公司要求為準。' },
-  { k: ['健保', '勞保', '國民年金', '社會保險'], title: '社會保險與商業保險', text: '健保、勞保與國民年金是基本盤,但給付有限、也不一定涵蓋收入中斷。商業保險是用來補足社會保險補不到的缺口。' },
-  { k: ['複利', '72', '時間'], title: '複利與時間', text: '複利是「利息再生利息」。年報酬 6% 時,約 12 年資產可以翻倍(72 法則:72 ÷ 年報酬率 ≈ 翻倍年數)。越早開始,時間幫你的忙越多。' },
-  { k: ['通膨', '物價'], title: '通膨', text: '物價逐年上漲,同樣的錢未來買得到的東西變少。只放活存,長期購買力會被侵蝕,所以需要適度的資產配置。' },
-  { k: ['分散', '配置', '雞蛋', '投資'], title: '資產配置與分散風險', text: '不要把所有錢放在同一種資產。定存、債券、股票的漲跌時間不同,搭配起來能降低整體波動。配置比例要依你的年齡、收入與風險承受度決定。' },
-  { k: ['ETF', '指數', '基金', '股票', '股市'], title: '股票型 ETF', text: 'ETF 是一籃子股票,追蹤某個指數,費用低、分散度高。長期報酬可能不錯,但單年可能大漲大跌,需要時間與耐心。' },
-  { k: ['債券', '債'], title: '債券基金', text: '波動通常比股票小,報酬也較低,常被拿來平衡股票的風險。利率變動時價格也會波動。' },
-  { k: ['個股', '飆股', '明牌'], title: '個股與明牌', text: '單一個股的波動很大,可能翻倍也可能腰斬。別人報的明牌背後常有你不知道的資訊落差,用「輸得起」的錢,而且比例要小。' },
-  { k: ['定期定額', '定投'], title: '定期定額', text: '每期固定投入一筆錢,用時間分散進場成本,不必預測高低點。重點是持續與紀律,以及先留好預備金。' },
-  { k: ['恐慌', '賣出', '賣', '崩盤', '大跌', '下跌', '股災', '反彈'], title: '市場下跌時怎麼辦?', text: '歷史上多次大跌後都出現過反彈。恐慌賣出等於把帳面的損失變成真的損失,還可能錯過後續的回升。先確認自己的資金有沒有短期要用,再決定要不要動。' },
-  { k: ['槓桿', '借錢', '貸款', '信貸', '利息'], title: '借錢投資的風險', text: '貸款的利息是確定要付的,投資的報酬卻不確定。槓桿會放大獲利,也會放大虧損;而且還款壓力在市場下跌時特別沉重。' },
-  { k: ['信用卡', '循環', '分期'], title: '信用卡循環利率', text: '循環利率常高達十幾個百分點,是最貴的貸款之一。只繳最低應繳金額,利息會越滾越大。' },
-  { k: ['詐騙', '165', '防詐'], title: '防詐騙', text: '官方單位不會要你轉帳或透露驗證碼。看到「急迫、保密、要錢、要連結」就要警覺,有疑問先打 165 或官方客服查證。「保證高報酬」幾乎都是陷阱。' },
-  { k: ['房貸', '買房', '頭期款'], title: '買房前先想清楚', text: '房貸不只是每月還款,還有稅費、修繕與天災風險。要確認收入中斷時還付得出來,並檢視壽險、失能險與住宅火險。' },
-  { k: ['稅', '扣除', '報稅'], title: '保險費與報稅', text: '人身保險費可列舉扣除,但每人每年有上限(約 2.4 萬,以最新稅法為準)。節稅只是附帶效益,不應該是買保險的主要理由。' },
-  { k: ['退休', '年金', '退休金'], title: '退休規劃', text: '壽命延長加上通膨,退休金的缺口會越來越大。越早開始每年固定存一筆,負擔越輕。可搭配年金險、債券與股票型資產。' },
-  { k: ['孩子', '扶養', '教育金'], title: '有孩子之後', text: '孩子出生後,責任變重:壽險保額、失能保障、教育金都要重新檢視。你的收入是家人的依靠,保障要先顧好。' },
-  { k: ['自由工作', '接案', '收入不穩'], title: '自由工作者的風險', text: '沒有雇主提供的保障,收入也不穩。建議預備金拉到 6 個月以上,並重視失能所得補償與醫療、重病保障。' },
+  { k: ['醫療險', '實支實付', '住院'], title: '醫療險(實支實付)', enKeys: ['medical insurance', 'medical', 'reimbursement', 'hospitalization', 'hospital bill', 'surgery'], text: '依實際的醫療收據,補貼住院、手術等健保之外的自費項目。它補的是「醫療費用」,不是收入損失。遊戲裡的醫療險給付約為醫療費用的 70%,每次有上限。' },
+  { k: ['重大傷病', '重疾', '重大疾病', '癌症險'], title: '重大傷病險與癌症險', enKeys: ['critical illness', 'critical', 'cancer', 'stroke', 'serious illness', 'lump sum'], text: '確診符合條件的重大傷病(如癌症、中風)時一次給付一筆錢,用來補貼治療期間的收入中斷與長期開銷。癌症險專門針對癌症,可與重大傷病險疊加。重點是先看你一旦收入中斷,現金能撐多久。' },
+  { k: ['失能', '所得補償'], title: '失能所得補償險', enKeys: ['disability', 'income replacement', 'income protection', 'cannot work', 'unable to work'], text: '因傷病無法工作時,依年收入比例給付,補的是「無法賺錢」的損失。收入是家庭主要來源、或自由工作者(沒有雇主保障)特別需要。' },
+  { k: ['壽險', '身故', '保額'], title: '定期壽險與保額估算', enKeys: ['life insurance', 'term life', 'death benefit', 'coverage amount', 'sum insured', 'how much life'], text: '萬一不幸,留給家人的保障。保額的算法:家人未來的生活費 + 房貸與負債 − 已有的資產。單身沒有扶養責任時,需求較低;結婚、生子、買房後要提高。' },
+  { k: ['長照', '長期照顧'], title: '長照險', enKeys: ['long-term care', 'long term care', 'ltc', 'nursing home', 'caregiver'], text: '自己需要長期照顧時,定期給付以補貼看護與機構費用。年紀越大保費越高,年輕時規劃較划算,但也要衡量其他保障的優先順序。' },
+  { k: ['意外險', '傷害險'], title: '意外險', enKeys: ['accident insurance', 'accident', 'accidental'], text: '因意外受傷、失能或身故時給付。保費較低,但只涵蓋「意外」,不包含疾病。經常騎車、外出的人較需要。' },
+  { k: ['住院日額', '日額'], title: '住院日額險', enKeys: ['daily cash', 'hospital daily', 'daily benefit', 'per day'], text: '住院期間每天給付固定金額,補貼看護、營養品、請假的雜支。通常搭配實支實付醫療險,各補不同的缺口。' },
+  { k: ['火險', '地震險', '住宅'], title: '住宅火險與地震險', enKeys: ['fire insurance', 'earthquake', 'home insurance', 'homeowner', 'house insurance'], text: '保護房屋本身的損失。買房後別只看房貸,颱風、淹水、火災與地震都可能造成大額損失,而房貸不會因此消失。' },
+  { k: ['汽車險', '第三人責任', '車體'], title: '汽車險', enKeys: ['auto insurance', 'car insurance', 'third-party', 'third party', 'liability insurance', 'collision'], text: '第三人責任險補貼撞傷他人的賠償,車體險補貼自己的修車費。有車就要考慮,因為賠償金額可能遠超過你的存款。' },
+  { k: ['旅平險', '旅遊'], title: '旅遊平安險', enKeys: ['travel insurance', 'travel accident', 'trip insurance', 'lost luggage', 'flight cancel'], text: '旅途中受傷、行李遺失、班機取消時給付。保費低,是低成本的保障。' },
+  { k: ['投資型', '投資型保單', '連結'], title: '投資型保單', enKeys: ['investment-linked', 'investment linked', 'unit-linked', 'ilp', 'variable life'], text: '保費一部分買保障,其餘進入投資帳戶,價值隨市場波動,投資風險由自己承擔,而且前幾年的費用通常較高。它同時做兩件事,但不一定兩件都做得最划算,買之前要看清楚費用與帳戶試算。' },
+  { k: ['儲蓄險', '年金', '還本'], title: '儲蓄險與年金險', enKeys: ['savings insurance', 'savings plan', 'annuity', 'endowment', 'surrender'], text: '以固定年繳累積資金,中途解約可能有損失。適合當作「不會被花掉的長期儲蓄」,但報酬通常不高,也不能取代保障型保險。' },
+  { k: ['保費', '預算', '比例'], title: '保費要占多少收入?', enKeys: ['premium', 'budget', 'how much should i spend', 'percent of income', '% of income'], text: '一般建議保費約占年收入的 10% 到 15%。太低可能保障不足,太高會壓縮生活與儲蓄。先補最大的風險缺口,再談其他。' },
+  { k: ['緊急預備金', '預備金', '備用金'], title: '緊急預備金', enKeys: ['emergency fund', 'rainy day', 'cash reserve', 'emergency savings'], text: '建議保留 3 到 6 個月的生活費。收入中斷或突發支出時,才不用賣資產或借錢。這也是保險之外,第一道防線。' },
+  { k: ['核保', '健康告知', '加費', '除外'], title: '核保與健康告知', enKeys: ['underwriting', 'health disclosure', 'pre-existing', 'preexisting', 'declined', 'surcharge', 'exclusion'], text: '投保時保險公司會評估你的健康狀況。罹患重大疾病後,再投保可能被加費、除外或拒保,所以保障要趁健康時規劃。' },
+  { k: ['等待期', '免責', '除外責任'], title: '等待期與除外責任', enKeys: ['waiting period', 'exclusions', 'not covered', 'exclusion clause'], text: '有些保險在投保後有一段等待期,期間內發生的事不理賠;條款中也會列出不理賠的情形。看懂這些,才不會理賠時才發現落差。' },
+  { k: ['理賠', '申請', '文件'], title: '理賠怎麼申請?', enKeys: ['claim', 'file a claim', 'how to claim', 'claim documents', 'paperwork'], text: '通常需要診斷證明、醫療收據、理賠申請書與身分文件。保留好單據,理賠才順利。實際文件以保險公司要求為準。' },
+  { k: ['健保', '勞保', '國民年金', '社會保險'], title: '社會保險與商業保險', enKeys: ['nhi', 'national health insurance', 'labor insurance', 'labour insurance', 'national pension', 'social insurance', 'social security'], text: '健保、勞保與國民年金是基本盤,但給付有限、也不一定涵蓋收入中斷。商業保險是用來補足社會保險補不到的缺口。' },
+  { k: ['複利', '72', '時間'], title: '複利與時間', enKeys: ['compound', 'rule of 72', 'compounding', 'double my money'], text: '複利是「利息再生利息」。年報酬 6% 時,約 12 年資產可以翻倍(72 法則:72 ÷ 年報酬率 ≈ 翻倍年數)。越早開始,時間幫你的忙越多。' },
+  { k: ['通膨', '物價'], title: '通膨', enKeys: ['inflation', 'prices rise', 'purchasing power'], text: '物價逐年上漲,同樣的錢未來買得到的東西變少。只放活存,長期購買力會被侵蝕,所以需要適度的資產配置。' },
+  { k: ['分散', '配置', '雞蛋', '投資'], title: '資產配置與分散風險', enKeys: ['diversif', 'asset allocation', 'eggs', 'portfolio', 'spread risk'], text: '不要把所有錢放在同一種資產。定存、債券、股票的漲跌時間不同,搭配起來能降低整體波動。配置比例要依你的年齡、收入與風險承受度決定。' },
+  { k: ['ETF', '指數', '基金', '股票', '股市'], title: '股票型 ETF', enKeys: ['etf', 'index fund', 'stock', 'stocks', 'stock market', 'equity'], text: 'ETF 是一籃子股票,追蹤某個指數,費用低、分散度高。長期報酬可能不錯,但單年可能大漲大跌,需要時間與耐心。' },
+  { k: ['債券', '債'], title: '債券基金', enKeys: ['bond', 'bonds', 'bond fund'], text: '波動通常比股票小,報酬也較低,常被拿來平衡股票的風險。利率變動時價格也會波動。' },
+  { k: ['個股', '飆股', '明牌'], title: '個股與明牌', enKeys: ['individual stock', 'hot tip', 'stock tip', 'stock picking', 'single stock'], text: '單一個股的波動很大,可能翻倍也可能腰斬。別人報的明牌背後常有你不知道的資訊落差,用「輸得起」的錢,而且比例要小。' },
+  { k: ['定期定額', '定投'], title: '定期定額', enKeys: ['dollar-cost', 'dollar cost', 'dca', 'invest regularly', 'regular investing'], text: '每期固定投入一筆錢,用時間分散進場成本,不必預測高低點。重點是持續與紀律,以及先留好預備金。' },
+  { k: ['恐慌', '賣出', '賣', '崩盤', '大跌', '下跌', '股災', '反彈'], title: '市場下跌時怎麼辦?', enKeys: ['panic', 'market crash', 'crash', 'market drop', 'sell', 'selling', 'downturn', 'recession', 'sell-off'], text: '歷史上多次大跌後都出現過反彈。恐慌賣出等於把帳面的損失變成真的損失,還可能錯過後續的回升。先確認自己的資金有沒有短期要用,再決定要不要動。' },
+  { k: ['槓桿', '借錢', '貸款', '信貸', '利息'], title: '借錢投資的風險', enKeys: ['leverage', 'borrow to invest', 'borrow', 'loan', 'margin', 'interest rate'], text: '貸款的利息是確定要付的,投資的報酬卻不確定。槓桿會放大獲利,也會放大虧損;而且還款壓力在市場下跌時特別沉重。' },
+  { k: ['信用卡', '循環', '分期'], title: '信用卡循環利率', enKeys: ['credit card', 'revolving', 'minimum payment', 'installment'], text: '循環利率常高達十幾個百分點,是最貴的貸款之一。只繳最低應繳金額,利息會越滾越大。' },
+  { k: ['詐騙', '165', '防詐'], title: '防詐騙', enKeys: ['scam', 'fraud', '165', 'phishing', 'anti-fraud', 'too good to be true', 'guaranteed return'], text: '官方單位不會要你轉帳或透露驗證碼。看到「急迫、保密、要錢、要連結」就要警覺,有疑問先打 165 或官方客服查證。「保證高報酬」幾乎都是陷阱。' },
+  { k: ['房貸', '買房', '頭期款'], title: '買房前先想清楚', enKeys: ['mortgage', 'buy a house', 'buying a home', 'down payment', 'home loan'], text: '房貸不只是每月還款,還有稅費、修繕與天災風險。要確認收入中斷時還付得出來,並檢視壽險、失能險與住宅火險。' },
+  { k: ['稅', '扣除', '報稅'], title: '保險費與報稅', enKeys: ['tax', 'deduction', 'tax deduction', 'tax return', 'file taxes'], text: '人身保險費可列舉扣除,但每人每年有上限(約 2.4 萬,以最新稅法為準)。節稅只是附帶效益,不應該是買保險的主要理由。' },
+  { k: ['退休', '年金', '退休金'], title: '退休規劃', enKeys: ['retire', 'retirement', 'pension', 'retirement plan'], text: '壽命延長加上通膨,退休金的缺口會越來越大。越早開始每年固定存一筆,負擔越輕。可搭配年金險、債券與股票型資產。' },
+  { k: ['孩子', '扶養', '教育金'], title: '有孩子之後', enKeys: ['child', 'children', 'kids', 'baby', 'dependents', 'education fund'], text: '孩子出生後,責任變重:壽險保額、失能保障、教育金都要重新檢視。你的收入是家人的依靠,保障要先顧好。' },
+  { k: ['自由工作', '接案', '收入不穩'], title: '自由工作者的風險', enKeys: ['freelance', 'freelancer', 'self-employed', 'gig', 'irregular income'], text: '沒有雇主提供的保障,收入也不穩。建議預備金拉到 6 個月以上,並重視失能所得補償與醫療、重病保障。' },
 ]
 
 // 簡單的關鍵字比對:回傳最相關的 n 筆
-export function lookupGlossary(q, n = 3) {
+//   中文提問用中文關鍵字比對(行為與原本相同);不含中文的提問改用英文關鍵字 enKeys。
+//   lang 為 'en' 時(未指定則看目前語言)回傳英文標題與答案;伺服器可明確傳入 lang。
+const HAS_CJK = /[㐀-鿿]/
+export function lookupGlossary(q, n = 3, lang) {
   const text = String(q || '').toLowerCase()
+  const english = !HAS_CJK.test(text)
   const scored = GLOSSARY.map((g) => {
     let score = 0
     for (const k of g.k) if (text.includes(k.toLowerCase())) score += k.length >= 3 ? 3 : 2
     if (text.includes(g.title.toLowerCase())) score += 4
+    if (english) {
+      for (const k of g.enKeys || []) if (text.includes(k.toLowerCase())) score += k.length >= 5 ? 3 : 2
+      const et = EN[g.title]
+      if (et && text.includes(et.toLowerCase())) score += 4
+    }
     return { g, score }
   })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-  return scored.slice(0, n).map((x) => x.g)
+  const hits = scored.slice(0, n).map((x) => x.g)
+  if ((lang || getLang()) !== 'en') return hits
+  return hits.map((g) => ({ ...g, title: EN[g.title] ?? g.title, text: EN[g.text] ?? g.text }))
 }
 
 export const SUGGESTED_QUESTIONS = [

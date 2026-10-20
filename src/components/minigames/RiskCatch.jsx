@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t } from '../../i18n.js'
 
 const HAZ = ['🌪️', '🚗', '🤒', '🔥', '💥']
 const DURATION = 15
@@ -41,7 +42,7 @@ export default function RiskCatch({ onDone }) {
       const g = scoreRef.current
       const net = g.got - g.bad
       const stars = net >= 13 ? 3 : net >= 8 ? 2 : net >= 3 ? 1 : 0
-      setTimeout(() => onDone({ stars, note: `攔截 ${g.got} 個風險,漏掉 ${g.missed} 個,誤點金幣 ${g.bad} 次。` }), 400)
+      setTimeout(() => onDone({ stars, note: t('攔截 {got} 個風險,漏掉 {missed} 個,誤點金幣 {bad} 次。', { got: g.got, missed: g.missed, bad: g.bad }) }), 400)
     }
   }, [time, started, onDone])
 
@@ -52,11 +53,11 @@ export default function RiskCatch({ onDone }) {
 
   return (
     <div className="mg">
-      <div className="mg-bar"><span>⏱ {Math.max(0, time)} 秒</span><span>攔截 {score.got} · 漏掉 {score.missed}</span></div>
-      <div className="catch-field" role="group" aria-label="風險攔截區">
-        {!started && <button className="btn primary big catch-start" onClick={() => setStarted(true)}>開始!</button>}
+      <div className="mg-bar"><span>{t('⏱ {n} 秒', { n: Math.max(0, time) })}</span><span>{t('攔截 {got} · 漏掉 {missed}', { got: score.got, missed: score.missed })}</span></div>
+      <div className="catch-field" role="group" aria-label={t('風險攔截區')}>
+        {!started && <button className="btn primary big catch-start" onClick={() => setStarted(true)}>{t('開始!')}</button>}
         {items.map((it) => (
-          <button key={it.id} className={`faller ${it.coin ? 'coin' : ''}`} style={{ left: `${it.x}%`, top: `${it.y}%` }} onPointerDown={() => hit(it)} aria-label={it.coin ? '金幣' : '風險'}>{it.e}</button>
+          <button key={it.id} className={`faller ${it.coin ? 'coin' : ''}`} style={{ left: `${it.x}%`, top: `${it.y}%` }} onPointerDown={() => hit(it)} aria-label={it.coin ? t('金幣') : t('風險')}>{it.e}</button>
         ))}
       </div>
     </div>

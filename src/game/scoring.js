@@ -2,6 +2,7 @@
 import { PRODUCTS, PRODUCT_ORDER, payoutFor, totalPremium } from './products.js'
 import { clamp, netWorth, recommended, householdIncome } from './core.js'
 import { questScore } from './quests.js'
+import { t } from '../i18n.js'
 
 // 平行人生:同一串人生事件,只替換保障配置。
 // 作法:以「實際淨資產」為基準,逐年加上(替代配置的給付 - 實際給付)與(實際保費 - 替代配置保費)。
@@ -60,12 +61,12 @@ export function computeScore(s) {
   const bankrupt = s.ended?.reason === 'bankrupt'
   if (bankrupt) total = Math.min(Math.round(total * 0.5), 39)
   const grade = total >= 85 ? 'S' : total >= 72 ? 'A' : total >= 58 ? 'B' : total >= 40 ? 'C' : 'D'
-  let archetype = '成長中的規劃者'
-  if (prot < 0.4) archetype = '裸奔冒險家'
-  else if (premiumRatio > 0.22) archetype = '保障控'
-  else if (total >= 80) archetype = '穩健守護者'
-  if (bankrupt) archetype = '破產出局'
-  if (family) archetype = family.ratio >= 1 ? '家人的靠山' : '來不及的守護'
+  let archetype = t('成長中的規劃者')
+  if (prot < 0.4) archetype = t('裸奔冒險家')
+  else if (premiumRatio > 0.22) archetype = t('保障控')
+  else if (total >= 80) archetype = t('穩健守護者')
+  if (bankrupt) archetype = t('破產出局')
+  if (family) archetype = t(family.ratio >= 1 ? '家人的靠山' : '來不及的守護')
 
   return {
     total, grade, archetype,
@@ -89,9 +90,9 @@ export function computeScore(s) {
 function lifeSummary(s) {
   return {
     name: s.player.name,
-    career: s.player.title,
-    background: s.player.background,
-    style: s.player.style,
+    career: t(s.player.title),
+    background: t(s.player.background),
+    style: t(s.player.style),
     age: s.age,
     married: !!s.partner,
     dependents: s.dependents,
@@ -102,9 +103,9 @@ function lifeSummary(s) {
 function coverageTable(s) {
   const rec = recommended(s)
   return PRODUCT_ORDER.filter((id) => id !== 'home' || s.house).map((id) => ({
-    product: PRODUCTS[id].name,
-    yours: PRODUCTS[id].tiers[s.coverage[id] || 0].label,
-    recommended: PRODUCTS[id].tiers[rec[id] || 0].label,
+    product: t(PRODUCTS[id].name),
+    yours: t(PRODUCTS[id].tiers[s.coverage[id] || 0].label),
+    recommended: t(PRODUCTS[id].tiers[rec[id] || 0].label),
   }))
 }
 

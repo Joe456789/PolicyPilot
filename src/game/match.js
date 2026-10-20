@@ -2,6 +2,7 @@
 import { PERSONAS, createBotGame, botFastForward, botWantsProperty } from './bots.js'
 import { computeScore, netWorth, receiveCash, buyPropertyAt, clearOps } from './engine.js'
 import { propById } from './properties.js'
+import { t } from '../i18n.js'
 
 export function createMatch(humanState, opponents, seed) {
   const rngPick = [...PERSONAS]
@@ -11,7 +12,7 @@ export function createMatch(humanState, opponents, seed) {
   const players = [{ id: 'you', human: true, name: humanState.player.name, title: humanState.player.title, look: humanState.player.look, s: humanState }]
   chosen.forEach((p, i) => {
     players.push({
-      id: p.id, human: false, persona: p, name: p.name, title: p.title, look: p.look,
+      id: p.id, human: false, persona: p, name: t(p.name), title: t(p.title), look: p.look,
       s: createBotGame(p, seed * 7 + i * 101 + 13, humanState.length, humanState.player.startAge || 22),
     })
   })
@@ -55,7 +56,7 @@ export function applyOps(players, fromIdx) {
       const owner = next[op.toIdx]
       if (owner && owner.s.phase !== 'ended') {
         owner.s = receiveCash(owner.s, op.amount)
-        notes.push({ icon: '💰', who: owner.name, text: `收到 ${next[fromIdx].name} 的過路費 ${Math.round(op.amount / 10000)} 萬(${propById(op.propId).name})`, tone: 'good' })
+        notes.push({ icon: '💰', who: owner.name, text: t('收到 {from} 的過路費 {n} 萬({prop})', { from: next[fromIdx].name, n: Math.round(op.amount / 10000), prop: propById(op.propId).name }), tone: 'good' })
       }
     } else if (op.op === 'auction') {
       const prop = propById(op.propId)
@@ -68,7 +69,7 @@ export function applyOps(players, fromIdx) {
         const mode = botWantsProperty(pl.s, pl.persona, prop)
         if (mode === 'cash') {
           pl.s = buyPropertyAt(pl.s, prop.id, 'cash')
-          notes.push({ icon: '🏷️', who: pl.name, text: `在拍賣中買下了「${prop.name}」(${Math.round(prop.price / 10000)} 萬)`, tone: '' })
+          notes.push({ icon: '🏷️', who: pl.name, text: t('在拍賣中買下了「{prop}」({n} 萬)', { prop: prop.name, n: Math.round(prop.price / 10000) }), tone: '' })
           break
         }
       }

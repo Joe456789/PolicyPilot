@@ -2,14 +2,15 @@ import AnimNum from './AnimNum.jsx'
 import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import { wan } from '../game/format.js'
+import { t } from '../i18n.js'
 
 // 即時排名:你和電腦對手,同一個棋盤、各自的人生。
 export function Leaderboard({ rows, activeId }) {
   const prev = useRef({})
   useEffect(() => { prev.current = Object.fromEntries(rows.map((r) => [r.id, r.rank])) })
   return (
-    <section className="panel board-rank" aria-label="即時排名">
-      <h3>🏁 即時排名</h3>
+    <section className="panel board-rank" aria-label={t('即時排名')}>
+      <h3>🏁 {t('即時排名')}</h3>
       <ol>
         {rows.map((r) => {
           const was = prev.current[r.id]
@@ -19,10 +20,10 @@ export function Leaderboard({ rows, activeId }) {
               <b className="rk">{r.rank}</b>
               <Avatar look={r.look} size={34} ring={false} />
               <div className="rk-t">
-                <div className="rk-n">{r.name}{r.human && <em>你</em>}{delta && <i className={delta === '▲' ? 'up' : 'down'}>{delta}</i>}</div>
-                <div className="rk-s">{r.bankrupt ? '💥 破產出局' : r.dead ? '已退場' : `${r.age} 歲 · 淨資產 ${wan(r.net)}`}</div>
+                <div className="rk-n">{r.human ? r.name : t(r.name)}{r.human && <em>{t('你')}</em>}{delta && <i className={delta === '▲' ? 'up' : 'down'}>{delta}</i>}</div>
+                <div className="rk-s">{r.bankrupt ? t('💥 破產出局') : r.dead ? t('已退場') : t('{age} 歲 · 淨資產 {net}', { age: r.age, net: wan(r.net) })}</div>
               </div>
-              <div className="rk-sc"><AnimNum value={r.total} delta={false} /><small>分</small></div>
+              <div className="rk-sc"><AnimNum value={r.total} delta={false} /><small>{t('分')}</small></div>
             </li>
           )
         })}
@@ -33,17 +34,17 @@ export function Leaderboard({ rows, activeId }) {
 
 export function QuestPanel({ quests }) {
   return (
-    <section className="panel" aria-label="人生任務">
-      <h3>🎯 人生任務</h3>
+    <section className="panel" aria-label={t('人生任務')}>
+      <h3>🎯 {t('人生任務')}</h3>
       <ul className="quests">
         {quests.map((q) => (
           <li key={q.id} className={q.done ? 'done' : ''}>
             <span className="q-ico" aria-hidden>{q.done ? '✅' : q.icon}</span>
             <div className="q-t">
-              <div className="q-n">{q.title}</div>
+              <div className="q-n">{t(q.title)}</div>
               <div className="q-bar"><i style={{ width: `${(q.value / q.target) * 100}%` }} /></div>
             </div>
-            <span className="q-v">{q.done ? '達成' : `${q.value}/${q.target}`}</span>
+            <span className="q-v">{q.done ? t('達成') : `${q.value}/${q.target}`}</span>
           </li>
         ))}
       </ul>
@@ -54,13 +55,13 @@ export function QuestPanel({ quests }) {
 export function Feed({ items }) {
   if (!items.length) return null
   return (
-    <section className="panel feed" aria-label="對手動態" aria-live="polite">
-      <h3>📣 對手動態</h3>
+    <section className="panel feed" aria-label={t('對手動態')} aria-live="polite">
+      <h3>📣 {t('對手動態')}</h3>
       <ul>
         {items.slice(0, 6).map((f) => (
           <li key={f.id} className={f.tone}>
             <span aria-hidden>{f.icon}</span>
-            <span><b>{f.who}</b> {f.text}{f.ai && <em className="ai-mark" title="Gemini 即時生成"> ✨</em>}</span>
+            <span><b>{f.who}</b> {f.text}{f.ai && <em className="ai-mark" title={t('Gemini 即時生成')}> ✨</em>}</span>
           </li>
         ))}
       </ul>
@@ -123,7 +124,7 @@ export function Drawer({ open, onClose, title, children }) {
   return (
     <div className="drawer-wrap" onClick={onClose}>
       <div className="drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
-        <header><b>{title}</b><button className="btn ghost" onClick={onClose}>關閉</button></header>
+        <header><b>{title}</b><button className="btn ghost" onClick={onClose}>{t('關閉')}</button></header>
         <div className="drawer-body">{children}</div>
       </div>
     </div>

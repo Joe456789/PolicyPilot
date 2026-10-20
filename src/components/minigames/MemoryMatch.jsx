@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { t } from '../../i18n.js'
 
 const PAIRS = [
-  ['🏥 住院手術', '🩺 醫療險'],
-  ['🚗 車禍受傷', '🚑 意外險'],
-  ['🌪️ 颱風淹水', '🏠 住宅火險'],
-  ['🦽 無法工作', '💼 失能險'],
-  ['🎗️ 確診癌症', '🎗️ 重大傷病險'],
-  ['👨‍👩‍👧 家人失去依靠', '🛡️ 壽險'],
+  ['🏥 住院手術', '🩺 醫療險'], // i18n-ignore 顯示時用 t()
+  ['🚗 車禍受傷', '🚑 意外險'], // i18n-ignore 顯示時用 t()
+  ['🌪️ 颱風淹水', '🏠 住宅火險'], // i18n-ignore 顯示時用 t()
+  ['🦽 無法工作', '💼 失能險'], // i18n-ignore 顯示時用 t()
+  ['🎗️ 確診癌症', '🎗️ 重大傷病險'], // i18n-ignore 顯示時用 t()
+  ['👨‍👩‍👧 家人失去依靠', '🛡️ 壽險'], // i18n-ignore 顯示時用 t()
 ]
 
 function shuffle(a) {
@@ -41,22 +42,22 @@ export default function MemoryMatch({ onDone }) {
   useEffect(() => {
     if (matched.length === PAIRS.length) {
       const stars = moves <= 12 ? 3 : moves <= 17 ? 2 : 1
-      const t = setTimeout(() => onDone({ stars, note: `你用了 ${moves} 次翻牌完成配對。` }), 900)
-      return () => clearTimeout(t)
+      const timer = setTimeout(() => onDone({ stars, note: t('你用了 {moves} 次翻牌完成配對。', { moves }) }), 900)
+      return () => clearTimeout(timer)
     }
     return undefined
   }, [matched, moves, onDone])
 
   return (
     <div className="mg">
-      <div className="mg-bar"><span>翻牌 {moves} 次</span><span>已配對 {matched.length} / {PAIRS.length}</span></div>
+      <div className="mg-bar"><span>{t('翻牌 {n} 次', { n: moves })}</span><span>{t('已配對 {n} / {m}', { n: matched.length, m: PAIRS.length })}</span></div>
       <div className="mem-grid">
         {cards.map((c, i) => {
           const open = flipped.includes(i) || matched.includes(c.pair)
           return (
-            <button key={c.id} className={`mem ${open ? 'open' : ''} ${matched.includes(c.pair) ? 'ok' : ''} ${c.kind}`} onClick={() => flip(i)} aria-label={open ? c.text : '未翻開的牌'}>
+            <button key={c.id} className={`mem ${open ? 'open' : ''} ${matched.includes(c.pair) ? 'ok' : ''} ${c.kind}`} onClick={() => flip(i)} aria-label={open ? t(c.text) : t('未翻開的牌')}>
               <span className="mem-back" aria-hidden>❓</span>
-              <span className="mem-front">{c.text}</span>
+              <span className="mem-front">{t(c.text)}</span>
             </button>
           )
         })}

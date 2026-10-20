@@ -6,13 +6,14 @@ import { clamp, round1k } from './core.js'
 import { TAGS, TAG_IDS } from './tags.js'
 import { SLOTS } from './prologueCards.js'
 import { adultStart } from './starts.js'
+import { t, trDeep, getLang } from '../i18n.js'
 
 const MAJORS = {
-  stem: { id: 'stem', icon: '🔬', title: '理工', careers: ['engineer', 'office'] },
-  biz: { id: 'biz', icon: '📊', title: '商管', careers: ['office', 'sales', 'teacher'] },
-  med: { id: 'med', icon: '🩺', title: '醫護', careers: ['nurse', 'office'] },
-  art: { id: 'art', icon: '🎨', title: '設計人文', careers: ['freelancer', 'office', 'teacher'] },
-  work: { id: 'work', icon: '🔧', title: '直接就業', careers: ['office', 'sales', 'freelancer'] },
+  stem: { id: 'stem', icon: '🔬', title: '理工', careers: ['engineer', 'office'] }, // i18n-ignore
+  biz: { id: 'biz', icon: '📊', title: '商管', careers: ['office', 'sales', 'teacher'] }, // i18n-ignore
+  med: { id: 'med', icon: '🩺', title: '醫護', careers: ['nurse', 'office'] }, // i18n-ignore
+  art: { id: 'art', icon: '🎨', title: '設計人文', careers: ['freelancer', 'office', 'teacher'] }, // i18n-ignore
+  work: { id: 'work', icon: '🔧', title: '直接就業', careers: ['office', 'sales', 'freelancer'] }, // i18n-ignore
 }
 export { MAJORS }
 
@@ -30,8 +31,8 @@ export function createLife(setup, seed = Math.floor(Math.random() * 100000)) {
     age: 0,
     step: 0,
     bgId: bg.id,
-    family: bg.title,
-    familyBlurb: bg.blurb,
+    family: t(bg.title),
+    familyBlurb: t(bg.blurb),
     parentsInsured: insured,
     parentsSupport: bg.parentsSupport,
     assets: { ...(bg.assets || {}) },
@@ -77,12 +78,13 @@ export function nextLifeScene(life) {
   life.rngN = rng.n
   life.age = slot.age
   life.used.push(card.id)
-  return {
+  // 靜態字串在這裡一次翻成目前語言(組出來的文字已在卡片裡用 t());英文模式下 trDeep 才會動作
+  return trDeep({
     kind: 'life', defId: 'life_' + card.id, aiable: true, base: {}, ai: false, _cid: card.id, _hit: hit,
     icon: fnOr(card.icon, life, hit), title: fnOr(card.title, life, hit), story: fnOr(card.story, life, hit),
     tone: card.tone || (hit ? 'bad' : 'neutral'),
     choices: fnOr(card.choices, life, hit).map(({ res, ...c }) => c), // 函式不能存進狀態,結算時再從卡池取回
-  }
+  })
 }
 
 const addTag = (life, id) => { if (TAGS[id] && !life.tags.includes(id)) life.tags.push(id) }
@@ -97,44 +99,44 @@ export function chooseLife(state, idx) {
   const lines = []
   const rng = new Rng(life.seed, life.rngN)
   if (choice.fx) for (const [k, v] of Object.entries(choice.fx)) life.stats[k] = clamp((life.stats[k] || 0) + v, 5, 100)
-  if (choice.cash) { life.cash = Math.max(0, life.cash + choice.cash); lines.push({ label: choice.cash > 0 ? '存款增加' : '花費', amount: choice.cash, kind: choice.cash > 0 ? 'in' : 'out' }) }
+  if (choice.cash) { life.cash = Math.max(0, life.cash + choice.cash); lines.push({ label: choice.cash > 0 ? t('存款增加') : t('花費'), amount: choice.cash, kind: choice.cash > 0 ? 'in' : 'out' }) }
   if (choice.gamble) {
     const win = rng.next() < 0.5
     const amt = win ? 20000 : -10000
     life.cash = Math.max(0, life.cash + amt)
-    lines.push({ label: win ? '小額投資賺到了' : '小額投資賠了一點', amount: amt, kind: win ? 'in' : 'out' })
+    lines.push({ label: win ? t('小額投資賺到了') : t('小額投資賠了一點'), amount: amt, kind: win ? 'in' : 'out' })
   }
   if (choice.boost) life.incomeBoost *= choice.boost
   if (choice.track === 'vocational') life.track = 'vocational'
   if (choice.flag) life.flags[choice.flag] = true
-  if (choice.tag) { addTag(life, choice.tag); lines.push({ label: `獲得人生標籤:${TAGS[choice.tag].icon} ${TAGS[choice.tag].title}`, amount: 0, kind: 'cover' }) }
+  if (choice.tag) { addTag(life, choice.tag); lines.push({ label: t('獲得人生標籤:{icon} {title}', { icon: TAGS[choice.tag].icon, title: TAGS[choice.tag].title }), amount: 0, kind: 'cover' }) }
   if (choice.major) {
     const share = life.tuition ?? 1
     const base = Math.round(((choice.loan || 0) * share) / 10000) * 10000
     if (life.stats.study < (choice.need || 0)) {
-      lines.push({ label: '成績差一點,沒考上第一志願,改念較低的選擇(學貸增加)', amount: 0, kind: 'warn' })
+      lines.push({ label: t('成績差一點,沒考上第一志願,改念較低的選擇(學貸增加)'), amount: 0, kind: 'warn' })
       life.loan += base + 50000
     } else life.loan += base
-    if (share < 1 && choice.loan) lines.push({ label: share === 0 ? '家裡全額負擔學費' : '家裡負擔了部分學費', amount: 0, kind: 'cover' })
+    if (share < 1 && choice.loan) lines.push({ label: share === 0 ? t('家裡全額負擔學費') : t('家裡負擔了部分學費'), amount: 0, kind: 'cover' })
     if (life.stats.study >= 75 && choice.loan) {
       life.loan = Math.max(0, life.loan - 50000)
-      lines.push({ label: '成績優異拿到獎學金', amount: 50000, kind: 'in' })
+      lines.push({ label: t('成績優異拿到獎學金'), amount: 50000, kind: 'in' })
     }
     life.major = choice.major
-    life.edu = choice.major === 'work' ? '高中職' : '大學'
-    if (base) lines.push({ label: `學貸 ${Math.round(base / 10000)} 萬`, amount: -base, kind: 'out' })
+    life.edu = choice.major === 'work' ? '高中職' : '大學' // i18n-ignore
+    if (base) lines.push({ label: t('學貸 {n} 萬', { n: Math.round(base / 10000) }), amount: -base, kind: 'out' })
     if (choice.major === 'work') life.incomeBoost *= 0.95
   }
   if (choice.fx) {
-    const t = Object.entries(choice.fx).map(([k, v]) => `${{ health: '健康', study: '學業', social: '人緣', finance: '財商' }[k]} ${v > 0 ? '+' : ''}${v}`).join('、')
-    if (t) lines.push({ label: t, amount: 0, kind: 'note' })
+    const fxText = Object.entries(choice.fx).map(([k, v]) => t('{stat} {delta}', { stat: { health: '健康', study: '學業', social: '人緣', finance: '財商' }[k], delta: `${v > 0 ? '+' : ''}${v}` })).join(getLang() === 'en' ? ', ' : '、')
+    if (fxText) lines.push({ label: fxText, amount: 0, kind: 'note' })
   }
   if (choice.res) lines.push(...choice.res(life, rng))
   life.rngN = rng.n
   if (card?.after) lines.push(...card.after(life, sc, choice, rng))
   if (card?.lesson) lines.push({ label: card.lesson, amount: 0, kind: 'lesson' })
   life.log.push({ age: SLOTS[life.step].age, title: sc.title })
-  life.scene = { ...sc, result: { lines } }
+  life.scene = { ...sc, result: { lines: trDeep(lines) } } // 靜態字串(卡片裡的結果行、教訓)在英文模式翻成英文
   return life
 }
 
@@ -142,8 +144,8 @@ export function chooseLife(state, idx) {
 export function deriveTags(life) {
   const f = life.flags
   const st = life.stats
-  const t = [...life.tags]
-  const add = (id) => { if (!t.includes(id)) t.push(id) }
+  const out = [...life.tags]
+  const add = (id) => { if (!out.includes(id)) out.push(id) }
   if (f.early_illness && (f.chronic || st.health < 85)) add('sickly')
   if (st.health >= 95 && !f.early_illness) add('strong')
   if (f.saver || st.finance >= 70) add('saver')
@@ -155,7 +157,7 @@ export function deriveTags(life) {
   if (f.adventurer) add('adventurer')
   if (f.parent_ill || f.parent_jobloss || f.parent_acc || f.debt) add('survivor')
   if (life.parentsInsured && !f.debt) add('insured_home')
-  return t.slice(0, 5)
+  return out.slice(0, 5)
 }
 
 export function advanceLife(state) {
@@ -199,7 +201,7 @@ export function lifeToSetup(life, careerId, length, opponents) {
       start: {
         ...a,
         parentsInsured: life.parentsInsured, stats: { ...life.stats }, incomeBoost: 1,
-        education: '大學', majorTitle: MAJORS[life.major || 'biz'].title,
+        education: t('大學'), majorTitle: t(MAJORS[life.major || 'biz'].title),
         house: 0,
       },
     }
@@ -225,8 +227,8 @@ export function lifeToSetup(life, careerId, length, opponents) {
       tags: life.tags,
       assets: life.assets,
       house: life.house || 0,
-      education: life.edu || '高中職',
-      majorTitle: MAJORS[life.major || 'work'].title,
+      education: t(life.edu || '高中職'),
+      majorTitle: t(MAJORS[life.major || 'work'].title),
     },
   }
 }
@@ -240,7 +242,7 @@ export function skipLife(state, startAge = 22) {
   life.done = true
   life.scene = null
   life.major = 'biz'
-  life.edu = '大學'
+  life.edu = '大學' // i18n-ignore
   life.stats = { health: startAge >= 40 ? 84 : startAge >= 30 ? 90 : 92, study: 55, social: 50, finance: startAge >= 40 ? 65 : startAge >= 30 ? 55 : 45 }
   return life
 }

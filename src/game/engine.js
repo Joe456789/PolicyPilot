@@ -9,6 +9,7 @@ import {
 import { buildScene, buildHospitalRest, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
 import { propById, rentOf, propPremium, upgradeCost, RISK_NAME } from './properties.js'
 import { updateQuests } from './quests.js'
+import { t, trDeep, getLang } from '../i18n.js'
 
 export * from './core.js'
 export * from './scoring.js'
@@ -21,7 +22,7 @@ export function setCoverage(state, id, tier) {
   return run(state, (s) => {
     const cur = s.coverage[id] || 0
     if (tier > cur && !canIncrease(s, id)) {
-      s.flash = id === 'home' ? '需要先擁有房子才能投保。' : id === 'auto' ? '需要先有車才能投保汽車險。' : '你已有相關傷病紀錄,這項保障已無法加保(核保限制)。'
+      s.flash = id === 'home' ? t('需要先擁有房子才能投保。') : id === 'auto' ? t('需要先有車才能投保汽車險。') : t('你已有相關傷病紀錄,這項保障已無法加保(核保限制)。')
       return
     }
     s.coverage[id] = tier
@@ -48,7 +49,7 @@ export function borrow(state, amount) {
   return run(state, (s) => {
     const limit = Math.max(0, householdIncome(s) * 1.5 - s.loan)
     const a = Math.min(amount, limit)
-    if (a <= 0) { s.flash = '貸款額度已用完(上限約為家庭年收入的 1.5 倍)。'; return }
+    if (a <= 0) { s.flash = t('貸款額度已用完(上限約為家庭年收入的 1.5 倍)。'); return }
     s.loan += a
     s.cash += a
   })
@@ -67,13 +68,13 @@ export function propAction(state, propId, action) {
   return run(state, (s) => {
     const p = propById(propId)
     const mine = s.props[propId]
-    if (!p || !mine) { s.flash = '你還沒有這處資產。'; return }
+    if (!p || !mine) { s.flash = t('你還沒有這處資產。'); return }
     if (s.phase !== 'plan') return
-    if (s.ap <= 0) { s.flash = '今年的行動點已用完(每年 2 點)。'; return }
+    if (s.ap <= 0) { s.flash = t('今年的行動點已用完(每年 2 點)。'); return }
     const lines = []
     const add = (label, amount, kind) => lines.push({ label, amount, kind })
     if (action === 'upgrade') {
-      if (mine.level >= 3) { s.flash = '已經是最高等級。'; return }
+      if (mine.level >= 3) { s.flash = t('已經是最高等級。'); return }
       upgradeProp(s, p, add)
     } else if (action === 'insure') {
       if (mine.insured) return
@@ -81,7 +82,7 @@ export function propAction(state, propId, action) {
     } else if (action === 'sell') sellProp(s, p, add)
     else return
     s.ap -= 1
-    s.flash = lines.map((l) => l.label).join(';')
+    s.flash = lines.map((l) => l.label).join(getLang() === 'en' ? '; ' : ';')
   })
 }
 
@@ -131,8 +132,8 @@ export function choose(state, idx, opts = {}) {
     const add = (label, amount, kind) => lines.push({ label, amount, kind: kind || (amount >= 0 ? 'in' : 'out') })
     resolveScene(s, rng, sc, choice, add, opts)
     cover(s)
-    if (s.cash < 0) add(`現金與可變現資產都用完了,缺口 ${Math.round(-s.cash / 10000)} 萬。年底前補不上就破產出局!`, 0, 'warn')
-    sc.result = { lines }
+    if (s.cash < 0) add(t('現金與可變現資產都用完了,缺口 {n} 萬。年底前補不上就破產出局!', { n: Math.round(-s.cash / 10000) }), 0, 'warn')
+    sc.result = { lines: trDeep(lines) }
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })
     s.phase = 'result'
   })
@@ -141,7 +142,7 @@ export function choose(state, idx, opts = {}) {
 // ---------- AI 事件導演 ----------
 // 引擎決定事件的類別與嚴重程度,AI 設計具體情境與選項;選項的「方向」由引擎轉成有上下限的數字。
 const DIRECTOR_DEFS = ['flu', 'fracture', 'car_accident', 'chronic', 'cancer', 'disability', 'burnout', 'house_repair', 'house_damage', 'tuition', 'car_liability']
-const CAT_NAME = { medical: '醫療', critical: '重大傷病', disability: '失能', career: '職場壓力', property: '家居意外', home: '房屋災損', family: '家庭教育', liability: '交通賠償' }
+const CAT_NAME = { medical: '醫療', critical: '重大傷病', disability: '失能', career: '職場壓力', property: '家居意外', home: '房屋災損', family: '家庭教育', liability: '交通賠償' } // i18n-ignore
 const STYLE_FX = {
   frugal: { costMult: 0.75, otherMult: 0.7, lossMult: 1.2, health: 1.3 },
   standard: { costMult: 1, otherMult: 1, lossMult: 1, health: 1 },
@@ -155,7 +156,7 @@ export function directorInfo(scene) {
   const cost = (b.medical || 0) + (b.other || 0)
   const rough = cost / 600000
   const severity = rough < 0.15 ? 1 : rough < 0.5 ? 2 : rough < 1.5 ? 3 : 4
-  return { cat: scene.cat, catName: CAT_NAME[scene.cat] || '生活', severity, needs: `核心事件必須保留:「${scene.title}」(${scene.story})` }
+  return { cat: scene.cat, catName: t(CAT_NAME[scene.cat] || '生活'), severity, needs: t('核心事件必須保留:「{title}」({story})', { title: scene.title, story: scene.story }) }
 }
 
 export function applyAiScene(state, out) {
@@ -258,7 +259,7 @@ export function endYear(state) {
           dmgCost += cost
           if (pr.insured) dmgPaid += Math.round(cost * 0.9)
           rent = Math.round(rent * 0.5)
-          s.year.events.push({ title: `${p.name}遭遇${RISK_NAME[k]},修繕 ${Math.round(cost / 10000)} 萬${pr.insured ? '(保險賠 9 成)' : '(沒有保險,全部自付)'}`, kind: 'event', cat: 'propdamage', icon: k === 'fire' ? '🔥' : k === 'quake' ? '🌋' : '🌊' })
+          s.year.events.push({ title: t('{name}遭遇{risk},修繕 {n} 萬{note}', { name: p.name, risk: RISK_NAME[k], n: Math.round(cost / 10000), note: pr.insured ? t('(保險賠 9 成)') : t('(沒有保險,全部自付)') }), kind: 'event', cat: 'propdamage', icon: k === 'fire' ? '🔥' : k === 'quake' ? '🌋' : '🌊' })
           break
         }
       }
@@ -279,13 +280,13 @@ export function endYear(state) {
     if (premiums > 0 && useCard(s, 'premium_off')) {
       const back = Math.round((premiums * 0.3) / 100) * 100
       premBack = back
-      s.year.events.push({ title: `${CARDS.premium_off.name}生效:保費回饋 ${Math.round(back / 10000 * 10) / 10} 萬`, kind: 'chance', cat: 'card', icon: CARDS.premium_off.icon })
+      s.year.events.push({ title: t('{card}生效:保費回饋 {n} 萬', { card: CARDS.premium_off.name, n: Math.round(back / 10000 * 10) / 10 }), kind: 'chance', cat: 'card', icon: CARDS.premium_off.icon })
     }
     if (rentIncome > 0 && useCard(s, 'rent_boost')) {
       const extra = Math.round((rentIncome * 0.5) / 100) * 100
       rentIncome += extra
       s.year.rent = rentIncome
-      s.year.events.push({ title: `${CARDS.rent_boost.name}生效:租金多收 ${Math.round(extra / 10000 * 10) / 10} 萬`, kind: 'chance', cat: 'card', icon: CARDS.rent_boost.icon })
+      s.year.events.push({ title: t('{card}生效:租金多收 {n} 萬', { card: CARDS.rent_boost.name, n: Math.round(extra / 10000 * 10) / 10 }), kind: 'chance', cat: 'card', icon: CARDS.rent_boost.icon })
     }
 
     s.cash += effIncome + rentIncome + premBack - s.expense - premiums - recurring - houseCost - loanService - propPrem - propLoan - dmgCost + dmgPaid

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from '../i18n.js'
 const PIPS = {
   1: [[50, 50]],
   2: [[28, 28], [72, 72]],
@@ -13,12 +14,12 @@ export default function Dice({ value, rolling }) {
   const [face, setFace] = useState(1)
   useEffect(() => {
     if (!rolling) return
-    const t = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 90)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 90)
+    return () => clearInterval(timer)
   }, [rolling])
   const v = rolling ? face : value || 1
   return (
-    <div className={`dice ${rolling ? 'rolling' : ''}`} aria-label={value ? `骰子點數 ${value}` : '骰子'}>
+    <div className={`dice ${rolling ? 'rolling' : ''}`} aria-label={value ? t('骰子點數 {n}', { n: value }) : t('骰子')}>
       <svg viewBox="0 0 100 100" width="100%" height="100%">
         <rect x="4" y="4" width="92" height="92" rx="20" fill="#fff" stroke="#d6d3c8" strokeWidth="3" />
         {PIPS[v].map(([x, y], i) => (
