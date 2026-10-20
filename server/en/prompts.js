@@ -13,7 +13,7 @@ export const DIRECTIVE = `
 LANGUAGE: Write every natural-language string value in natural American English. Keep the JSON keys and enum values (e.g. style: frugal/standard/premium/risky) exactly as specified. The length limits above are given in English words.`
 
 const who = (c, b) =>
-  `${c.name} (${c.career}, ${c.background} background, ${c.style}; age ${b.age}, ${b.married ? 'married' : 'single'}, ${b.dependents} dependents, ${b.ownsHouse ? 'has a mortgage' : 'no home'})`
+  `${c.name} (${c.career}, ${c.background} background, ${c.style}; age ${b.age}, ${b.married ? 'married' : 'single'}, dependents: ${b.dependents}, ${b.ownsHouse ? 'has a mortgage' : 'no home'})`
 
 export function narratePrompt({ scene, character, brief }) {
   return `Rewrite the game event card below into story text that fits the main character's situation.
