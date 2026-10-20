@@ -628,7 +628,7 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 }
 
 .settings-fab {
-  position: fixed; top: 10px; right: 10px; z-index: 60; width: 40px; height: 40px; border-radius: 14px;
+  position: fixed; top: 10px; right: 10px; z-index: 40; width: 40px; height: 40px; border-radius: 14px;
   display: grid; place-items: center; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-2);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12); transition: transform 0.15s, box-shadow 0.15s;
 }
@@ -823,3 +823,15 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 :root[data-style="anime"] .lines .line { border-bottom: 2px dashed var(--line); }
 :root[data-style="anime"] .lines .line b { font-weight: 900; }
 .game3 .topbar { padding-right: 62px; }
+
+/* 手機:觸控目標至少約 36px */
+@media (max-width: 720px), (pointer: coarse) {
+  .sw { gap: 10px; }
+  .sw button { width: 36px; height: 36px; }
+  .step-row button { min-height: 36px; padding: 4px 14px; }
+  .switch input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--green); }
+  .seg-pill { min-height: 40px; }
+  .tour-skip { min-height: 36px; padding: 6px 10px; }
+  .btn.ghost { min-height: 36px; }
+}
+@media (max-width: 720px), (pointer: coarse) { .pills button, .pills.big button { min-height: 38px; } }
