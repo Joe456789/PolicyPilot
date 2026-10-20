@@ -24,6 +24,7 @@ import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
+import { useLang } from './i18n.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -663,6 +664,7 @@ function Title({ aiInfo, onStart, onRecords }) {
 }
 
 export default function App() {
+  useLang() // 語言切換時整個畫面重新渲染
   return (
     <>
       <GameApp />
