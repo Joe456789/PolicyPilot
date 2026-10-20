@@ -3,6 +3,11 @@ import Chart from './Chart.jsx'
 import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
+import LifeTimeline from './LifeTimeline.jsx'
+import ShareCard from './ShareCard.jsx'
+import PrintReport from './PrintReport.jsx'
+import AchievementPopups from './AchievementPopups.jsx'
+import { Printer } from 'lucide-react'
 import { useArt } from '../art.js'
 import { TAGS } from '../game/tags.js'
 import { computeEnding } from '../game/endings.js'
@@ -85,6 +90,10 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
         </div>
       </section>
 
+      <div className="res-tools">
+        <button className="btn" onClick={() => window.print()}><Printer size={16} aria-hidden /> 下載 PDF 學習報告</button>
+      </div>
+
       <div className="res-top">
         <div className="card score">
           <div className="life-sum">
@@ -145,6 +154,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
         </section>
       )}
 
+      <AchievementPopups items={fresh} />
       {fresh && fresh.length > 0 && (
         <section className="card unlock">
           <h3>🎉 解鎖新成就</h3>
@@ -168,6 +178,8 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
           ))}
         </ul>
       </section>
+
+      <LifeTimeline s={s} />
 
       <section className="card">
         <h3>🌌 平行人生:同樣的人生,不同的保障</h3>
@@ -235,6 +247,12 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
           <p className="compliance">⚖️ {coach.compliance}</p>
         </section>
       )}
+
+      <ShareCard s={s} score={score} ending={ending} headline={coach?.headline || score.archetype}
+        rank={ranks && ranks.length > 1 ? ranks.find((r) => r.human)?.rank : null} players={ranks?.length || 1}
+        questsDone={quests.filter((q) => q.done).length} netWorth={netWorth(s)} artUrl={endingArt} />
+
+      <PrintReport s={s} score={score} ending={ending} coach={coach} report={report} data={data} rec={rec} quests={quests} ps={ps} netWorth={netWorth(s)} />
 
       <p className="footnote">
         遊戲分工:劇情改寫、理專諮詢、人生階段分析與教練回饋由 Gemini 生成;所有金額、機率與保險給付由規則引擎確定性計算,

@@ -669,3 +669,61 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 @keyframes tourIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .set-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .set-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- 結算:時間軸、成績卡、成就彈出、PDF 報告 ---------- */
+.res-tools { display: flex; justify-content: flex-end; gap: 8px; margin: -4px 0 10px; }
+.res-tools .btn { display: inline-flex; align-items: center; gap: 6px; }
+.timeline .tl-chart { width: 100%; height: auto; display: block; margin: 8px 0 4px; }
+.tl-zero { stroke: var(--line); stroke-dasharray: 4 4; }
+.tl-line { fill: none; stroke: var(--green); stroke-width: 3; stroke-linejoin: round; }
+.tl-dot { fill: var(--surface); stroke: var(--green); stroke-width: 2; cursor: pointer; transition: r 0.2s; }
+.tl-dot.good { stroke: #3b82f6; } .tl-dot.bad { stroke: var(--red); }
+.tl-dot.cur { fill: #ffd166; stroke: var(--ink); stroke-width: 3; }
+.tl-age { fill: var(--muted); font-size: 13px; font-weight: 700; }
+.tl-ctl { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.tl-ctl .btn { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tl-ctl input[type=range] { flex: 1; accent-color: var(--green); }
+.tl-year { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 16px; background: var(--tint-green); animation: tlIn 0.35s ease; }
+.tl-age-big { font-size: 54px; font-weight: 900; line-height: 1; color: var(--green); text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.12); } .tl-age-big small { font-size: 18px; margin-left: 2px; }
+.tl-nw { font-size: 15px; } .tl-nw b { font-size: 22px; } .tl-nw em { font-style: normal; font-weight: 800; margin-left: 6px; }
+.tl-events { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 3px; font-size: 14px; } .tl-events li span { margin-right: 6px; }
+.tl-notes { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.chip.good { background: var(--tint-blue); color: var(--on-blue); border-color: var(--line-blue); } .chip.bad { background: var(--tint-red); color: var(--on-red); border-color: var(--line-red); }
+@keyframes tlIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+.sharecard h3 { display: flex; align-items: center; gap: 6px; }
+.share-out { display: grid; grid-template-columns: minmax(180px, 320px) 1fr; gap: 16px; align-items: start; margin-top: 10px; }
+.share-out img { width: 100%; border-radius: 14px; border: 2px solid var(--ink); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.15); }
+.share-btns { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.share-btns .btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+@media (max-width: 600px) { .share-out { grid-template-columns: 1fr; } .tl-year { grid-template-columns: 1fr; } }
+.ach-pop { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: flex; justify-content: center; align-items: flex-start; padding-top: 70px; }
+.ach-card { display: flex; gap: 12px; align-items: center; background: #fff7d6; color: #5c4400; border: 3px solid #1f2a37; border-radius: 18px; padding: 12px 18px; box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.25); animation: achIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); max-width: min(440px, 92vw); }
+.ach-card b { font-size: 18px; } .ach-card p { font-size: 13px; margin-top: 2px; }
+.ach-k { font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #b45309; display: flex; gap: 4px; align-items: center; }
+.ach-trophy { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #ffd166; border: 3px solid #1f2a37; color: #5c4400; animation: trophy 0.9s ease; }
+@keyframes achIn { from { opacity: 0; transform: translateY(-40px) scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes trophy { 0% { transform: rotate(-25deg) scale(0.5); } 60% { transform: rotate(12deg) scale(1.15); } 100% { transform: none; } }
+
+.print-report { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  :root, :root[data-theme="dark"] { --paper: #fff; --cream: #fff; --ink: #111; --ink-2: #222; --muted: #555; --line: #bbb; --surface: #fff; --surface-2: #f3f3f3; color-scheme: light; }
+  body { background: #fff !important; zoom: 1 !important; }
+  .settings-fab, .tour, .ach-pop, .overlay { display: none !important; }
+  .screen.result > *:not(.print-report) { display: none !important; }
+  .screen.result { padding: 0 !important; background: none !important; }
+  .print-report { display: block !important; color: #111; font-size: 11.5pt; line-height: 1.6; }
+  .print-report * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pr-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00915a; padding-bottom: 8px; margin-bottom: 10px; }
+  .pr-head h1 { font-size: 22pt; color: #006b43; } .pr-head p { color: #555; }
+  .pr-score { text-align: center; } .pr-score b { display: block; font-size: 30pt; color: #006b43; line-height: 1; } .pr-score span { font-weight: 800; }
+  .print-report h2 { font-size: 13.5pt; margin: 14px 0 6px; padding-left: 8px; border-left: 5px solid #f5a524; break-after: avoid; }
+  .pr-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10.5pt; break-inside: auto; }
+  .pr-table th, .pr-table td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+  .pr-table th { background: #f1efe5; width: 18%; } .pr-gap th, .pr-years th { width: auto; }
+  .pr-table tr { break-inside: avoid; }
+  .pr-script { border: 1px solid #ccc; border-left: 5px solid #00915a; padding: 6px 10px; margin: 6px 0; break-inside: avoid; }
+  .pr-note { color: #555; font-size: 10pt; } .pr-foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #bbb; font-size: 9pt; color: #666; }
+  .print-report svg { max-width: 100%; height: auto; }
+}
