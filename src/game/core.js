@@ -6,42 +6,33 @@ import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
 import { t, getLang } from '../i18n.js'
 
-// 8x8 環形棋盤:28 格。8 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
+// 棋盤:42 格,沿著 map.js 的彎曲路徑排列。12 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
 import { PROPERTIES, propById } from './properties.js'
 const P = (id) => {
   const p = PROPERTIES.find((x) => x.id === id)
   return { type: 'property', label: p.name, icon: p.icon, prop: id }
 }
-export const BOARD = [
-  { type: 'start', label: '年度起點', icon: '🏁' }, // i18n-ignore
-  P('wanhua'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
-  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
-  P('banqiao'),
-  { type: 'market', label: '市場行情', icon: '📊' }, // i18n-ignore
-  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
-  { type: 'milestone', label: '人生里程碑', icon: '🌟' }, // i18n-ignore
-  P('qingpu'),
-  { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' }, // i18n-ignore
-  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
-  { type: 'tax', label: '年度報稅', icon: '🧾' }, // i18n-ignore
-  P('zhubei'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
-  { type: 'hospital', label: '醫院', icon: '🏥' }, // i18n-ignore
-  P('qiqi'),
-  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
-  { type: 'milestone', label: '人生里程碑', icon: '🌟' }, // i18n-ignore
-  { type: 'bank', label: '銀行', icon: '🏦' }, // i18n-ignore
-  P('tainan'),
-  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
-  { type: 'market', label: '市場行情', icon: '📊' }, // i18n-ignore
-  P('kaohsiung'),
-  { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
-  P('hualien'),
-  { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
-  { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
-  { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
+const TILE = {
+  start: { type: 'start', label: '年度起點', icon: '🏁' }, // i18n-ignore
+  chance: { type: 'chance', label: '機會與命運', icon: '🎲' }, // i18n-ignore
+  event: { type: 'event', label: '生活事件', icon: '🎴' }, // i18n-ignore
+  market: { type: 'market', label: '市場行情', icon: '📊' }, // i18n-ignore
+  minigame: { type: 'minigame', label: '小遊戲', icon: '🎮' }, // i18n-ignore
+  milestone: { type: 'milestone', label: '人生里程碑', icon: '🌟' }, // i18n-ignore
+  advisor: { type: 'advisor', label: '理專諮詢', icon: '🧑‍💼' }, // i18n-ignore
+  tax: { type: 'tax', label: '年度報稅', icon: '🧾' }, // i18n-ignore
+  hospital: { type: 'hospital', label: '醫院', icon: '🏥' }, // i18n-ignore
+  bank: { type: 'bank', label: '銀行', icon: '🏦' }, // i18n-ignore
+  shop: { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
+}
+const LAYOUT = [
+  'start', 'P:wanhua', 'chance', 'event', 'P:banqiao', 'market', 'minigame', 'milestone', 'P:tamsui', 'advisor',
+  'event', 'tax', 'P:qingpu', 'chance', 'shop', 'P:zhubei', 'minigame', 'milestone', 'hospital', 'P:yilan',
+  'event', 'bank', 'market', 'P:qiqi', 'chance', 'minigame', 'event', 'P:chiayi', 'milestone', 'event',
+  'shop', 'P:tainan', 'advisor', 'P:kaohsiung', 'chance', 'event', 'P:kenting', 'minigame', 'market', 'P:hualien',
+  'chance', 'event',
 ]
+export const BOARD = LAYOUT.map((k) => (k.startsWith('P:') ? P(k.slice(2)) : { ...TILE[k] }))
 
 export const ASSETS = {
   deposit: { id: 'deposit', name: '定存', icon: '🏦', risk: '極低', blurb: '幾乎不波動,年報酬約 1.5%,但追不上通膨。' }, // i18n-ignore

@@ -107,7 +107,7 @@ export default {
   "風險:{risk}": "Risk: {risk}",
   "買入": "Buy",
   "全賣": "Sell all",
-  "棋盤上有 8 處資產,走到才能買。擁有後每年收租、別人走到你的資產要付過路費。": "There are 8 properties on the board; you can buy one by landing on it. Owners collect rent every year, and rivals landing on your property pay you a toll. ",
+  "棋盤上有 12 處資產,走到才能買。擁有後每年收租、別人走到你的資產要付過路費。": "There are 12 properties on the board; you can buy one by landing on it. Owners collect rent every year, and rivals landing on your property pay you a toll. ",
   "行動點:{n} / 2": "Action points: {n} / 2",
   "(升級、投保、出售各花 1 點)。天災(火災、地震、淹水)會在年底檢查,沒保險要自己付修繕費。": " (Upgrading, insuring and selling cost 1 each.) Disasters (fire, earthquake, flood) are checked at year-end; without insurance you pay the repairs yourself.",
   "售價 {price} · 年租約 {rent}({pct}%) · 風險:{risks}": "Price {price} · rent about {rent}/yr ({pct}%) · Risk: {risks}",

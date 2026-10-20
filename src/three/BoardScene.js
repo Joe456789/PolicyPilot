@@ -6,8 +6,12 @@ import { PROPERTIES } from '../game/properties.js'
 import { t, getLang } from '../i18n.js'
 import { wan } from '../game/format.js'
 
-const N = 28
+import { MAP_PATH, MAP_COLS, MAP_ROWS, groundCells } from '../game/map.js'
+
+const N = MAP_PATH.length
 const S = 2 // 一格的邊長
+const HW = (MAP_COLS * S) / 2 // 棋盤範圍的一半(世界座標)
+const HH = (MAP_ROWS * S) / 2
 
 const TYPE_COLOR = {
   start: 0x00915a, event: 0xff6b57, chance: 0xf97316, market: 0x3b82f6, bonus: 0xf5b301,
@@ -15,17 +19,12 @@ const TYPE_COLOR = {
   hospital: 0xec4899, bank: 0x0d9488, minigame: 0x6366f1, property: 0xb7791f,
 }
 
-// 與 2D 棋盤相同的環形座標(8x8 外圈 28 格)
-export function tileCoord(i) {
-  if (i <= 7) return { r: 0, c: i }
-  if (i <= 13) return { r: i - 7, c: 7 }
-  if (i <= 21) return { r: 7, c: 21 - i }
-  return { r: 28 - i, c: 0 }
-}
+// 與 2D 棋盤共用 map.js 的彎曲路徑座標;世界原點放在整個棋盤的中心
 const tileXZ = (i) => {
-  const { r, c } = tileCoord(i)
-  return new THREE.Vector3((c - 3.5) * S, 0.5, (r - 3.5) * S)
+  const { r, c } = MAP_PATH[((i % N) + N) % N]
+  return new THREE.Vector3((c - (MAP_COLS - 1) / 2) * S, 0.5, (r - (MAP_ROWS - 1) / 2) * S)
 }
+const cellXZ = (c, r) => new THREE.Vector3((c - (MAP_COLS - 1) / 2) * S, 0, (r - (MAP_ROWS - 1) / 2) * S)
 
 const ease = {
   inOut: (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
@@ -104,7 +103,7 @@ export class BoardScene {
     this.tokens = []
     this.disposed = false
     this.clock = new THREE.Clock()
-    this.orbit = { az: 0.0, pol: 0.78, dist: 33, tAz: 0, tPol: 0.78, tDist: 33 }
+    this.orbit = { az: 0.0, pol: 0.78, dist: 40, tAz: 0, tPol: 0.78, tDist: 40 }
     this.camTarget = new THREE.Vector3()
     this.camTargetGoal = new THREE.Vector3()
     this.mode = 'board' // board 全景 | dice 對著骰子 | token 跟著棋子
@@ -156,34 +155,37 @@ export class BoardScene {
     const { scene } = this
     scene.add(new THREE.HemisphereLight(0xffffff, 0xb7d9c4, 1.05))
     const sun = new THREE.DirectionalLight(0xfff3dc, 2.2)
-    sun.position.set(14, 26, 10)
+    sun.position.set(12, 28, 12)
     sun.castShadow = true
     const small = window.innerWidth < 700
     sun.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048)
     const sc = sun.shadow.camera
-    sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 70
+    sc.left = -20; sc.right = 20; sc.top = 15; sc.bottom = -15; sc.near = 1; sc.far = 80
     sun.shadow.bias = -0.0004
     scene.add(sun)
   }
 
   buildWorld() {
     const { scene } = this
-    // 水面與草地島嶼
+    // 水面與草地島嶼(橢圓形,比棋盤大一圈)
     const water = new THREE.Mesh(
-      new THREE.CircleGeometry(120, 64),
+      new THREE.CircleGeometry(160, 64),
       new THREE.MeshStandardMaterial({ color: 0x7cc7e8, roughness: 0.25, metalness: 0.1 }),
     )
     water.rotation.x = -Math.PI / 2
     water.position.y = -0.75
     scene.add(water)
+    this.islandR = { x: HW + 9, z: HH + 9 }
     const island = new THREE.Mesh(
-      new THREE.CylinderGeometry(27, 29, 1.1, 64),
+      new THREE.CylinderGeometry(1, 1.06, 1.1, 64),
       new THREE.MeshStandardMaterial({ color: 0x9bd8a9, roughness: 1 }),
     )
+    island.scale.set(this.islandR.x, 1, this.islandR.z)
     island.position.y = -1.3
     island.receiveShadow = true
     scene.add(island)
-    const top = new THREE.Mesh(new THREE.CircleGeometry(27, 64), new THREE.MeshStandardMaterial({ color: 0xa8e0b3, roughness: 1 }))
+    const top = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshStandardMaterial({ color: 0xa8e0b3, roughness: 1 }))
+    top.scale.set(this.islandR.x, this.islandR.z, 1)
     top.rotation.x = -Math.PI / 2
     top.position.y = -0.74
     top.receiveShadow = true
@@ -191,24 +193,17 @@ export class BoardScene {
     this.buildScenery()
     this.buildClouds()
 
-    // 棋盤底座
-    const base = new THREE.Mesh(
-      new RoundedBoxGeometry(8 * S + 1.4, 0.9, 8 * S + 1.4, 4, 0.35),
-      new THREE.MeshStandardMaterial({ color: 0x0b7a4d, roughness: 0.6 }),
-    )
-    base.position.y = -0.1
-    base.castShadow = true
-    base.receiveShadow = true
-    scene.add(base)
-
-    // 中央城市底板
-    const plate = new THREE.Mesh(
-      new RoundedBoxGeometry(6 * S - 0.1, 0.16, 6 * S - 0.1, 3, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xf3efe0, roughness: 0.9 }),
-    )
-    plate.position.y = 0.36
-    plate.receiveShadow = true
-    scene.add(plate)
+    // 棋盤底座:每一格墊一塊略大的綠色底板,連起來就是一條彎曲的賽道
+    const baseGeo = new RoundedBoxGeometry(S + 0.55, 0.9, S + 0.55, 3, 0.3)
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x0b7a4d, roughness: 0.6 })
+    for (let i = 0; i < N; i++) {
+      const p = tileXZ(i)
+      const base = new THREE.Mesh(baseGeo, baseMat)
+      base.position.set(p.x, -0.1, p.z)
+      base.castShadow = true
+      base.receiveShadow = true
+      scene.add(base)
+    }
 
     this.buildTiles()
     this.buildCity()
@@ -228,10 +223,21 @@ export class BoardScene {
     const rnd = mulberry(777)
     const trunkM = new THREE.MeshStandardMaterial({ color: 0x8a5a3c })
     const leaf = [0x2f9e6b, 0x3fb37a, 0x5cc98a].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }))
-    for (let i = 0; i < 70; i++) {
-      const ang = rnd() * Math.PI * 2
-      const r = 14.5 + rnd() * 11
-      const x = Math.cos(ang) * r, z = Math.sin(ang) * r
+    const { x: rx, z: rz } = this.islandR
+    // 在島上、棋盤範圍之外隨機撒點
+    const spot = (minOut, maxOut) => {
+      for (let k = 0; k < 40; k++) {
+        const a = rnd() * Math.PI * 2, f = 0.55 + rnd() * 0.42
+        const x = Math.cos(a) * rx * f, z = Math.sin(a) * rz * f
+        const out = Math.max(Math.abs(x) - HW, Math.abs(z) - HH)
+        if (out >= minOut && out <= maxOut) return { x, z }
+      }
+      return null
+    }
+    for (let i = 0; i < 90; i++) {
+      const pt = spot(1.8, 20)
+      if (!pt) continue
+      const { x, z } = pt
       const s = 0.8 + rnd() * 0.9
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.16 * s, 0.9 * s, 8), trunkM)
       trunk.position.set(x, -0.3 + 0.45 * s, z)
@@ -241,10 +247,10 @@ export class BoardScene {
       this.scene.add(trunk, crown)
     }
     const wall = [0xf9d5c7, 0xfde4a8, 0xc9e4f5, 0xe6d7f5]
-    for (let i = 0; i < 9; i++) {
-      const ang = (i / 9) * Math.PI * 2 + rnd() * 0.3
-      const r = 16.5 + rnd() * 6
-      const x = Math.cos(ang) * r, z = Math.sin(ang) * r
+    for (let i = 0; i < 10; i++) {
+      const pt = spot(3, 9)
+      if (!pt) continue
+      const { x, z } = pt
       const h = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.1, 1.4, 2, 0.08), new THREE.MeshStandardMaterial({ color: wall[i % 4] }))
       h.position.set(x, -0.15, z)
       h.rotation.y = rnd() * Math.PI
@@ -276,23 +282,6 @@ export class BoardScene {
 
   buildCars() {
     this.cars = []
-    const colors = [0xe5484d, 0x3b82f6, 0xf5b301, 0x2eb67d, 0xa855f7]
-    const lines = [
-      { axis: 'z', fixed: S - 0.18, dir: 1 }, { axis: 'z', fixed: -S + 0.18, dir: -1 },
-      { axis: 'x', fixed: S - 0.18, dir: -1 }, { axis: 'x', fixed: -S + 0.18, dir: 1 },
-      { axis: 'z', fixed: S + 0.18, dir: -1 },
-    ]
-    lines.forEach((ln, i) => {
-      const car = new THREE.Group()
-      const body = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.22, 0.34, 2, 0.05), new THREE.MeshStandardMaterial({ color: colors[i % colors.length], roughness: 0.4 }))
-      body.position.y = 0.2
-      const cab = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.18, 0.3, 2, 0.05), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, roughness: 0.2 }))
-      cab.position.set(-0.03, 0.38, 0)
-      body.castShadow = true
-      car.add(body, cab)
-      this.scene.add(car)
-      this.cars.push({ car, ln, t: (i * 2.3) % (6 * S - 1.2) })
-    })
   }
 
   // 一般格子貼圖(表情符號 + 名稱 + 價格);img 有值時是地產插圖版
@@ -376,74 +365,89 @@ export class BoardScene {
     const pastel = [0xf9d5c7, 0xfde4a8, 0xc9e4f5, 0xd7ecd0, 0xe6d7f5, 0xffd9e6, 0xf5e6c8]
     const roofs = [0xd96a4b, 0x4f8cff, 0x2eb67d, 0x9b6bff, 0xf5a524]
     const group = new THREE.Group()
-    // 中央 6x6 → 3x3 街區(每區 2x2 格),中間留道路
-    for (let bx = 0; bx < 3; bx++) {
-      for (let bz = 0; bz < 3; bz++) {
-        const cx = (bx - 1) * 2 * S
-        const cz = (bz - 1) * 2 * S
-        const isCenter = bx === 1 && bz === 1
-        if (isCenter) {
-          // 中央廣場:高塔 + 噴水
-          const tower = new THREE.Mesh(
-            new RoundedBoxGeometry(1.5, 4.2, 1.5, 3, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0x0b9a62, roughness: 0.35, metalness: 0.2 }),
-          )
-          tower.position.set(cx, 2.55, cz)
-          tower.castShadow = true
-          group.add(tower)
-          this.fadeMats = [tower.material]
-          const cap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.1, 4), new THREE.MeshStandardMaterial({ color: 0xffd166 }))
-          cap.position.set(cx, 5.2, cz)
-          cap.rotation.y = Math.PI / 4
-          cap.castShadow = true
-          group.add(cap)
-          this.fadeMats.push(cap.material)
-          continue
-        }
-        const n = 2 + Math.floor(rnd() * 2)
-        for (let k = 0; k < n; k++) {
-          const w = 1.0 + rnd() * 0.9
-          const d = 1.0 + rnd() * 0.9
-          const h = 0.7 + rnd() * 1.7
-          const ox = (rnd() - 0.5) * 2.0
-          const oz = (rnd() - 0.5) * 2.0
-          const b = new THREE.Mesh(
-            new RoundedBoxGeometry(w, h, d, 2, 0.08),
-            new THREE.MeshStandardMaterial({ map: windowTex(pastel[Math.floor(rnd() * pastel.length)]), roughness: 0.7 }),
-          )
-          b.position.set(cx + ox, 0.45 + h / 2, cz + oz)
-          b.castShadow = true
-          b.receiveShadow = true
-          group.add(b)
-          const roof = new THREE.Mesh(
-            new RoundedBoxGeometry(w + 0.12, 0.14, d + 0.12, 2, 0.05),
-            new THREE.MeshStandardMaterial({ color: roofs[Math.floor(rnd() * roofs.length)], roughness: 0.6 }),
-          )
-          roof.position.set(cx + ox, 0.45 + h + 0.07, cz + oz)
-          roof.castShadow = true
-          group.add(roof)
-        }
-        // 樹
-        for (let k = 0; k < 2; k++) {
-          const tx = cx + (rnd() - 0.5) * 3
-          const tz = cz + (rnd() - 0.5) * 3
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.4, 8), new THREE.MeshStandardMaterial({ color: 0x8a5a3c }))
-          trunk.position.set(tx, 0.65, tz)
-          const crown = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.9, 8), new THREE.MeshStandardMaterial({ color: 0x2f9e6b, roughness: 0.8 }))
-          crown.position.set(tx, 1.2, tz)
-          crown.castShadow = true
-          group.add(trunk, crown)
-        }
+    const { inner, bay } = groundCells()
+    const plateGeo = new RoundedBoxGeometry(S - 0.05, 0.16, S - 0.05, 3, 0.06)
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0xf3efe0, roughness: 0.9 })
+    const lawnMat = new THREE.MeshStandardMaterial({ color: 0xb9e6a6, roughness: 1 })
+    const pondMat = new THREE.MeshStandardMaterial({ color: 0x7cc7e8, roughness: 0.2, metalness: 0.1 })
+    const tree = (x, z, sc = 1) => {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * sc, 0.09 * sc, 0.4 * sc, 8), new THREE.MeshStandardMaterial({ color: 0x8a5a3c }))
+      trunk.position.set(x, 0.65, z)
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.38 * sc, 0.9 * sc, 8), new THREE.MeshStandardMaterial({ color: 0x2f9e6b, roughness: 0.8 }))
+      crown.position.set(x, 0.65 + 0.2 * sc + 0.45 * sc, z)
+      crown.castShadow = true
+      group.add(trunk, crown)
+    }
+    // 中央高塔:放在最靠近棋盤中心的街區格;它和相鄰的格子保留成廣場(骰子落在這裡)
+    let plaza = inner[0]
+    for (const c of inner) if (Math.hypot(c.c - (MAP_COLS - 1) / 2, c.r - (MAP_ROWS - 1) / 2) < Math.hypot(plaza.c - (MAP_COLS - 1) / 2, plaza.r - (MAP_ROWS - 1) / 2)) plaza = c
+    const tp = cellXZ(plaza.c, plaza.r)
+    this.towerPos = tp
+    const isPlaza = (c) => Math.abs(c.c - plaza.c) <= 1 && Math.abs(c.r - plaza.r) <= 1
+
+    for (const cell of inner) {
+      const p = cellXZ(cell.c, cell.r)
+      const plate = new THREE.Mesh(plateGeo, plateMat)
+      plate.position.set(p.x, 0.36, p.z)
+      plate.receiveShadow = true
+      group.add(plate)
+      if (cell === plaza) {
+        const tower = new THREE.Mesh(
+          new RoundedBoxGeometry(1.2, 4.2, 1.2, 3, 0.2),
+          new THREE.MeshStandardMaterial({ color: 0x0b9a62, roughness: 0.35, metalness: 0.2 }),
+        )
+        tower.position.set(p.x, 2.55, p.z)
+        tower.castShadow = true
+        group.add(tower)
+        this.fadeMats = [tower.material]
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.95, 1.1, 4), new THREE.MeshStandardMaterial({ color: 0xffd166 }))
+        cap.position.set(p.x, 5.2, p.z)
+        cap.rotation.y = Math.PI / 4
+        cap.castShadow = true
+        group.add(cap)
+        this.fadeMats.push(cap.material)
+        continue
       }
+      if (isPlaza(cell)) { tree(p.x + (rnd() - 0.5) * 0.8, p.z + (rnd() - 0.5) * 0.8, 0.8); continue }
+      // 街區:一到兩棟低矮的小樓(不要擋到後面的格子)
+      const n = 1 + Math.floor(rnd() * 2)
+      for (let k = 0; k < n; k++) {
+        const w = 0.7 + rnd() * 0.45, d = 0.7 + rnd() * 0.45, h = 0.6 + rnd() * 0.9
+        const ox = n === 1 ? (rnd() - 0.5) * 0.3 : (k ? 0.42 : -0.42), oz = (rnd() - 0.5) * 0.5
+        const b = new THREE.Mesh(
+          new RoundedBoxGeometry(w, h, d, 2, 0.08),
+          new THREE.MeshStandardMaterial({ map: windowTex(pastel[Math.floor(rnd() * pastel.length)]), roughness: 0.7 }),
+        )
+        b.position.set(p.x + ox, 0.45 + h / 2, p.z + oz)
+        b.castShadow = true
+        b.receiveShadow = true
+        group.add(b)
+        const roof = new THREE.Mesh(
+          new RoundedBoxGeometry(w + 0.12, 0.14, d + 0.12, 2, 0.05),
+          new THREE.MeshStandardMaterial({ color: roofs[Math.floor(rnd() * roofs.length)], roughness: 0.6 }),
+        )
+        roof.position.set(p.x + ox, 0.45 + h + 0.07, p.z + oz)
+        roof.castShadow = true
+        group.add(roof)
+      }
+      if (rnd() < 0.6) tree(p.x + (rnd() - 0.5) * 1.3, p.z + (rnd() > 0.5 ? 0.8 : -0.8), 0.7)
     }
-    // 十字道路
-    const road = new THREE.MeshStandardMaterial({ color: 0x8d9aa5, roughness: 1 })
-    for (const [w, d, x, z] of [[0.7, 6 * S - 0.3, S, 0], [0.7, 6 * S - 0.3, -S, 0], [6 * S - 0.3, 0.7, 0, S], [6 * S - 0.3, 0.7, 0, -S]]) {
-      const r = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, d), road)
-      r.position.set(x, 0.46, z)
-      r.receiveShadow = true
-      group.add(r)
-    }
+    // 缺口的庭園:草地、池塘與樹
+    bay.forEach((cell, i) => {
+      const p = cellXZ(cell.c, cell.r)
+      const lawn = new THREE.Mesh(plateGeo, lawnMat)
+      lawn.position.set(p.x, 0.36, p.z)
+      lawn.receiveShadow = true
+      group.add(lawn)
+      if ((cell.c + cell.r) % 3 === 1 && i % 2 === 0) {
+        const pond = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.05, 28), pondMat)
+        pond.position.set(p.x, 0.46, p.z)
+        group.add(pond)
+      } else {
+        tree(p.x + (rnd() - 0.5) * 0.9, p.z + (rnd() - 0.5) * 0.9, 0.9 + rnd() * 0.3)
+        if (rnd() < 0.5) tree(p.x + (rnd() - 0.5) * 1.2, p.z + (rnd() - 0.5) * 1.2, 0.65)
+      }
+    })
     this.scene.add(group)
   }
 
@@ -767,7 +771,8 @@ export class BoardScene {
     // 落在高塔「靠鏡頭的這一側」,視角怎麼轉都不會被塔擋住
     const az = this.orbit.tAz
     const j = (Math.random() - 0.5) * 0.9
-    const end = new THREE.Vector3(Math.sin(az) * 1.7 + Math.cos(az) * j, 1.35, Math.cos(az) * 1.7 - Math.sin(az) * j)
+    const tp = this.towerPos || new THREE.Vector3()
+    const end = new THREE.Vector3(tp.x + Math.sin(az) * 1.7 + Math.cos(az) * j, 1.35, tp.z + Math.cos(az) * 1.7 - Math.sin(az) * j)
     const spin = new THREE.Quaternion()
     return this.tween(1.35, (t) => {
       const e = ease.out(t)
@@ -804,6 +809,7 @@ export class BoardScene {
     const down = (e) => { dragging = true; lx = e.clientX; ly = e.clientY; el.setPointerCapture?.(e.pointerId) }
     const move = (e) => {
       if (!dragging) return
+      this.userRotated = true
       this.orbit.tAz -= (e.clientX - lx) * 0.006
       this.orbit.tPol = Math.min(1.25, Math.max(0.55, this.orbit.tPol - (e.clientY - ly) * 0.005))
       lx = e.clientX; ly = e.clientY
@@ -811,7 +817,7 @@ export class BoardScene {
     const up = () => { dragging = false }
     const wheel = (e) => {
       e.preventDefault()
-      this.orbit.tDist = Math.min(46, Math.max(18, this.orbit.tDist + e.deltaY * 0.02))
+      this.orbit.tDist = Math.min((this.baseDist || 30) * 1.4, Math.max(14, this.orbit.tDist + e.deltaY * 0.02))
     }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
@@ -833,10 +839,17 @@ export class BoardScene {
     if (!w || !h) return
     this.renderer.setSize(w, h)
     this.camera.aspect = w / h
-    // 依畫面比例調整距離,讓整個棋盤都在畫面內
+    // 依畫面比例擺鏡頭:寬螢幕沿著棋盤長邊看;直立或窄的畫面把棋盤轉 90 度,讓長邊對著螢幕的長邊
     const aspect = w / h
-    this.baseDist = aspect < 1.4 ? Math.max(30, 31 / aspect + 1) : 31
+    const k = 2 * Math.tan((38 / 2) * Math.PI / 180) // 距離 1 時畫面高度
+    const long = HW * 2 + 5, short = HH * 2 + 5
+    const flat = 1.0 // 斜視會壓縮深度,但近處被透視放大,兩者大致抵消
+    const dWide = Math.max(long / (k * aspect), (short * flat) / k)
+    const dTall = Math.max(short / (k * aspect), (long * flat) / k)
+    const tall = dTall < dWide
+    this.baseDist = Math.max(20, Math.min((tall ? dTall : dWide) * 1.05, 80))
     this.orbit.dist = this.baseDist
+    if (!this.userRotated) { this.orbit.tAz = tall ? Math.PI / 2 : 0; if (!this.fitted) this.orbit.az = this.orbit.tAz; this.fitted = true }
     this.setMode(this.mode || 'board')
     this.camera.updateProjectionMatrix()
   }

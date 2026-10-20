@@ -1,22 +1,30 @@
-// 資產格:棋盤上 8 個固定地點。可以買下來收租、升級、投保;別人走到要付過路費。
+// 資產格:棋盤上 12 個固定地點。可以買下來收租、升級、投保;別人走到要付過路費。
 // 價格與租金為教學用的簡化數字,不代表真實行情。
 export const PROPERTIES = [
   { id: 'wanhua', tile: 1, region: '台北', name: '萬華老公寓', kind: '公寓', icon: '🏚️', price: 2800000, yield: 0.055, vol: 0.08,
     risk: { fire: 0.018, quake: 0.015, flood: 0.012 }, blurb: '價格親民的老公寓,租客穩定,但屋齡高,火災與地震風險偏高。' },
   { id: 'banqiao', tile: 4, region: '新北', name: '板橋停車位', kind: '車位', icon: '🅿️', price: 800000, yield: 0.06, vol: 0.05,
     risk: { fire: 0.006, quake: 0.006, flood: 0.018 }, blurb: '門檻最低的資產,租金穩定,地下停車場要留意淹水。' },
-  { id: 'qingpu', tile: 8, region: '桃園', name: '青埔店面', kind: '店面', icon: '🏪', price: 4500000, yield: 0.05, vol: 0.12,
+  { id: 'qingpu', tile: 12, region: '桃園', name: '青埔店面', kind: '店面', icon: '🏪', price: 4500000, yield: 0.05, vol: 0.12,
     risk: { fire: 0.018, quake: 0.012, flood: 0.009 }, blurb: '商圈新興、租金成長快,景氣差時店家可能退租。' },
-  { id: 'zhubei', tile: 12, region: '新竹', name: '竹北新大樓', kind: '大樓', icon: '🏢', price: 6500000, yield: 0.04, vol: 0.06,
+  { id: 'zhubei', tile: 15, region: '新竹', name: '竹北新大樓', kind: '大樓', icon: '🏢', price: 6500000, yield: 0.04, vol: 0.06,
     risk: { fire: 0.006, quake: 0.015, flood: 0.006 }, blurb: '新建大樓,管理良好、風險低,但租金報酬率偏低。' },
-  { id: 'qiqi', tile: 15, region: '台中', name: '七期豪宅', kind: '豪宅', icon: '🏙️', price: 15000000, yield: 0.035, vol: 0.1,
+  { id: 'qiqi', tile: 23, region: '台中', name: '七期豪宅', kind: '豪宅', icon: '🏙️', price: 15000000, yield: 0.035, vol: 0.1,
     risk: { fire: 0.006, quake: 0.012, flood: 0.006 }, blurb: '高總價、高門檻的豪宅,增值潛力大,但租金報酬率最低。' },
-  { id: 'tainan', tile: 19, region: '台南', name: '古都民宿', kind: '民宿', icon: '🏡', price: 3800000, yield: 0.07, vol: 0.25,
+  { id: 'tainan', tile: 31, region: '台南', name: '古都民宿', kind: '民宿', icon: '🏡', price: 3800000, yield: 0.07, vol: 0.25,
     risk: { fire: 0.015, quake: 0.018, flood: 0.018 }, blurb: '旅遊旺季租金很高,淡季客人少,收入起伏大。' },
-  { id: 'kaohsiung', tile: 22, region: '高雄', name: '港邊倉庫', kind: '倉庫', icon: '🏭', price: 5200000, yield: 0.055, vol: 0.1,
+  { id: 'kaohsiung', tile: 33, region: '高雄', name: '港邊倉庫', kind: '倉庫', icon: '🏭', price: 5200000, yield: 0.055, vol: 0.1,
     risk: { fire: 0.018, quake: 0.012, flood: 0.024 }, blurb: '物流需求穩定,但靠近港口,淹水與颱風的影響大。' },
-  { id: 'hualien', tile: 24, region: '花蓮', name: '花蓮海景民宿', kind: '民宿', icon: '🌊', price: 4200000, yield: 0.065, vol: 0.2,
+  { id: 'hualien', tile: 39, region: '花蓮', name: '花蓮海景民宿', kind: '民宿', icon: '🌊', price: 4200000, yield: 0.065, vol: 0.2,
     risk: { fire: 0.009, quake: 0.03, flood: 0.012 }, blurb: '風景很美、租金不錯,但位在地震與颱風都頻繁的地區。' },
+  { id: 'tamsui', tile: 8, region: '新北', name: '淡水河岸套房', kind: '套房', icon: '🌇', price: 3200000, yield: 0.05, vol: 0.07,
+    risk: { fire: 0.009, quake: 0.012, flood: 0.018 }, blurb: '夕陽河景的小套房,租客以上班族為主,但河岸低窪處颱風天要小心淹水。' },
+  { id: 'yilan', tile: 19, region: '宜蘭', name: '田園農舍', kind: '農舍', icon: '🌾', price: 2400000, yield: 0.045, vol: 0.1,
+    risk: { fire: 0.012, quake: 0.018, flood: 0.018 }, blurb: '空氣好、價格親民的農舍,適合長期持有,但離市區遠,租客不好找。' },
+  { id: 'chiayi', tile: 27, region: '嘉義', name: '檜意老街店面', kind: '店面', icon: '🏮', price: 3600000, yield: 0.058, vol: 0.14,
+    risk: { fire: 0.021, quake: 0.018, flood: 0.006 }, blurb: '觀光老街上的木造店面,人潮帶來租金,但木造建築的火災風險高。' },
+  { id: 'kenting', tile: 36, region: '屏東', name: '墾丁度假公寓', kind: '度假屋', icon: '🏖️', price: 5800000, yield: 0.068, vol: 0.25,
+    risk: { fire: 0.009, quake: 0.015, flood: 0.024 }, blurb: '旺季一房難求、淡季門可羅雀,颱風來時損失也大。' },
 ]
 
 export const LEVELS = [
