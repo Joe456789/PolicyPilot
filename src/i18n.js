@@ -33,7 +33,7 @@ export function moneyEn(yuan) {
   const a = Math.abs(yuan)
   if (a >= 1e6) {
     const m = a / 1e6
-    const s = (m >= 100 ? Math.round(m).toLocaleString('en-US') : m >= 10 ? m.toFixed(1) : m.toFixed(2)).replace(/\.?0+$/, '')
+    const s = (m >= 100 ? Math.round(m).toLocaleString('en-US') : m >= 10 ? m.toFixed(1) : m.toFixed(2)).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '')
     return `${sign}NT$${s}M`
   }
   if (a >= 1000) return `${sign}NT$${Math.round(a / 1000).toLocaleString('en-US')}K`
