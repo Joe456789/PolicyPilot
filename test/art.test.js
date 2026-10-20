@@ -31,7 +31,7 @@ test('遊戲查圖的 id 與生成的 id 一致(含成長篇出事版)', () => {
 })
 
 test('gen-art 腳本:--dry 不需要金鑰,--only 只列出符合的題材', () => {
-  const out = execFileSync('node', ['scripts/gen-art.mjs', '--dry', '--only', 'prop_'], { encoding: 'utf8', env: { ...process.env, GEMINI_API_KEY: '' } })
+  const out = execFileSync('node', ['scripts/gen-art.mjs', '--dry', '--force', '--only', 'prop_'], { encoding: 'utf8', env: { ...process.env, GEMINI_API_KEY: '' } })
   assert.match(out, /需要生成 8 個/)
   assert.match(out, /prop_wanhua/)
   assert.throws(() => execFileSync('node', ['scripts/gen-art.mjs', '--only', 'prop_'], { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, GEMINI_API_KEY: '' } }))
