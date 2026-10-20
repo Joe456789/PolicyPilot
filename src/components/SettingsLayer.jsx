@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles } from 'lucide-react'
+import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap } from 'lucide-react'
 import { useSettings } from '../settings.js'
 import { sfx } from '../sfx.js'
+import { resetTutorial } from './Tutorial.jsx'
 
 const THEMES = [['light', '淺色', Sun], ['dark', '深色', Moon], ['auto', '跟隨系統', MonitorCog]]
 const SCALES = [[1, '標準'], [1.12, '大'], [1.25, '特大']]
@@ -70,7 +71,10 @@ export default function SettingsLayer() {
               <Toggle icon={Sparkles} title="減少動畫" desc="關閉彈跳、閃光與轉場,適合容易暈眩的人" checked={s.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
               <Toggle icon={Eye} title="色盲友善配色" desc="把紅綠對比改成藍橘配色,增減數字也會加上符號" checked={s.colorblind} onChange={(v) => set({ colorblind: v })} />
             </section>
-            <button className="btn set-reset" onClick={reset}><RotateCcw size={16} aria-hidden /> 恢復預設</button>
+            <div className="set-actions">
+              <button className="btn" onClick={() => { resetTutorial(); setOpen(false) }}><GraduationCap size={16} aria-hidden /> 重看新手教學</button>
+              <button className="btn set-reset" onClick={reset}><RotateCcw size={16} aria-hidden /> 恢復預設</button>
+            </div>
           </div>
         </div>
       )}

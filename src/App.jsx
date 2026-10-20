@@ -22,6 +22,7 @@ import {
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
+import Tutorial from './components/Tutorial.jsx'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
@@ -614,6 +615,7 @@ function GameApp() {
       )}
       {showScene && scene.kind === 'minigame' && g.phase === 'scene' && <MiniGameModal key={scene.defId + g.turn} game={scene.base.game} s={g} onDone={onMinigameDone} />}
       {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} tips={coach && g.phase === 'scene' ? coachScene(g, scene) : null} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
+      <Tutorial enabled={g.turn === 0 && !params.get('auto') && !params.get('notut')} planOpen={planOpen} />
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
       {stage && <StageModal data={stage.data} fromAi={stage.fromAi} loading={stage.loading} onClose={closeStage} age={g.age} />}
     </div>
