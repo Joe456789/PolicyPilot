@@ -38,7 +38,7 @@ export default function LifeTimeline({ s }) {
   const events = cur.events.filter((e) => KINDS.includes(e.kind)).slice(0, 5)
 
   return (
-    <section className="card timeline">
+    <section className="card life-timeline">
       <h3>🎞️ 人生時間軸</h3>
       <p className="muted small">一年一年回顧:按播放,看你的人生怎麼走到這裡。也可以拖曳下面的捲軸。</p>
       <svg className="tl-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="淨資產時間軸">

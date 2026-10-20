@@ -673,7 +673,7 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 /* ---------- 結算:時間軸、成績卡、成就彈出、PDF 報告 ---------- */
 .res-tools { display: flex; justify-content: flex-end; gap: 8px; margin: -4px 0 10px; }
 .res-tools .btn { display: inline-flex; align-items: center; gap: 6px; }
-.timeline .tl-chart { width: 100%; height: auto; display: block; margin: 8px 0 4px; }
+.life-timeline .tl-chart { width: 100%; height: auto; display: block; margin: 8px 0 4px; }
 .tl-zero { stroke: var(--line); stroke-dasharray: 4 4; }
 .tl-line { fill: none; stroke: var(--green); stroke-width: 3; stroke-linejoin: round; }
 .tl-dot { fill: var(--surface); stroke: var(--green); stroke-width: 2; cursor: pointer; transition: r 0.2s; }
