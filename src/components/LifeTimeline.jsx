@@ -66,10 +66,10 @@ export default function LifeTimeline({ s }) {
             {events.length ? events.map((e, k) => <li key={k}><span aria-hidden>{e.icon}</span>{e.title}</li>) : <li className="muted">平靜的一年</li>}
           </ul>
           <div className="tl-notes">
-            {cur.payout > 0 && <span className="chip good">保險理賠 {wan(cur.payout)}</span>}
-            {cur.borrowed > 0 && <span className="chip bad">被迫借款 {wan(cur.borrowed)}</span>}
-            {cur.rent > 0 && <span className="chip">租金 {wan(cur.rent)}</span>}
-            {cur.forced > 0 && <span className="chip bad">資產被拍賣</span>}
+            {cur.payout > 0 && <span className="tl-chip good">保險理賠 {wan(cur.payout)}</span>}
+            {cur.borrowed > 0 && <span className="tl-chip bad">被迫借款 {wan(cur.borrowed)}</span>}
+            {cur.rent > 0 && <span className="tl-chip">租金 {wan(cur.rent)}</span>}
+            {cur.forced > 0 && <span className="tl-chip bad">資產被拍賣</span>}
           </div>
         </div>
       </div>
