@@ -1,17 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import SceneModal from './SceneModal.jsx'
 import { MAJORS, PROLOGUE_LENGTH } from '../game/prologue.js'
 import { TAGS } from '../game/tags.js'
 import { wan } from '../game/format.js'
 import { sfx } from '../sfx.js'
+import AgeJourney from './AgeJourney.jsx'
+import { useArt, sceneArtIds } from '../art.js'
 
 const STAT = [['health', '健康', '💪'], ['study', '學業', '📚'], ['social', '人緣', '🤝'], ['finance', '財商', '💰']]
 
 // 成長篇:0 ~ 21 歲。每個階段一張事件卡,像「選擇人生」一樣一路做選擇。
 export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose, onContinue, careerOptions, onPickCareer, length, setLength, opponents, setOpponents }) {
   const [shown, setShown] = useState(false)
-  useEffect(() => { setShown(false); const t = setTimeout(() => setShown(true), 500); return () => clearTimeout(t) }, [life.step, life.done])
+  const [journey, setJourney] = useState(null)
+  const prevAge = useRef(0)
+  const artOf = useArt()
+  // 每換一個年齡,先播成長動畫(年齡跳上去、角色長大、帶出這一年的情境),再顯示事件卡
+  useEffect(() => {
+    setShown(false)
+    if (life.done || !life.scene || life.scene.result) { setJourney(null); const t = setTimeout(() => setShown(true), 300); return () => clearTimeout(t) }
+    setJourney({ from: prevAge.current, to: life.age })
+    prevAge.current = life.age
+    return undefined
+  }, [life.step, life.done]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (life.scene && shown) sfx.card() }, [shown, life.step]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pct = Math.min(100, (life.age / 22) * 100)
@@ -84,6 +96,10 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
         </div>
       )}
 
+      {journey && life.scene && !life.done && (
+        <AgeJourney key={life.step} from={journey.from} to={journey.to} look={life.look} art={artOf(sceneArtIds(life.scene))} icon={life.scene.icon} title={life.scene.title}
+          onDone={() => { setJourney(null); setShown(true) }} />
+      )}
       {life.scene && shown && (
         <SceneModal scene={life.scene} phase={life.scene.result ? 'result' : 'scene'} onChoose={onChoose} onContinue={onContinue} aiTag={aiTag} loadingAi={loadingAi} continueLabel={life.step === PROLOGUE_LENGTH - 1 ? '畢業!' : '繼續長大 →'} />
       )}

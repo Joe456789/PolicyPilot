@@ -835,3 +835,33 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
   .btn.ghost { min-height: 36px; }
 }
 @media (max-width: 720px), (pointer: coarse) { .pills button, .pills.big button { min-height: 38px; } }
+
+/* ---------- 成長動畫(0~22 歲) ---------- */
+:root[data-theme="dark"] body, :root[data-theme="dark"] .modal, :root[data-theme="dark"] .card, :root[data-theme="dark"] .panel, :root[data-theme="dark"] .screen { color: var(--ink); }
+.journey { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; overflow: hidden; cursor: pointer; animation: jIn 0.3s ease; }
+@keyframes jIn { from { opacity: 0; } to { opacity: 1; } }
+.journey.stage-baby { background: linear-gradient(160deg, #ffe7f1, #fff6d6); }
+.journey.stage-toddler { background: linear-gradient(160deg, #d9f2ff, #fff3c4); }
+.journey.stage-kid { background: linear-gradient(160deg, #d6f5df, #fff3c4); }
+.journey.stage-teen { background: linear-gradient(160deg, #e3dcff, #ffe3e8); }
+.journey.stage-hs { background: linear-gradient(160deg, #ffe0c7, #e6f0ff); }
+.journey.stage-uni { background: linear-gradient(160deg, #cfe9ff, #e9ddff); }
+.journey.stage-work { background: linear-gradient(160deg, #ffe5a8, #c9f0dc); }
+:root[data-theme="dark"] .journey { filter: brightness(0.62) saturate(1.1); }
+.journey::before { content: ''; position: absolute; inset: -20%; background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255, 255, 255, 0.35) 0 6deg, transparent 6deg 14deg); animation: burstSpin 40s linear infinite; }
+.journey-icons span { position: absolute; bottom: -40px; font-size: 42px; opacity: 0; animation: jFloat 3.2s ease-in infinite; }
+@keyframes jFloat { 0% { transform: translateY(0) rotate(-10deg); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(-105vh) rotate(14deg); opacity: 0; } }
+.journey-main { position: relative; display: grid; justify-items: center; gap: 10px; width: min(92vw, 460px); text-align: center; color: #1f2a37; }
+.journey-stage { font-weight: 900; letter-spacing: 3px; padding: 4px 16px; border: 2.5px solid #1f2a37; border-radius: 8px; background: #fff7d6; box-shadow: 3px 3px 0 rgba(31, 42, 55, 0.25); transform: skewX(-8deg); }
+.journey-age { display: flex; align-items: baseline; gap: 4px; }
+.journey-age b { font-size: clamp(84px, 22vw, 140px); line-height: 1; font-weight: 900; color: #00915a; text-shadow: 4px 4px 0 #1f2a37, 7px 7px 0 rgba(31, 42, 55, 0.18); font-variant-numeric: tabular-nums; }
+.journey-age small { font-size: 28px; font-weight: 900; }
+.journey-avatar { display: grid; place-items: center; transition: width 0.1s, height 0.1s; filter: drop-shadow(0 8px 0 rgba(31, 42, 55, 0.18)); }
+.journey-bar { width: 100%; height: 14px; border: 2.5px solid #1f2a37; border-radius: 999px; background: #fff; overflow: hidden; }
+.journey-bar i { display: block; height: 100%; background: linear-gradient(90deg, #00915a, #ffd166); }
+.journey-scene { display: grid; justify-items: center; gap: 6px; padding: 10px 14px 12px; background: #fffdf7; border: 3px solid #1f2a37; border-radius: 16px; box-shadow: 5px 5px 0 rgba(31, 42, 55, 0.25); animation: sceneSlide 0.55s cubic-bezier(0.2, 1.5, 0.4, 1); transform: rotate(-2deg); max-width: 330px; }
+.journey-scene img { width: 300px; max-width: 70vw; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 2px solid #1f2a37; }
+.journey-scene b { font-size: 17px; color: #1f2a37; }
+.journey-emoji { font-size: 64px; line-height: 1.1; }
+@keyframes sceneSlide { from { opacity: 0; transform: translateY(40px) rotate(6deg) scale(0.7); } to { opacity: 1; transform: rotate(-2deg); } }
+.journey-skip { position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 8px 14px; border: 2.5px solid #1f2a37; border-radius: 12px; background: #fff; font-weight: 800; box-shadow: 3px 3px 0 rgba(31, 42, 55, 0.25); }
