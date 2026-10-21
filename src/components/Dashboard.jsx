@@ -98,14 +98,15 @@ export default function Dashboard({ s, onQuick }) {
       )}
 
       <div className="hand">
-        <div className="cov-h">{t('我的手牌')} <span className="muted">{(s.cards || []).length}/{MAX_CARDS}{t(',條件成立自動生效')}</span></div>
+        <div className="cov-h">{t('我的手牌')} <span className="muted">{t('{n} 張(最多 {m} 張)', { n: (s.cards || []).length, m: MAX_CARDS })}</span></div>
+        <p className="muted small hand-note">{t('不用集滿、也不用按:遇到對應的事件時會自動使用,用完就消失。')}</p>
         <div className="hand-row">
           {(s.cards || []).map((id, i) => (
             <span key={id + i} className={`hcard ${CARDS[id].kind === '保障卡' ? 'prot' : 'opp'}`} tabIndex={0} title={`${t(CARDS[id].name)}${colon}${t(CARDS[id].desc)}`}>
               <b>{CARDS[id].icon}</b>{t(CARDS[id].name)}<small>{t(CARDS[id].desc)}</small>
             </span>
           ))}
-          {!(s.cards || []).length && <span className="muted hand-empty">{t('還沒有卡片。機會格、小遊戲三顆星、理專諮詢都有機會抽到。')}</span>}
+          {!(s.cards || []).length && <span className="muted hand-empty">{t('還沒有卡片。機會格、小遊戲三顆星、理專諮詢都有機會抽到,也可以到「商店」買。')}</span>}
         </div>
       </div>
 

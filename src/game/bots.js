@@ -61,7 +61,9 @@ function botLifeSetup(p, seed, length, opponents, startAge = 22) {
   }
   const opts = careerOptions(l)
   const prefer = p.id === 'allin' ? ['sales', 'freelancer'] : p.id === 'steady' ? ['teacher', 'engineer', 'office'] : ['engineer', 'nurse', 'office']
-  const pick = opts.find((c) => prefer.includes(c.id)) || opts[0]
+  // 一半機率照個性挑職業,一半隨機,讓每局對手的起點不一樣
+  const r = new Rng((seed ^ 0x5bd1) >>> 0, 0)
+  const pick = (r.next() < 0.5 && opts.find((c) => prefer.includes(c.id))) || r.pick(opts)
   return lifeToSetup(l, pick.id, length, opponents)
 }
 

@@ -985,3 +985,4 @@ body[data-demo="1"] .toast { top: 100px; }
 .quick-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .btn.quick { padding: 7px 4px; font-size: 12.5px; flex-direction: column; gap: 2px; min-height: 48px; justify-content: center; }
 .btn.quick span { font-size: 18px; line-height: 1; }
+.hand-note { margin: 2px 0 6px; font-size: 12px; }

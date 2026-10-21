@@ -123,9 +123,13 @@ function GameApp() {
   // 過路費與拍賣:把一個玩家剛做完的選擇,對其他玩家造成的影響處理掉
   const processOps = useCallback((idx) => {
     if (!playersRef.current[idx].s.pendingOps?.length) return
+    const cash0 = playersRef.current[0].s.cash
     const { players: np, notes } = applyOps(playersRef.current, idx)
     playersRef.current = np
     setPlayers(np)
+    // 你收到過路費:跳出金額、播錢幣聲,讓「收租」看得見
+    const got = np[0].s.cash - cash0
+    if (idx > 0 && got > 0) setTimeout(() => { popupRef.current?.(`💰 +${wan(got)}`, 'gain'); sfx.coin() }, 300)
     if (notes.length) {
       setFeed((f) => [...notes.map((n) => ({ id: ++uid, icon: n.icon, who: n.who, text: n.text, tone: n.tone })), ...f].slice(0, 12))
       const n = notes[0]
@@ -365,6 +369,8 @@ function GameApp() {
     setPopups((p) => [...p, { id, text, kind, x }])
     setTimeout(() => setPopups((p) => p.filter((q) => q.id !== id)), 1900)
   }, [])
+  const popupRef = useRef(null)
+  popupRef.current = popup
   const doShake = () => { setShake(true); setTimeout(() => setShake(false), 520) }
 
   function react(sc) {

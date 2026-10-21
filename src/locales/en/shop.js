@@ -44,4 +44,7 @@ export default {
   '買下自住房(房價 {amt})': 'Bought a home (price {amt})',
   '賣掉房子,扣掉房貸與費用拿回 {amt};之後要重新租屋,住宅火險也一併解約。': 'Sold the house and kept {amt} after the mortgage and fees; you will rent again and the home insurance is cancelled.',
   '賣掉自住房': 'Sold the home',
+  '{n} 張(最多 {m} 張)': '{n} (max {m})',
+  '不用集滿、也不用按:遇到對應的事件時會自動使用,用完就消失。': 'No need to collect a set or press anything: a card is used automatically when a matching event happens, then it is gone.',
+  '還沒有卡片。機會格、小遊戲三顆星、理專諮詢都有機會抽到,也可以到「商店」買。': 'No cards yet. You can get them from Chance tiles, three stars in a mini-game or the advisor, or buy them in the Shop.',
 }
