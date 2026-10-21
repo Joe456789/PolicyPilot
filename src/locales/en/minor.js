@@ -133,4 +133,5 @@ export default {
   '可能拿不回來': 'You may not get it back',
   '婉拒,但請他吃頓飯': 'Decline, but buy him a meal',
   '借錢給別人,最好只借「拿不回來也沒關係」的金額。': 'Only lend what you could live without getting back.',
+  '一年裡不只一件事:擲骰的年度大事之外,還有手機摔壞、喜帖、扭傷這類小事要選擇;小意外有保險也會理賠。': 'A year holds more than one thing: besides the big event from the dice, there are small choices like a broken phone, a wedding invitation or a sprain, and insurance pays for small accidents too.',
 }
