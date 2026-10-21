@@ -35,3 +35,9 @@ export function demoCaption(c) {
   return { title, text: body + (c.aiScene ? ' ' + t('✨ 這段情境由 Gemini 生成,金額仍由規則引擎計算。') : '') }
 }
 
+
+// 格子說明(點棋盤上的格子時顯示):沿用上面每種格子的導覽文字
+export function tileHelp(type) {
+  if (type === 'start') return [t('年度起點'), t('每走完一圈回到這裡。一年的收入、保費與房貸在年底結算,不必經過起點也會發生。')]
+  return (KIND[type] || KIND.tip)()
+}

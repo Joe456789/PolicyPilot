@@ -17,7 +17,7 @@ function useNarrow() {
   return narrow
 }
 
-export default function Board({ tokens, centerSlot, owners = {} }) {
+export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) {
   const tall = useNarrow()
   const cols = tall ? MAP_ROWS : MAP_COLS
   const rows = tall ? MAP_COLS : MAP_ROWS
@@ -41,7 +41,7 @@ export default function Board({ tokens, centerSlot, owners = {} }) {
         {BOARD.map((tile, i) => {
           const { r, c } = coord(i)
           return (
-            <div key={i} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1 }}>
+            <div key={i} onClick={() => onTileClick?.(i)} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1 }}>
               <span className="tile-n">{i === 0 ? '' : i}</span>
               {owners[i] && <span className={`tile-own o${owners[i].ownerIdx}`} title={`Lv${owners[i].level}`}>Lv{owners[i].level}</span>}
               <span className="tile-ico" aria-hidden>{tile.icon}</span>

@@ -1,7 +1,8 @@
 import { coachScene } from './game/coach.js'
 import { classifyBanter, offlineLine, shouldSpeak } from './game/banter.js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Board3D from './components/Board3D.jsx'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// 3D 棋盤(three.js)很大,等進到棋盤才載入,標題頁開得比較快
+const Board3D = lazy(() => import('./components/Board3D.jsx'))
 import Board from './components/Board.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import PlanModal from './components/PlanModal.jsx'
@@ -28,6 +29,7 @@ import { t, useLang, getLang } from './i18n.js'
 import { saveGame, loadSave, clearSave } from './save.js'
 import AutopilotMenu from './components/AutopilotMenu.jsx'
 import DemoBar from './components/DemoBar.jsx'
+import TileInfo from './components/TileInfo.jsx'
 import { demoCaption, DEMO_SEED, DEMO_YEARS } from './game/demoScript.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
 import { useArt } from './art.js'
@@ -76,6 +78,7 @@ function GameApp() {
   const [muted, setMuted] = useState(sfx.isMuted())
   const [botFast, setBotFast] = useState(false)
   const [auto, setAuto] = useState(null) // 電腦託管:{ persona, left }
+  const [inspect, setInspect] = useState(null) // 點棋盤看格子說明
   const [demo, setDemo] = useState(null) // 展示模式:{ paused, fast, done }
   const [drawer, setDrawer] = useState(null)
   const [toast, setToast] = useState(null)
@@ -322,6 +325,8 @@ function GameApp() {
     if (!demo || demo.introDone || screen !== 'game') return undefined
     let alive = true
     const id = setTimeout(async () => {
+      // 3D 棋盤是延後載入的,最多等 4 秒讓它準備好
+      for (let k = 0; k < 40 && !boardRef.current && use3d; k++) await sleep(100)
       await (boardRef.current?.intro?.() ?? Promise.resolve())
       if (!alive) return
       setDemo((d) => d && { ...d, introDone: true })
@@ -688,9 +693,11 @@ function GameApp() {
         {wide && <aside className="side side-l"><Dashboard s={g} /></aside>}
         <main className="gstage">
           {use3d ? (
-            <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} owners={ownersMap} onFail={() => setUse3d(false)} onStep={() => sfx.step()} />
+            <Suspense fallback={<div className="board3d-loading">{t('3D 棋盤載入中…')}</div>}>
+              <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} owners={ownersMap} onFail={() => setUse3d(false)} onStep={() => sfx.step()} onTileClick={(i) => { if (!demo && !busy) setInspect(i) }} />
+            </Suspense>
           ) : (
-            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} owners={ownersMap} /></div>
+            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} owners={ownersMap} onTileClick={(i) => { if (!demo && !busy) setInspect(i) }} /></div>
           )}
           <div className="stage-hud">
             <div className="year-chip">
@@ -733,6 +740,7 @@ function GameApp() {
         <Feed items={feed} />
       </Drawer>
 
+      {inspect != null && <TileInfo index={inspect} players={players} owner={ownersMap[inspect]} humanPos={g.pos || 0} onClose={() => setInspect(null)} />}
       {askOpen && <AskModal s={g} aiOn={aiInfo.ai} onClose={() => setAskOpen(false)} />}
       {debugMg && <MiniGameModal game={debugMg} s={g} onDone={(r) => { console.log('MG ' + JSON.stringify(r)); setDebugMg(null) }} />}
       {planOpen && !debugMg && (
@@ -803,6 +811,7 @@ function Title({ aiInfo, onStart, onRecords, save, onResume, onDemo }) {
           <button className="btn primary huge" onClick={onStart}>{t('開始新的人生')}</button>
           <button className="btn huge2" onClick={onRecords}>🏅 {t('成就與戰績')}</button>
           <button className="btn huge2" onClick={onDemo}>🎬 {t('展示模式')}</button>
+          <button className="btn huge2" onClick={() => window.dispatchEvent(new Event('pp-help'))}>📖 {t('玩法說明')}</button>
         </div>
         <ol className="how">
           <li><b>{t('1 創角')}</b>{t('可從出生開始,或直接進棋盤')}</li>

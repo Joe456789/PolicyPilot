@@ -5,12 +5,12 @@ import { loadArt } from '../art.js'
 import { t, useLang, getLang } from '../i18n.js'
 
 // React 包裝:把 3D 場景的動作(擲骰、移動、聚焦)以 Promise 介面交給 App 編排。
-const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep }, ref) {
+const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep, onTileClick }, ref) {
   useLang()
   const host = useRef(null)
   const scene = useRef(null)
   const latest = useRef({ players, onStep })
-  latest.current = { players, onStep, owners }
+  latest.current = { players, onStep, owners, onTileClick }
   // 3D 畫風(設定面板切換時重建場景,棋子位置沿用目前的)
   const [style, setStyle] = useState(() => document.documentElement.dataset.scene3d || 'real')
   useEffect(() => {
@@ -30,6 +30,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     }
     scene.current = sc
     sc.onStep = (pos, i) => latest.current.onStep?.(pos, i)
+    sc.onTileClick = (i) => latest.current.onTileClick?.(i)
     sc.setPlayers(latest.current.players.map((p) => ({ look: p.look, name: p.name, pos: p.pos })))
     sc.overview()
     sc.setOwners(latest.current.owners || {})

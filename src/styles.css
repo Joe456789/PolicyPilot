@@ -951,3 +951,25 @@ body[data-demo="1"] .toast { top: 100px; }
   body[data-demo="1"] .overlay { padding-bottom: 240px; }
   body[data-demo="1"] .modal { max-height: calc(100dvh - 270px); }
 }
+
+/* ---------- 格子說明 ---------- */
+.modal.tile-info { width: min(460px, 100%); display: grid; gap: 8px; }
+.ti-h { display: flex; gap: 12px; align-items: center; }
+.ti-h > div { flex: 1; min-width: 0; }
+.ti-h h3 { margin: 0; font-size: 19px; }
+.ti-h small { color: var(--muted); }
+.ti-ico { font-size: 34px; line-height: 1; }
+.ti-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+.ti-grid b { text-align: right; }
+.ti-owner { font-weight: 600; margin: 0; }
+.board .tile { cursor: pointer; }
+.board3d-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+.modal.help { width: min(640px, 100%); display: grid; gap: 12px; text-align: left; }
+.modal.help h3 { margin: 0 0 4px; font-size: 16px; }
+.modal.help p, .modal.help li { font-size: 14px; line-height: 1.6; }
+.modal.help ol, .modal.help ul { margin: 0; padding-left: 20px; }
+.help-tiles { list-style: none; padding: 0 !important; display: grid; gap: 8px; }
+.help-tiles li { display: flex; gap: 10px; align-items: flex-start; background: var(--surface-2); border-radius: 12px; padding: 8px 10px; }
+.help-tiles li > span { font-size: 22px; line-height: 1.2; }
+.help-tiles b { display: block; }
+.help-tiles small { color: var(--muted); font-size: 13px; line-height: 1.5; }

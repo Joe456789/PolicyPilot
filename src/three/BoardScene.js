@@ -1157,8 +1157,8 @@ export class BoardScene {
   bindInput() {
     const el = this.renderer.domElement
     let dragging = false
-    let lx = 0, ly = 0
-    const down = (e) => { dragging = true; lx = e.clientX; ly = e.clientY; el.setPointerCapture?.(e.pointerId) }
+    let lx = 0, ly = 0, sx = 0, sy = 0
+    const down = (e) => { dragging = true; lx = sx = e.clientX; ly = sy = e.clientY; el.setPointerCapture?.(e.pointerId) }
     const move = (e) => {
       if (!dragging) return
       this.userRotated = true
@@ -1166,7 +1166,20 @@ export class BoardScene {
       this.orbit.tPol = Math.min(1.25, Math.max(0.55, this.orbit.tPol - (e.clientY - ly) * 0.005))
       lx = e.clientX; ly = e.clientY
     }
-    const up = () => { dragging = false }
+    const up = (e) => {
+      dragging = false
+      // 沒有拖曳的點擊:看點到哪一格,交給外面顯示格子說明
+      if (e && Math.hypot(e.clientX - sx, e.clientY - sy) < 6 && this.onTileClick && !this.cine) {
+        const r = el.getBoundingClientRect()
+        const ray = new THREE.Raycaster()
+        ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera)
+        const hit = ray.intersectObjects([...this.tileMeshes, ...this.tileDecals], false)[0]
+        if (hit) {
+          const i = Math.max(this.tileMeshes.indexOf(hit.object), this.tileDecals.indexOf(hit.object))
+          if (i >= 0) this.onTileClick(i)
+        }
+      }
+    }
     const wheel = (e) => {
       e.preventDefault()
       this.orbit.tDist = Math.min((this.baseDist || 30) * 1.4, Math.max(14, this.orbit.tDist + e.deltaY * 0.02))

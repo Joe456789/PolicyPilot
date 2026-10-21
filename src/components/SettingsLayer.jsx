@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap, Box } from 'lucide-react'
+import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap, Box, BookOpen } from 'lucide-react'
 import { useSettings } from '../settings.js'
 import { sfx } from '../sfx.js'
 import { resetTutorial } from './Tutorial.jsx'
+import HelpModal from './HelpModal.jsx'
 import { t, useLang } from '../i18n.js'
 
 const THEMES = [['light', '淺色', Sun], ['dark', '深色', Moon], ['auto', '跟隨系統', MonitorCog]] // i18n-ignore
@@ -38,6 +39,13 @@ export default function SettingsLayer() {
   useLang()
   const [s, set, reset] = useSettings()
   const [open, setOpen] = useState(false)
+  const [help, setHelp] = useState(false)
+  // 其他畫面(例如標題頁)可以用事件打開玩法說明
+  useEffect(() => {
+    const on = () => setHelp(true)
+    window.addEventListener('pp-help', on)
+    return () => window.removeEventListener('pp-help', on)
+  }, [])
   useEffect(() => {
     if (!open) return undefined
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
@@ -87,12 +95,14 @@ export default function SettingsLayer() {
               <Toggle icon={Eye} title="色盲友善配色" desc="把紅綠對比改成藍橘配色,增減數字也會加上符號" checked={s.colorblind} onChange={(v) => set({ colorblind: v })} /> {/* i18n-ignore */}
             </section>
             <div className="set-actions">
+              <button className="btn" onClick={() => { setOpen(false); setHelp(true) }}><BookOpen size={16} aria-hidden /> {t('玩法說明')}</button>
               <button className="btn" onClick={() => { resetTutorial(); setOpen(false) }}><GraduationCap size={16} aria-hidden /> {t('重看新手教學')}</button>
               <button className="btn set-reset" onClick={reset}><RotateCcw size={16} aria-hidden /> {t('恢復預設')}</button>
             </div>
           </div>
         </div>
       )}
+      {help && <HelpModal onClose={() => setHelp(false)} />}
     </>
   )
 }
