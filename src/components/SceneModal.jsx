@@ -20,6 +20,7 @@ const KIND = {
   tip: () => t('保險小學堂'),
   life: () => t('成長篇'),
   minigame: () => t('小遊戲'),
+  minor: () => t('生活小事'),
 }
 
 export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel, tips }) {
@@ -29,7 +30,7 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
     <div className="overlay" role="dialog" aria-modal="true" aria-label={scene.title}>
       <div className={`modal card-pop tone-${scene.tone} kind-${scene.kind}`}>
         <div className="card-top">
-          <span className="card-kind">{KIND[scene.kind]?.()}</span>
+          <span className="card-kind">{KIND[scene.kind]?.()}{scene.tag ? ` · ${scene.tag}` : ''}</span>
           {aiTag && <span className="ai-pill" title={t('情境由 Gemini 依角色處境生成;金額與給付由規則引擎計算')}>{t('✨ AI 導演')}</span>}
           {loadingAi && !aiTag && scene.aiable && <span className="ai-pill dim">{t('AI 構思情境中…')}</span>}
         </div>

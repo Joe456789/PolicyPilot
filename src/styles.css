@@ -973,3 +973,15 @@ body[data-demo="1"] .toast { top: 100px; }
 .help-tiles li > span { font-size: 22px; line-height: 1.2; }
 .help-tiles b { display: block; }
 .help-tiles small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+/* ---------- 生活與商店分頁 ---------- */
+.life-h { margin: 12px 0 6px; font-size: 15px; }
+.life-card { display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.life-card > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.life-card small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.life-card small.neg { color: var(--red-text); font-weight: 600; }
+.life-card .btn { flex: none; }
+.plan .tabs { flex-wrap: wrap; }
+.quick-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.btn.quick { padding: 7px 4px; font-size: 12.5px; flex-direction: column; gap: 2px; min-height: 48px; justify-content: center; }
+.btn.quick span { font-size: 18px; line-height: 1; }

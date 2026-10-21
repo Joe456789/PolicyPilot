@@ -3,6 +3,7 @@
 import { tagMult } from './tags.js'
 import { t, trDeep, getLang } from '../i18n.js'
 import { CARDS, giveCard, hasCard, useCard } from './cards.js'
+import { minorById } from './minor.js'
 import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
 } from './content.js'
@@ -355,6 +356,7 @@ export function resolveScene(s, rng, sc, choice, add, opts = {}) {
     case 'quiz': return resolveQuiz(s, sc, choice, add)
     case 'minigame': return resolveMinigame(s, rng, sc, add, opts)
     case 'chance':
+    case 'minor':
     case 'milestone': return resolveFxScene(s, rng, sc, choice, add)
     default: return undefined
   }
@@ -683,7 +685,7 @@ function resolveMinigame(s, rng, sc, add, opts) {
 function resolveFxScene(s, rng, sc, choice, add) {
   if (choice.special) specials[choice.special](s, rng, add)
   let fx = choice.fx
-  const scam = ['scam_call', 'high_return'].includes(sc.defId) && fx && (fx.gamble || fx.cashPct < 0)
+  const scam = ['scam_call', 'high_return', 'm_line'].includes(sc.defId) && fx && (fx.gamble || fx.cashPct < 0)
   if (scam && useCard(s, 'antiscam')) {
     add(t('{icon} 防詐提醒卡生效:你一眼識破,錢保住了', { icon: CARDS.antiscam.icon }), 0, 'cover')
     fx = null
@@ -693,6 +695,23 @@ function resolveFxScene(s, rng, sc, choice, add) {
 }
 
 function applyFx(s, rng, fx, add) {
+  // 小事件:依年收入發一筆錢(可以直接拿去投資)
+  if (fx.incomeCash) {
+    const got = round1k(s.income * fx.incomeCash)
+    s.cash += got
+    add(t('收入'), got)
+    if (fx.investAll) { s.cash -= got; s.hold[fx.investAll] += got; add(t('買入{name}', { name: ASSETS[fx.investAll].name }), -got, 'note') }
+  }
+  // 小意外:先付錢,有對應的保險再理賠
+  if (fx.hit) {
+    const h = fx.hit
+    const cost = (h.medical || 0) + (h.other || 0)
+    s.cash -= cost
+    add(t(h.label), -cost)
+    const p = payoutFor(s.coverage, { cat: h.cat, medicalCost: h.medical || 0, otherCost: h.other || 0, income: s.income, years: 0, accident: !!h.accident })
+    if (p.total > 0) { s.cash += p.total; s.year.payout += p.total; add(t('保險理賠'), p.total, 'cover') }
+    else add(t('沒有對應的保險,全部由自己承擔'), 0, 'warn')
+  }
   if (fx.cash) { s.cash += fx.cash; add(t(fx.cash > 0 ? '收入' : '花費'), fx.cash) }
   if (fx.cashPct) {
     const amt = round1k(Math.max(0, s.cash) * fx.cashPct)
@@ -802,4 +821,14 @@ const specials = {
     }
     buyAsset(s, 'bond', 0.25, add)
   },
+}
+
+// ---------- 每年的小事 ----------
+export function buildMinorScene(s, id, k, m) {
+  const d = minorById(id)
+  return trDeep({
+    kind: 'minor', defId: d.id, icon: d.icon, tone: 'neutral', title: d.title, story: d.story,
+    tag: t('今年的小事 {k}/{m}', { k, m }),
+    choices: d.choices.map((c) => ({ ...c })), base: { lesson: d.lesson },
+  })
 }

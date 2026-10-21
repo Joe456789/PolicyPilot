@@ -7,5 +7,7 @@ import ui1 from './ui1.js'
 import ui2 from './ui2.js'
 import settings from './settings.js'
 import extra from './extra.js'
+import minor from './minor.js'
+import shop from './shop.js'
 
-export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra }
+export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop }

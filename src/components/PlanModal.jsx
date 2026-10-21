@@ -1,5 +1,7 @@
 import MarketChart from './MarketChart.jsx'
-import { Shield, TrendingUp, Building2, Landmark } from 'lucide-react'
+import { Shield, TrendingUp, Building2, Landmark, Home, ShoppingBag } from 'lucide-react'
+import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, buyCard, buyCar, sellCar, buyHome, sellHome } from '../game/purchases.js'
+import { CARDS, MAX_CARDS } from '../game/cards.js'
 import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
 import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
@@ -13,8 +15,8 @@ const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
 
 const STEPS = [50000, 100000, 300000, 1000000]
 
-export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onRepay, onPropAction, onClose, coach, title = t('年度規劃') }) {
-  const [tab, setTab] = useState('cover')
+export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onRepay, onPropAction, onAct, onClose, coach, title = t('年度規劃'), initialTab = 'cover' }) {
+  const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(100000)
   const rec = recommended(s)
   const premium = totalPremium(s.coverage, s.age)
@@ -38,7 +40,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
         {s.turn === 0 && s.player.intro && <div className="note-box intro-box">📖 <b>{t('你的起點:')}</b>{s.player.intro}</div>}
 
         <div className="tabs" role="tablist">
-          {[['cover', t('保障'), Shield], ['invest', t('理財'), TrendingUp], ['assets', t('資產'), Building2], ['loan', cap(t('貸款')), Landmark]].map(([k, n, Icon]) => (
+          {[['cover', t('保障'), Shield], ['invest', t('理財'), TrendingUp], ['assets', t('資產'), Building2], ['loan', cap(t('貸款')), Landmark], ['life', cap(t('生活')), Home], ['shop', t('商店'), ShoppingBag]].map(([k, n, Icon]) => (
             <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><Icon size={17} aria-hidden /> {n}</button>
           ))}
         </div>
@@ -186,6 +188,62 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
                 </div>
                 {s.flash && <div className="flash">{s.flash}</div>}
                 {s.house && <p className="muted small">🏠 {t('房貸餘額 {bal},每年還款 {pay}(自動扣款)。', { bal: wan(s.house.balance), pay: wan(s.house.payment) })}</p>}
+              </>
+            )}
+            {tab === 'life' && (
+              <>
+                <div className="note-box">🏠 {t('不用等擲骰,規劃時就能買車、買房或賣掉。車子和房子都會改變每年支出,也會多出需要的保險(汽車險、住宅火險、壽險)。')}</div>
+                <h4 className="life-h">🏡 {t('自住房')}</h4>
+                {s.house ? (
+                  <div className="life-card">
+                    <div><b>{t('你的房子')}</b><small>{t('市值 {v} · 房貸餘額 {b} · 每年房貸 {p}', { v: wan(s.house.value), b: wan(s.house.balance), p: wan(s.house.payment) })}</small></div>
+                    <button className="btn" onClick={() => { if (window.confirm(t('確定要賣掉房子嗎?之後要重新租屋。'))) onAct(sellHome) }}>{t('賣掉')}</button>
+                  </div>
+                ) : ['small', 'family'].map((size) => {
+                  const o = homeOffer(s, size)
+                  const why = homeBlock(s, o)
+                  return (
+                    <div key={size} className="life-card">
+                      <div>
+                        <b>{size === 'family' ? t('三房家庭宅') : t('兩房小宅')} · {wan(o.price)}</b>
+                        <small>{t('頭期款 {d} · 房貸 30 年,每年約 {p}(占家庭年收入 {r}%)· 省下房租約 {rent}/年', { d: wan(o.down), p: wan(o.payment), r: Math.round(o.burden * 100), rent: wan(o.rentSaved) })}</small>
+                        {why && <small className="neg">{why}</small>}
+                      </div>
+                      <button className="btn primary" disabled={!!why} onClick={() => onAct(buyHome, size)}>{t('買下')}</button>
+                    </div>
+                  )
+                })}
+                <h4 className="life-h">🚗 {t('車子')}</h4>
+                {s.car ? (
+                  <div className="life-card">
+                    <div><b>{cap(t(CARS[s.carKind]?.name || '你的車'))}</b><small>{t('每年油錢、保養、停車等約 {n}', { n: wan((CARS[s.carKind] || CARS.used).yearly) })}</small></div>
+                    <button className="btn" onClick={() => onAct(sellCar)}>{t('賣掉')}</button>
+                  </div>
+                ) : Object.entries(CARS).map(([k, c]) => (
+                  <div key={k} className="life-card">
+                    <div><b>{c.icon} {cap(t(c.name))} · {wan(c.price)}</b><small>{t('每年支出 +{n}', { n: wan(c.yearly) })}</small>{s.cash < c.price && <small className="neg">{t('現金不足')}</small>}</div>
+                    <button className="btn primary" disabled={s.cash < c.price} onClick={() => onAct(buyCar, k)}>{t('買下')}</button>
+                  </div>
+                ))}
+                {s.flash && <div className="flash">{s.flash}</div>}
+              </>
+            )}
+
+            {tab === 'shop' && (
+              <>
+                <div className="note-box">🛒 {t('用現金買手牌,條件成立時自動生效。每年最多買 {n} 張,手牌最多 {m} 張。「免災金牌」買不到:現實中沒有讓壞事不發生的東西,只有保險。', { n: SHOP_PER_YEAR, m: MAX_CARDS })}</div>
+                <p className="muted small">{t('今年還能買 {n} 張 · 目前手牌 {k}/{m}', { n: Math.max(0, shopLeft(s)), k: (s.cards || []).length, m: MAX_CARDS })}</p>
+                {SHOP.map((it) => {
+                  const c = CARDS[it.id]
+                  const why = shopBlock(s, it)
+                  return (
+                    <div key={it.id} className="life-card">
+                      <div><b>{c.icon} {t(c.name)} · {wan(it.price)}</b><small>{t(c.desc)}</small>{why && <small className="neg">{why}</small>}</div>
+                      <button className="btn primary" disabled={!!why} onClick={() => onAct(buyCard, it.id)}>{t('購買')}</button>
+                    </div>
+                  )
+                })}
+                {s.flash && <div className="flash">{s.flash}</div>}
               </>
             )}
           </section>

@@ -4,7 +4,7 @@
 import { Rng } from './rng.js'
 import { LOOKS, CAREERS, STYLES } from './careers.js'
 import {
-  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction,
+  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction, hasMinor, nextMinor,
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
 import { PRODUCT_ORDER, totalPremium } from './products.js'
@@ -129,6 +129,10 @@ function fxScore(fx, p) {
   if (fx.cash) sc += fx.cash / 40000
   if (fx.expense) sc -= fx.expense / 60000
   if (fx.health) sc += fx.health / 6
+  if (fx.incomeCash) sc += fx.incomeCash * 12
+  if (fx.investAll) sc += p.risk - 0.3
+  if (fx.hit) sc -= ((fx.hit.medical || 0) + (fx.hit.other || 0)) / 60000
+  if (fx.trip) sc += p.love * 0.3
   return sc
 }
 
@@ -142,6 +146,7 @@ export function botChoose(s, p) {
       if (sc.cat === 'death') return 0
       return p.id === 'allin' ? Math.min(1, last) : 0
     }
+    case 'minor':
     case 'chance': {
       let best = 0, bestV = -1e9
       sc.choices.forEach((c, i) => {
@@ -239,11 +244,19 @@ export function botAct(s, p) {
   return choose(s, botChoose(s, p))
 }
 
+// 年度大事之後的小事:一件一件選完
+export function botMinors(s, p) {
+  let guard = 0
+  while (hasMinor(s) && guard++ < 5) s = botAct(nextMinor(s), p)
+  return s
+}
+
 // ---------- 一整年(同步,用於快轉或測試)----------
 export function botPlayYear(s, p, world = {}) {
   s = botPlan(s, p)
   s = roll(s, world)
   s = botAct(s, p)
+  s = botMinors(s, p)
   s = endYear(s)
   return s
 }
@@ -254,6 +267,7 @@ export function botFastForward(s, p, world = {}) {
     if (s.phase === 'plan') s = botPlan(s, p)
     if (s.phase === 'plan') s = roll(s, world)
     if (s.phase === 'scene') s = botAct(s, p)
+    if (s.phase === 'result') s = botMinors(s, p)
     if (s.phase === 'result') s = endYear(s)
   }
   return s

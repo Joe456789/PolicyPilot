@@ -17,11 +17,11 @@ import Avatar from './components/Avatar.jsx'
 import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedia } from './components/HUD.jsx'
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
-  createGame, roll, choose, endYear, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
+  createGame, roll, choose, endYear, hasMinor, nextMinor, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
   computeScore, evalQuests, directorInfo, applyAiScene, propAction,
 } from './game/engine.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
-import { PERSONAS, botPlan, botAct, botChoose, botStars } from './game/bots.js'
+import { PERSONAS, botPlan, botAct, botChoose, botStars, botMinors } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
@@ -67,6 +67,7 @@ function GameApp() {
   const [activeIdx, setActiveIdx] = useState(0)
   // 介面
   const [planOpen, setPlanOpen] = useState(false)
+  const [planTab, setPlanTab] = useState('cover') // 打開規劃視窗時先停在哪個分頁
   const [busy, setBusy] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
   const [yearOpen, setYearOpen] = useState(false)
@@ -316,7 +317,7 @@ function GameApp() {
         if (cur.scene.kind === 'minigame') return onMinigameDone({ stars: botStars(cur, persona) })
         return onChoose(botChoose(cur, persona))
       }
-      if (cur.phase === 'result') { setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
+      if (cur.phase === 'result') { if (!hasMinor(cur)) setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
     }, wait)
     return () => clearTimeout(id)
   }, [auto, demo?.paused, screen, g, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -482,6 +483,13 @@ function GameApp() {
   }
 
   async function onContinue() {
+    // 年度大事之後,還有這一年的小事就先處理
+    if (hasMinor(human())) {
+      commit(0, nextMinor(human()))
+      setAiText(null)
+      sfx.card()
+      return
+    }
     const ng = endYear(human())
     commit(0, ng)
     setAiText(null)
@@ -549,7 +557,7 @@ function GameApp() {
       commit(i, s)
       processOps(i)
       const bought = sc.kind === 'property' && ['buy_cash', 'buy_loan'].includes(sc.choices[s.scene.picked]?.tag)
-      s = endYear(playersRef.current[i].s)
+      s = endYear(botMinors(playersRef.current[i].s, pl.persona))
       commit(i, s)
       const rankNow = rank(playersRef.current)
       const mine = rankNow.find((r) => r.id === pl.id).rank
@@ -690,7 +698,7 @@ function GameApp() {
       </header>
 
       <div className="gbody">
-        {wide && <aside className="side side-l"><Dashboard s={g} /></aside>}
+        {wide && <aside className="side side-l"><Dashboard s={g} onQuick={busy || demo || auto ? null : (tab) => { setPlanTab(tab); setPlanOpen(true); setDrawer(null) }} /></aside>}
         <main className="gstage">
           {use3d ? (
             <Suspense fallback={<div className="board3d-loading">{t('3D 棋盤載入中…')}</div>}>
@@ -710,11 +718,11 @@ function GameApp() {
             {use3d && (
               <div className="action-bar">
                 <button className="btn primary big" onClick={onRoll} disabled={g.phase !== 'plan' || busy || planOpen || !!stage || !!auto} aria-label={g.hospitalTurns > 0 ? t('住院休養') : t('擲骰子')}>{g.hospitalTurns > 0 ? <><BedDouble size={20} aria-hidden /> {t('住院休養(跳過這回合)')}</> : <><Dices size={22} aria-hidden /> {t('擲骰子')}</>}</button>
-                <button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button>
+                <button className="btn big2" onClick={() => { setPlanTab('cover'); setPlanOpen(true) }} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button>
                 <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> {t('問理專')}</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => setPlanOpen(true)} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
+            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => { setPlanTab('cover'); setPlanOpen(true) }} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>
@@ -733,7 +741,7 @@ function GameApp() {
           <button onClick={() => setDrawer('rank')}><Flag size={18} aria-hidden /> {t('排名與任務')}</button>
         </nav>
       )}
-      <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title={t('我的狀態')}><Dashboard s={g} /></Drawer>
+      <Drawer open={drawer === 'status'} onClose={() => setDrawer(null)} title={t('我的狀態')}><Dashboard s={g} onQuick={busy || demo || auto ? null : (tab) => { setPlanTab(tab); setPlanOpen(true); setDrawer(null) }} /></Drawer>
       <Drawer open={drawer === 'rank'} onClose={() => setDrawer(null)} title={t('排名與任務')}>
         {rows.length > 1 && <Leaderboard rows={rows} activeId={players[activeIdx]?.id} />}
         <QuestPanel quests={quests} />
@@ -753,6 +761,8 @@ function GameApp() {
           onBorrow={(a) => commit(0, borrow(human(), a))}
           onRepay={(a) => commit(0, repay(human(), a))}
           onPropAction={(id, act) => commit(0, propAction(human(), id, act))}
+          onAct={(fn, ...args) => commit(0, fn(human(), ...args))}
+          initialTab={planTab}
           world={worldOf(players)}
           onClose={() => setPlanOpen(false)}
         />

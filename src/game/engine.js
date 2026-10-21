@@ -6,7 +6,8 @@ import {
   BOARD, ASSET_ORDER, run, cover, clamp, blankYear, netWorth, holdingsTotal, recommended,
   canIncrease, householdIncome, round1k,
 } from './core.js'
-import { buildScene, buildHospitalRest, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
+import { drawMinors } from './minor.js'
+import { buildScene, buildHospitalRest, buildMinorScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
 import { propById, rentOf, propPremium, upgradeCost, RISK_NAME } from './properties.js'
 import { updateQuests } from './quests.js'
 import { t, trDeep, getLang } from '../i18n.js'
@@ -115,6 +116,8 @@ export function roll(state, world = {}) {
       return
     }
     const dice = rng.int(1, 6)
+    s.minorQueue = drawMinors(s, rng)
+    s.minorTotal = s.minorQueue.length
     s.dice = dice
     s.pos = (s.pos + dice) % BOARD.length
     s.scene = buildScene(s, rng, BOARD[s.pos], world)
@@ -136,6 +139,17 @@ export function choose(state, idx, opts = {}) {
     sc.result = { lines: trDeep(lines) }
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })
     s.phase = 'result'
+  })
+}
+
+// 年度大事結算完之後,接著發生這一年的小事(一件一件來);沒有了就回傳原狀態
+export const hasMinor = (s) => s.phase === 'result' && !s.ended && (s.minorQueue || []).length > 0
+export function nextMinor(state) {
+  return run(state, (s) => {
+    if (!hasMinor(s)) return
+    const id = s.minorQueue.shift()
+    s.scene = buildMinorScene(s, id, s.minorTotal - s.minorQueue.length, s.minorTotal)
+    s.phase = 'scene'
   })
 }
 
@@ -332,6 +346,7 @@ export function endYear(state) {
     s.ap = 2
     s.pendingOps = []
     s.year = blankYear()
+    s.minorQueue = []
     s.scene = null
     s.dice = null
 

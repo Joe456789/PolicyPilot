@@ -21,7 +21,7 @@ function Stat({ label, value, tone, sub, num, fmt }) {
   )
 }
 
-export default function Dashboard({ s }) {
+export default function Dashboard({ s, onQuick }) {
   const colon = getLang() === 'en' ? ': ' : ':'
   const nw = netWorth(s)
   const months = s.cash / (s.expense / 12)
@@ -52,6 +52,14 @@ export default function Dashboard({ s }) {
         <div className="progress-bar"><i style={{ width: `${(s.turn / s.years) * 100}%` }} /></div>
         <span>{t('第 {n} / {m} 年', { n: Math.min(s.turn + 1, s.years), m: s.years })}</span>
       </div>
+
+      {onQuick && (
+        <div className="quick-acts" role="group" aria-label={t('快速操作')}>
+          {[['invest', '📈', '投資'], ['cover', '🛡️', '保險'], ['life', '🏠', '買房買車'], ['shop', '🛒', '商店']].map(([k, ic, n]) => (
+            <button key={k} className="btn quick" disabled={s.phase !== 'plan'} onClick={() => onQuick(k)}><span aria-hidden>{ic}</span> {cap(t(n))}</button>
+          ))}
+        </div>
+      )}
 
       <div className="stats">
         <Stat label={t('淨資產')} num={nw} fmt={(v) => wan(v)} value={wan(nw)} tone={nw < 0 ? 'bad' : 'ok'} />
