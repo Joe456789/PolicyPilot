@@ -13,13 +13,24 @@ npm install --no-save sharp                   # 選配:把圖縮小成 webp(檔�
 # .env 裡已經有 GEMINI_API_KEY=你的金鑰 的話,直接往下
 
 npm run art:dry          # 先看會生成哪些圖(不花錢)
-npm run art              # 生成「核心」約 65 張:生活事件、行情、里程碑、8 處地產、17 種結局、標題
+npm run art              # 生成「核心」69 張:生活事件、行情、里程碑、12 處地產、17 種結局、標題
 npm run art -- --tier all   # 想要更完整:再加上機會卡、意外之財、成長篇卡片(共約 180 張)
 ```
 
 - 可以隨時按 `Ctrl+C` 中斷,**再執行同一個指令只會補還沒有的圖**。
 - 只想重畫某幾張:`npm run art -- --only prop_ --force`(`--only` 是 id 開頭;例如 `ending_`、`life_kid_`、`flu`)。
 - 想先看畫面效果、不花額度:`npm run art -- --mock`(產生彩色占位圖,看完把 `public/art/` 清掉)。
+
+## 畫風:寫實電影感(2026/10 更新)
+
+`scripts/artSubjects.mjs` 的 `STYLE` 已從「黏土玩具」改成**寫實電影感照片**(黃昏暖光、淺景深、同一套調色),和 3D 棋盤的寫實畫風一致。
+之前生成的黏土風圖片不會自動換掉,要整批重畫:
+
+```bash
+npm run art -- --force   # 重新生成全部 69 張核心插圖(會覆蓋 public/art/ 裡的舊圖)
+```
+
+舊圖還在 git 歷史裡,想換回來可以 `git checkout <舊的 commit> -- public/art`。
 
 ## 看效果
 
@@ -42,7 +53,7 @@ git push origin claude/lucid-fermat-rlqnmr
 
 ## 費用與疑難排解
 
-- 圖片生成通常**不在免費額度內**,需要在 Google AI Studio 綁定計費。粗估一張約 0.04 美元,核心 65 張約 3 美元、全部約 7 美元。
+- 圖片生成通常**不在免費額度內**,需要在 Google AI Studio 綁定計費。粗估一張約 0.04 美元,核心 69 張約 3 美元、全部約 7 美元。
 - 全部都是 `HTTP 400 / 403 / 404`:金鑰沒有開通圖片生成,或模型名稱不對。可以用 `--model` 指定,或在 `.env` 設 `GEMINI_IMAGE_MODEL=你帳號可用的圖片模型`。預設是 `gemini-2.5-flash-image`。
 - `HTTP 429`:太快了,腳本會自動等待重試;也可以加 `--concurrency 1`。
 - 回應裡沒有圖片:被安全機制擋下,該題材會被列在失敗清單,再跑一次或手動調整 `scripts/artSubjects.mjs` 裡那一題的描述。

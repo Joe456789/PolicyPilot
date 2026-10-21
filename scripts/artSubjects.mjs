@@ -9,11 +9,11 @@ import { ENDINGS } from '../src/game/endings.js'
 import { SLOTS } from '../src/game/prologueCards.js'
 
 export const STYLE = [
-  'High-quality 3D render in a cute soft clay / vinyl toy style, like a miniature diorama sitting on a rounded cream-coloured base,',
-  'viewed from a consistent isometric three-quarter angle from above (about 35 degrees), same look as a colourful 3D board game with chunky rounded buildings and little toy pawn-like figures.',
-  'Soft studio lighting, gentle realistic shadows, subtle ambient occlusion, smooth matte materials, shallow depth, pastel palette (mint green, warm cream, coral, sky blue, butter yellow).',
-  'Plain soft off-white background, single centred subject, 4:3 landscape. Everyday Taiwan setting, simple friendly faces.',
-  'Absolutely no text, no letters, no numbers, no logos, no watermark. Non-graphic and family friendly even for sad or risky themes (show them gently, e.g. a clinic, an umbrella, a worried look).',
+  'Photorealistic cinematic photograph, as if shot on a full-frame camera with a 35mm lens: shallow depth of field, golden-hour warm sunlight with long soft shadows and a gentle haze,',
+  'rich but natural colours, soft highlights, subtle film grain, the same warm colour grading across the whole series so the images feel like one film.',
+  'Everyday modern Taiwan setting (streets, apartments, scooters, night markets, temples, offices, hospitals, homes) with Taiwanese people of fitting ages and natural expressions.',
+  'Single clear subject, centred composition, 4:3 landscape.',
+  'Absolutely no text, no letters, no numbers, no readable signs, no logos, no watermark. Non-graphic and family friendly even for sad or risky themes (show them gently, e.g. a clinic corridor, an umbrella in the rain, a worried look).',
 ].join(' ')
 
 const strip = (s) => String(s || '').replace(/[()（）【】「」『』]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -26,11 +26,11 @@ const call = (v, hit) => { try { return typeof v === 'function' ? v(fakeLife, hi
 export function allSubjects() {
   const out = []
   for (const d of EVENT_DEFS) out.push(subject(d.id, 'core', `${strip(d.title)}. ${strip(d.story)}`))
-  for (const d of MARKET_DEFS) out.push(subject(d.id, 'core', `A financial market moment in Taiwan: ${strip(d.title)}. ${strip(d.headline)}. Show mood with charts-free symbols such as arrows, buildings, crowds, weather.`))
+  for (const d of MARKET_DEFS) out.push(subject(d.id, 'core', `A financial market moment in Taiwan: ${strip(d.title)}. ${strip(d.headline)}. Show the mood through people, the city skyline and the weather rather than charts or screens.`))
   for (const d of MILESTONE_DEFS) out.push(subject(d.id, 'core', `${strip(d.title)}. ${strip(d.story)}`))
   for (const p of PROPERTIES) out.push(subject('prop_' + p.id, 'core', `A property in ${p.region}, Taiwan: ${p.name} (${p.kind}). ${strip(p.blurb)} Show the building and its neighbourhood.`))
   for (const e of ENDINGS) out.push(subject('ending_' + e.id, 'core', `Life ending portrait: ${e.title}. ${strip(e.blurb)}`))
-  out.push(subject('title_hero', 'core', 'A cheerful 3D-board-game-inspired scene: a colourful city board with little buildings, dice, a shield-shaped umbrella protecting a small family, coins and tiny pawns. Warm and inviting key art.'))
+  out.push(subject('title_hero', 'core', 'Key art: a beautifully crafted tabletop board game shaped like a miniature Taiwanese city with a Taipei 101 style tower in the middle, photographed at golden hour; dice, coins and a few game pawns in the sharp foreground, a small family figure sheltered by an umbrella. Warm, inviting and cinematic.'))
   for (const d of CHANCE_DEFS) out.push(subject(d.id, 'all', `${strip(d.title)}. ${strip(d.story)}`))
   for (const d of BONUS_DEFS) out.push(subject(d.id, 'all', `${strip(d.title)}. ${strip(d.story)}`))
   for (const slot of SLOTS) {
