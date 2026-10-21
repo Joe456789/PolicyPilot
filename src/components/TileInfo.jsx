@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { BOARD } from '../game/engine.js'
-import { propById, LEVELS, rentOf, tollOf, RISK_NAME } from '../game/properties.js'
+import { propById, LEVELS, rentOf, tollOf, RISK_NAME, areaById, areaProps, AREA_BONUS } from '../game/properties.js'
 import { tileHelp } from '../game/demoScript.js'
 import { wan } from '../game/format.js'
 import { useArt } from '../art.js'
@@ -36,6 +36,8 @@ export default function TileInfo({ index, players, owner, humanPos, onClose }) {
               <span>{t('售價')}</span><b>{wan(p.price)}</b>
               <span>{t('年租金(基本 / 頂級)')}</span><b>{wan(rentOf(p, 1))} / {wan(rentOf(p, 3))}</b>
               <span>{t('過路費(基本 / 頂級)')}</span><b>{wan(tollOf(p, 1))} / {wan(tollOf(p, 3))}</b>
+              <span>{t('區域')}</span><b><i className="area-dot" style={{ background: areaById(p.area).color }} /> {t(areaById(p.area).name)} · {areaProps(p.area).map((x) => x.icon).join(' ')}</b>
+              <span>{t('集齊整區')}</span><b>{t('租金與過路費 ×{x}', { x: AREA_BONUS })}</b>
               <span>{t('天災年機率')}</span><b>{Object.entries(p.risk).map(([k, v]) => `${t(RISK_NAME[k])} ${(v * 100).toFixed(1)}%`).join(sep)}</b>
             </div>
             <p className="ti-owner">

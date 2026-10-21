@@ -2,7 +2,7 @@
 // 只讀取狀態,不影響遊戲。字串走 t(),英文版有對應翻譯。
 import { t } from '../i18n.js'
 
-export const DEMO_SEED = 242 // 這個種子在「平衡型」託管下,會遇到理賠、買到資產、最後領先,適合展示
+export const DEMO_SEED = 283 // 這個種子在「平衡型」託管下,會遇到理賠、買到資產、最後領先,適合展示
 export const DEMO_YEARS = 12
 
 const KIND = {

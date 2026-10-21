@@ -2,7 +2,7 @@
 // 對外介面:setPlayers / moveToken / rollDice / focusPlayer / setActiveTile / dispose
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { PROPERTIES } from '../game/properties.js'
+import { PROPERTIES, AREAS } from '../game/properties.js'
 import { t, getLang } from '../i18n.js'
 import { wan } from '../game/format.js'
 
@@ -190,7 +190,7 @@ export class BoardScene {
       scene.background = null
       scene.environment = env
       scene.environmentIntensity = 0.75
-      scene.fog = new THREE.FogExp2(0xdcb48c, 0.0095)
+      scene.fog = new THREE.FogExp2(0xdcb48c, 0.0055)
     }
     this.buildLights()
     this.buildWorld()
@@ -277,6 +277,7 @@ export class BoardScene {
     }
 
     this.buildTiles()
+    this.buildAreas()
     this.buildCity()
     this.buildCars()
 
@@ -336,6 +337,7 @@ export class BoardScene {
       scene.add(base)
     }
     this.buildTiles()
+    this.buildAreas()
     this.buildCityReal()
     this.trees.build(scene)
     this.cars = []
@@ -629,6 +631,48 @@ export class BoardScene {
     })
   }
 
+  // 區域:每格底下一圈區域色的邊框;每一區第一格上方有區域名稱的看板
+  buildAreas() {
+    const rim = new RoundedBoxGeometry(S - 0.02, 0.08, S - 0.02, 2, 0.03)
+    const mats = {}
+    for (const a of AREAS) mats[a.id] = new THREE.MeshStandardMaterial({ color: new THREE.Color(a.color), roughness: 0.6 })
+    this.board.forEach((tile, i) => {
+      if (!tile.area) return
+      const p = tileXZ(i)
+      const m = new THREE.Mesh(rim, mats[tile.area])
+      m.position.set(p.x, 0.33, p.z)
+      m.receiveShadow = true
+      this.scene.add(m)
+    })
+    this.areaSigns = []
+    for (const a of AREAS) {
+      const i = this.board.findIndex((tile) => tile.area === a.id)
+      if (i < 0) continue
+      const c = tileXZ(i), nx = tileXZ(i + 1)
+      // 看板立在格子外側(離棋盤中心較遠的那一邊),不擋住格子
+      const dir = new THREE.Vector3().subVectors(nx, c).normalize()
+      const nrm = new THREE.Vector3(-dir.z, 0, dir.x)
+      if (nrm.dot(c) < 0) nrm.negate()
+      const p = c.clone().addScaledVector(nrm, 1.25)
+      const tex = canvasTex(320, 80, (g, w, h) => {
+        g.fillStyle = a.color
+        g.beginPath(); g.roundRect(4, 6, w - 8, h - 12, 20); g.fill()
+        g.fillStyle = '#fff'
+        g.textAlign = 'center'; g.textBaseline = 'middle'
+        fillFit(g, `📍 ${t(a.name)}`, w / 2, h / 2 + 2, w - 24, 800, 34, 16)
+      })
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }))
+      sp.scale.set(4.2, 1.05, 1)
+      sp.position.set(p.x, 3.2, p.z)
+      sp.renderOrder = 9
+      this.scene.add(sp)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.7, 6), new THREE.MeshStandardMaterial({ color: 0x555555 }))
+      pole.position.set(p.x, 1.8, p.z)
+      this.scene.add(pole)
+      this.areaSigns.push({ sp, a })
+    }
+  }
+
   buildTiles() {
     this.tileMeshes = []
     this.tileDecals = []
@@ -779,6 +823,11 @@ export class BoardScene {
     this.dice.castShadow = true
     this.dice.visible = false
     this.scene.add(this.dice)
+    // 第二顆骰子(兩顆骰子一起擲)
+    this.dice2 = new THREE.Mesh(this.dice.geometry, mats)
+    this.dice2.castShadow = true
+    this.dice2.visible = false
+    this.scene.add(this.dice2)
     this.faceNormals = {
       3: new THREE.Vector3(1, 0, 0), 4: new THREE.Vector3(-1, 0, 0), 1: new THREE.Vector3(0, 1, 0),
       6: new THREE.Vector3(0, -1, 0), 2: new THREE.Vector3(0, 0, 1), 5: new THREE.Vector3(0, 0, -1),
@@ -811,6 +860,17 @@ export class BoardScene {
   // 語言切換後,用目前語言重畫所有格子貼圖、出售牌(以及保留地產插圖)
   refreshLabels() {
     if (this.disposed) return
+    for (const { sp, a } of this.areaSigns || []) {
+      sp.material.map?.dispose?.()
+      sp.material.map = canvasTex(320, 80, (g, w, h) => {
+        g.fillStyle = a.color
+        g.beginPath(); g.roundRect(4, 6, w - 8, h - 12, 20); g.fill()
+        g.fillStyle = '#fff'
+        g.textAlign = 'center'; g.textBaseline = 'middle'
+        fillFit(g, `📍 ${t(a.name)}`, w / 2, h / 2 + 2, w - 24, 800, 34, 16)
+      })
+      sp.material.needsUpdate = true
+    }
     this.tileDecals.forEach((decal, i) => {
       const tex = this.drawTileTex(i, this.artImgs[i] || null)
       decal.material.map?.dispose?.()
@@ -1040,7 +1100,8 @@ export class BoardScene {
   setMode(mode) {
     this.mode = mode
     const d = this.baseDist || 33
-    this.orbit.tDist = mode === 'dice' ? d * 0.6 : mode === 'token' ? d * 0.68 : d
+    // 棋盤很大,跟著棋子與骰子時用固定的近距離,不隨全景距離拉遠
+    this.orbit.tDist = mode === 'dice' ? Math.min(d * 0.6, 17) : mode === 'token' ? Math.min(d * 0.68, 21) : d
     // 寫實畫風的鏡頭壓低一點,看得到地平線與天空,比較有電影感
     this.orbit.tPol = this.real ? (mode === 'board' ? 0.86 : 0.98) : mode === 'board' ? 0.78 : 0.7
   }
@@ -1062,40 +1123,45 @@ export class BoardScene {
   }
 
   // ---------- 骰子 ----------
+  // value:一個數字(一顆骰子)或 [a, b](兩顆骰子)
   rollDice(value) {
-    const d = this.dice
-    d.visible = true
-    d.scale.setScalar(1)
+    const faces = Array.isArray(value) ? value : [value]
+    const dice = faces.length > 1 ? [this.dice, this.dice2] : [this.dice]
     this.setMode('dice')
-    const target = new THREE.Quaternion().setFromUnitVectors(this.faceNormals[value], new THREE.Vector3(0, 1, 0))
-    target.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2))
-    const axis = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.4, Math.random() - 0.5).normalize()
-    const start = new THREE.Vector3((Math.random() - 0.5) * 3 - 6, 9, 5 + Math.random() * 2)
-    // 落在高塔「靠鏡頭的這一側」,視角怎麼轉都不會被塔擋住
     const az = this.orbit.tAz
-    const j = (Math.random() - 0.5) * 0.9
     const tp = this.towerPos || new THREE.Vector3()
-    const end = new THREE.Vector3(tp.x + Math.sin(az) * 1.7 + Math.cos(az) * j, 1.35, tp.z + Math.cos(az) * 1.7 - Math.sin(az) * j)
-    const spin = new THREE.Quaternion()
-    return this.tween(1.35, (t) => {
-      const e = ease.out(t)
-      d.position.lerpVectors(start, end, e)
-      // 彈跳:落地前反覆彈起
-      const bounce = Math.abs(Math.sin(t * Math.PI * 3.2)) * (1 - t) * 3.2
-      d.position.y = end.y + bounce + (1 - e) * (start.y - end.y)
-      spin.setFromAxisAngle(axis, (1 - e) * Math.PI * 7)
-      d.quaternion.copy(target).multiply(spin)
-    }).then(() => { d.quaternion.copy(target); d.position.copy(end) })
+    // 落在高塔「靠鏡頭的這一側」,兩顆骰子左右分開
+    const side = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az))
+    return Promise.all(dice.map((d, k) => {
+      d.visible = true
+      d.scale.setScalar(1)
+      const target = new THREE.Quaternion().setFromUnitVectors(this.faceNormals[faces[k]], new THREE.Vector3(0, 1, 0))
+      target.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2))
+      const axis = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.4, Math.random() - 0.5).normalize()
+      const spread = dice.length > 1 ? (k ? 0.85 : -0.85) : (Math.random() - 0.5) * 0.9
+      const start = new THREE.Vector3((Math.random() - 0.5) * 3 - 6 + spread, 9, 5 + Math.random() * 2)
+      const end = new THREE.Vector3(tp.x + Math.sin(az) * 1.7, 1.35, tp.z + Math.cos(az) * 1.7).addScaledVector(side, spread)
+      const spin = new THREE.Quaternion()
+      return this.tween(1.35 + k * 0.12, (t) => {
+        const e = ease.out(t)
+        d.position.lerpVectors(start, end, e)
+        const bounce = Math.abs(Math.sin(t * Math.PI * 3.2)) * (1 - t) * 3.2
+        d.position.y = end.y + bounce + (1 - e) * (start.y - end.y)
+        spin.setFromAxisAngle(axis, (1 - e) * Math.PI * 7)
+        d.quaternion.copy(target).multiply(spin)
+      }).then(() => { d.quaternion.copy(target); d.position.copy(end) })
+    }))
   }
 
   hideDice(delay = 0.9) {
+    const dice = [this.dice, this.dice2].filter((d) => d.visible)
     return this.tween(0.35, (t) => {
-      this.dice.scale.setScalar(1 - ease.inOut(t))
+      for (const d of dice) d.scale.setScalar(1 - ease.inOut(t))
     }, delay).then(() => {
-      this.dice.visible = false
-      this.dice.scale.setScalar(1)
+      for (const d of dice) { d.visible = false; d.scale.setScalar(1) }
     })
   }
+
 
   // ---------- 開場運鏡 ----------
   // 像參考影片那樣,從小東西的特寫慢慢拉遠:塔尖 → 路燈 → 天際線橫移 → 起點與棋子 → 全景。點一下畫面可以跳過。
@@ -1302,7 +1368,10 @@ export class BoardScene {
     o.az += (o.tAz - o.az) * 0.08
     o.pol += (o.tPol - o.pol) * 0.07
     o.dist += (o.tDist - o.dist) * 0.07
-    if (this.mode === 'dice' && this.dice.visible) this.camTargetGoal.set(this.dice.position.x, 0, this.dice.position.z)
+    if (this.mode === 'dice' && this.dice.visible) {
+      const p2 = this.dice2.visible ? this.dice2.position : this.dice.position
+      this.camTargetGoal.set((this.dice.position.x + p2.x) / 2, 0, (this.dice.position.z + p2.z) / 2)
+    }
     else if (this.mode === 'token' && this.tokens[this.focusIdx]) {
       const g = this.tokens[this.focusIdx].group.position
       this.camTargetGoal.set(g.x, 0, g.z)

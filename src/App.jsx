@@ -17,7 +17,7 @@ import Avatar from './components/Avatar.jsx'
 import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedia } from './components/HUD.jsx'
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
-  createGame, roll, choose, endYear, hasMinor, nextMinor, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
+  createGame, roll, choose, endYear, hasMinor, nextMinor, canRollAgain, rollAgain, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
   computeScore, evalQuests, directorInfo, applyAiScene, propAction,
 } from './game/engine.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
@@ -321,7 +321,7 @@ function GameApp() {
         if (cur.scene.kind === 'minigame') return onMinigameDone({ stars: botStars(cur, persona) })
         return onChoose(botChoose(cur, persona))
       }
-      if (cur.phase === 'result') { if (!hasMinor(cur)) setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
+      if (cur.phase === 'result') { if (!hasMinor(cur) && !canRollAgain(cur)) setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
     }, wait)
     return () => clearTimeout(id)
   }, [auto, demo?.paused, screen, g, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -414,13 +414,34 @@ function GameApp() {
       await sleep(700)
       b?.setActiveTile(ng.pos)
     } else if (b) {
-      await b.rollDice(ng.dice)
+      await b.rollDice(ng.diceFaces)
       b.hideDice()
       await b.moveToken(0, ng.pos)
       b.setActiveTile(ng.pos)
     } else {
       await sleep(900 + ng.dice * 120)
     }
+    commit(0, ng)
+    if (ng.extraRoll) showToast({ icon: '🎲', title: t('雙骰!{a} + {b}', { a: ng.diceFaces[0], b: ng.diceFaces[1] }), text: t('這件事結束後可以再擲一次'), tone: 'good' }, 2200)
+    requestAi(ng)
+    sfx.card()
+    setSceneReady(true)
+    setBusy(false)
+  }
+
+  async function onRollAgain() {
+    setBusy(true)
+    setSceneReady(false)
+    setAiText(null)
+    sfx.dice()
+    const ng = rollAgain(human(), worldOf(playersRef.current))
+    const b = boardRef.current
+    if (b) {
+      await b.rollDice(ng.diceFaces)
+      b.hideDice()
+      await b.moveToken(0, ng.pos)
+      b.setActiveTile(ng.pos)
+    } else await sleep(900 + ng.dice * 80)
     commit(0, ng)
     requestAi(ng)
     sfx.card()
@@ -489,6 +510,8 @@ function GameApp() {
   }
 
   async function onContinue() {
+    // 雙骰獎勵:先再擲一次
+    if (canRollAgain(human())) return onRollAgain()
     // 年度大事之後,還有這一年的小事就先處理
     if (hasMinor(human())) {
       commit(0, nextMinor(human()))
@@ -562,6 +585,17 @@ function GameApp() {
       const rankBefore = rank(playersRef.current).find((r) => r.id === pl.id).rank
       commit(i, s)
       processOps(i)
+      // 雙骰:再擲一次、再走一段
+      if (canRollAgain(playersRef.current[i].s)) {
+        let s2 = rollAgain(playersRef.current[i].s, worldOf(playersRef.current))
+        if (b && !botFast) await b.moveToken(i, s2.pos)
+        else if (b) b.teleport(i, s2.pos)
+        s2 = botAct(s2, pl.persona)
+        const sc2 = s2.scene
+        setFeed((f) => [{ id: ++uid, icon: '🎲', who: t(pl.name), text: t('雙骰再擲一次:{title}', { title: quote(sc2.title) }), tone: '' }, ...f].slice(0, 12))
+        commit(i, s2)
+        processOps(i)
+      }
       const bought = sc.kind === 'property' && ['buy_cash', 'buy_loan'].includes(sc.choices[s.scene.picked]?.tag)
       s = endYear(botMinors(playersRef.current[i].s, pl.persona))
       commit(i, s)

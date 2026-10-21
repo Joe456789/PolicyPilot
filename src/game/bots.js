@@ -4,7 +4,7 @@
 import { Rng } from './rng.js'
 import { LOOKS, CAREERS, STYLES } from './careers.js'
 import {
-  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction, hasMinor, nextMinor,
+  createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction, hasMinor, nextMinor, canRollAgain, rollAgain,
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
 import { PRODUCT_ORDER, totalPremium } from './products.js'
@@ -247,7 +247,8 @@ export function botAct(s, p) {
 }
 
 // 年度大事之後的小事:一件一件選完
-export function botMinors(s, p) {
+export function botMinors(s, p, world = {}) {
+  if (canRollAgain(s)) s = botAct(rollAgain(s, world), p)
   let guard = 0
   while (hasMinor(s) && guard++ < 5) s = botAct(nextMinor(s), p)
   return s
@@ -258,7 +259,7 @@ export function botPlayYear(s, p, world = {}) {
   s = botPlan(s, p)
   s = roll(s, world)
   s = botAct(s, p)
-  s = botMinors(s, p)
+  s = botMinors(s, p, world)
   s = endYear(s)
   return s
 }
@@ -269,7 +270,7 @@ export function botFastForward(s, p, world = {}) {
     if (s.phase === 'plan') s = botPlan(s, p)
     if (s.phase === 'plan') s = roll(s, world)
     if (s.phase === 'scene') s = botAct(s, p)
-    if (s.phase === 'result') s = botMinors(s, p)
+    if (s.phase === 'result') s = botMinors(s, p, world)
     if (s.phase === 'result') s = endYear(s)
   }
   return s

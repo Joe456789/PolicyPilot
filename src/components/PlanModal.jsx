@@ -132,7 +132,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
 
             {tab === 'assets' && (
               <>
-                <div className="note-box">🏘️ {t('棋盤上有 12 處資產,走到才能買。擁有後每年收租、別人走到你的資產要付過路費。')}<b>{t('行動點:{n} / 2', { n: s.ap })}</b>{t('(升級、投保、出售各花 1 點)。天災(火災、地震、淹水)會在年底檢查,沒保險要自己付修繕費。')}</div>
+                <div className="note-box">🏘️ {t('棋盤上有 28 處資產、分成 7 個區域,走到才能買。擁有後每年收租、別人走到要付過路費;同一區全部買齊,租金與過路費 ×1.5。')}<b>{t('行動點:{n} / 2', { n: s.ap })}</b>{t('(升級、投保、出售各花 1 點)。天災(火災、地震、淹水)會在年底檢查,沒保險要自己付修繕費。')}</div>
                 {s.flash && <div className="flash">{s.flash}</div>}
                 <div className="prop-list">
                   {PROPERTIES.map((p) => {

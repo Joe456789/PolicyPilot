@@ -983,6 +983,17 @@ body[data-demo="1"] .toast { top: 100px; }
 .life-card .btn { flex: none; }
 .plan .tabs { flex-wrap: wrap; }
 .quick-acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.btn.quick { padding: 7px 4px; font-size: 12.5px; flex-direction: column; gap: 2px; min-height: 48px; justify-content: center; }
-.btn.quick span { font-size: 18px; line-height: 1; }
+.quick-acts .btn.quick { display: flex; padding: 6px 2px; font-size: 12px; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; justify-content: center; white-space: nowrap; line-height: 1.2; }
+.quick-acts .btn.quick span { font-size: 18px; line-height: 1; }
 .hand-note { margin: 2px 0 6px; font-size: 12px; }
+.area-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: 0; }
+
+/* 2D 棋盤:區域色(格子底部色條)與區域起點標籤 */
+.board .tile { box-shadow: inset 0 -4px 0 var(--area, transparent); }
+.tile-area { position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 9px; font-weight: 800; color: #fff; background: var(--area); border-radius: 6px; padding: 0 4px; z-index: 3; pointer-events: none; }
+
+/* 100 格的 2D 棋盤:格子保持可讀的大小,棋盤可以捲動,會自動捲到你的棋子 */
+.board-2d { place-items: start; justify-content: start; }
+.board-wrap .board { width: max(100%, calc(var(--cols) * 60px)); }
+@media (max-width: 720px) { .board-wrap .board { width: max(100%, calc(var(--cols) * 46px)); } }
+.board-wrap { align-items: safe center; }

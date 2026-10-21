@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BOARD } from '../game/engine.js'
 import { MAP_PATH, MAP_COLS, MAP_ROWS, groundCells } from '../game/map.js'
+import { areaById } from '../game/properties.js'
 import Avatar from './Avatar.jsx'
 import { t } from '../i18n.js'
 
@@ -19,6 +20,10 @@ function useNarrow() {
 
 export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) {
   const tall = useNarrow()
+  const me = useRef(null)
+  const myPos = tokens[0]?.pos
+  // 棋盤很大:你的棋子移動後,自動捲到看得見的位置
+  useEffect(() => { me.current?.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'smooth' }) }, [myPos])
   const cols = tall ? MAP_ROWS : MAP_COLS
   const rows = tall ? MAP_COLS : MAP_ROWS
   const coord = (i) => {
@@ -41,7 +46,8 @@ export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) 
         {BOARD.map((tile, i) => {
           const { r, c } = coord(i)
           return (
-            <div key={i} onClick={() => onTileClick?.(i)} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1 }}>
+            <div key={i} onClick={() => onTileClick?.(i)} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1, '--area': areaById(tile.area)?.color }}>
+              {i > 0 && BOARD[i - 1].area !== tile.area && <span className="tile-area">{t(areaById(tile.area).name)}</span>}
               <span className="tile-n">{i === 0 ? '' : i}</span>
               {owners[i] && <span className={`tile-own o${owners[i].ownerIdx}`} title={`Lv${owners[i].level}`}>Lv{owners[i].level}</span>}
               <span className="tile-ico" aria-hidden>{tile.icon}</span>
@@ -52,7 +58,7 @@ export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) 
         {tokens.map((t, i) => {
           const { r, c } = coord(t.pos)
           return (
-            <div key={i} className="token" style={{ gridRow: r + 1, gridColumn: c + 1, transform: `translate(${(i % 2) * 8 - 4}px, ${Math.floor(i / 2) * 8 - 4}px)` }} aria-hidden>
+            <div key={i} ref={i === 0 ? me : null} className="token" style={{ gridRow: r + 1, gridColumn: c + 1, transform: `translate(${(i % 2) * 8 - 4}px, ${Math.floor(i / 2) * 8 - 4}px)` }} aria-hidden>
               <Avatar look={t.look} size={36} />
             </div>
           )

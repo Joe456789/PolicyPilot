@@ -13,13 +13,17 @@ npm install --no-save sharp                   # 選配:把圖縮小成 webp(檔�
 # .env 裡已經有 GEMINI_API_KEY=你的金鑰 的話,直接往下
 
 npm run art:dry          # 先看會生成哪些圖(不花錢)
-npm run art              # 生成「核心」69 張:生活事件、行情、里程碑、12 處地產、17 種結局、標題
+npm run art              # 生成「核心」85 張:生活事件、行情、里程碑、28 處地產、17 種結局、標題(已經有的會跳過)
 npm run art -- --tier all   # 想要更完整:再加上機會卡、意外之財、成長篇卡片(共約 180 張)
 ```
 
 - 可以隨時按 `Ctrl+C` 中斷,**再執行同一個指令只會補還沒有的圖**。
 - 只想重畫某幾張:`npm run art -- --only prop_ --force`(`--only` 是 id 開頭;例如 `ending_`、`life_kid_`、`flu`)。
 - 想先看畫面效果、不花額度:`npm run art -- --mock`(產生彩色占位圖,看完把 `public/art/` 清掉)。
+
+## 100 格棋盤新增的 16 處地產
+
+直接 `npm run art`(不要加 `--force`)只會補畫新地產的插圖,約 16 張。
 
 ## 畫風:寫實電影感(2026/10 更新)
 

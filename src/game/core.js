@@ -6,8 +6,8 @@ import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
 import { t, getLang } from '../i18n.js'
 
-// 棋盤:42 格,沿著 map.js 的彎曲路徑排列。12 格資產格(固定地點)+ 事件、機會、行情、小遊戲等。
-import { PROPERTIES, propById } from './properties.js'
+// 棋盤:100 格,沿著 map.js 的路徑環島一圈,依序經過 7 個區域;28 格資產格 + 事件、機會、行情、小遊戲等。
+import { PROPERTIES, propById, AREAS } from './properties.js'
 const P = (id) => {
   const p = PROPERTIES.find((x) => x.id === id)
   return { type: 'property', label: p.name, icon: p.icon, prop: id }
@@ -25,14 +25,34 @@ const TILE = {
   bank: { type: 'bank', label: '銀行', icon: '🏦' }, // i18n-ignore
   shop: { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
 }
-const LAYOUT = [
-  'start', 'P:wanhua', 'chance', 'event', 'P:banqiao', 'market', 'minigame', 'milestone', 'P:tamsui', 'advisor',
-  'event', 'tax', 'P:qingpu', 'chance', 'shop', 'P:zhubei', 'minigame', 'milestone', 'hospital', 'P:yilan',
-  'event', 'bank', 'market', 'P:qiqi', 'chance', 'minigame', 'event', 'P:chiayi', 'milestone', 'event',
-  'shop', 'P:tainan', 'advisor', 'P:kaohsiung', 'chance', 'event', 'P:kenting', 'minigame', 'market', 'P:hualien',
-  'chance', 'event',
-]
-export const BOARD = LAYOUT.map((k) => (k.startsWith('P:') ? P(k.slice(2)) : { ...TILE[k] }))
+// 每一區佔幾格(加起來 100;第一區含起點)
+const AREA_SIZE = { north: 16, taoz: 13, central: 14, yunchia: 14, kaoping: 14, islands: 11, east: 18 }
+// 非資產格依序填入的格子種類(每 24 格一輪,比例和原本的棋盤相近)
+const FILL = ['event', 'chance', 'minigame', 'milestone', 'market', 'event', 'chance', 'advisor', 'event', 'minigame', 'shop', 'chance',
+  'event', 'hospital', 'milestone', 'bank', 'event', 'minigame', 'chance', 'market', 'event', 'tax', 'chance', 'milestone']
+function buildBoard() {
+  const out = []
+  let f = 0
+  for (const area of AREAS) {
+    const n = AREA_SIZE[area.id]
+    const props = PROPERTIES.filter((p) => p.area === area.id)
+    const first = out.length === 0 ? 1 : 0 // 第一區的第 0 格是起點
+    const slots = new Map()
+    props.forEach((p, j) => slots.set(first + Math.floor(((j + 0.5) * (n - first)) / props.length), p.id))
+    for (let k = 0; k < n; k++) {
+      let tile
+      if (out.length === 0) tile = { ...TILE.start }
+      else if (slots.has(k)) tile = P(slots.get(k))
+      else tile = { ...TILE[FILL[f++ % FILL.length]] }
+      tile.area = area.id
+      out.push(tile)
+    }
+  }
+  // 資產格的編號由棋盤決定
+  out.forEach((tile, i) => { if (tile.prop) propById(tile.prop).tile = i })
+  return out
+}
+export const BOARD = buildBoard()
 
 export const ASSETS = {
   deposit: { id: 'deposit', name: '定存', icon: '🏦', risk: '極低', blurb: '幾乎不波動,年報酬約 1.5%,但追不上通膨。' }, // i18n-ignore

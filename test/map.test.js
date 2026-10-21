@@ -33,3 +33,47 @@ test('棋盤:每個資產格的 tile 編號對得上,起點在第 0 格', () => 
   for (const p of PROPERTIES) assert.equal(BOARD[p.tile].prop, p.id, p.id)
   assert.equal(BOARD.filter((b) => b.type === 'property').length, PROPERTIES.length)
 })
+
+import { createGame, roll, choose, canRollAgain, rollAgain, endYear } from '../src/game/engine.js'
+import { AREAS, ownsArea, areaProps } from '../src/game/properties.js'
+import { worldOf } from '../src/game/match.js'
+
+test('100 格:7 個區域依序排列,每區都有地產', () => {
+  assert.equal(BOARD.length, 100)
+  const order = [...new Set(BOARD.map((b) => b.area))]
+  assert.deepEqual(order, AREAS.map((a) => a.id))
+  for (const a of AREAS) assert.ok(areaProps(a.id).length >= 3, a.id)
+})
+
+test('兩顆骰子:點數 2~12;雙骰可以再擲一次且不連鎖', () => {
+  let doubles = 0
+  for (let seed = 1; seed < 200; seed++) {
+    let s = roll(createGame({ name: 't', career: 'office', background: 'normal', style: 'steady', length: 'short' }, seed), {})
+    if (s.dice == null) continue
+    assert.ok(s.dice >= 2 && s.dice <= 12)
+    assert.equal(s.dice, s.diceFaces[0] + s.diceFaces[1])
+    assert.equal(s.extraRoll, s.diceFaces[0] === s.diceFaces[1])
+    if (!s.extraRoll) continue
+    doubles++
+    s = choose(s, s.scene.choices.length - 1)
+    assert.ok(canRollAgain(s))
+    const pos = s.pos
+    s = rollAgain(s, {})
+    assert.equal(s.phase, 'scene')
+    assert.ok(s.scene.bonusRoll)
+    assert.equal(s.pos, (pos + s.dice) % BOARD.length)
+    s = choose(s, s.scene.choices.length - 1)
+    assert.ok(!canRollAgain(s))
+    endYear(s)
+  }
+  assert.ok(doubles > 10, `雙骰次數 ${doubles}`)
+})
+
+test('區域連鎖:集齊整區,過路費資訊標記 full', () => {
+  const s = createGame({ name: 't', career: 'office', background: 'normal', style: 'steady', length: 'short' }, 1)
+  const props = Object.fromEntries(areaProps('islands').map((p) => [p.id, { level: 1, insured: false }]))
+  assert.ok(ownsArea(props, 'islands'))
+  assert.ok(!ownsArea({ [areaProps('islands')[0].id]: { level: 1 } }, 'islands'))
+  const w = worldOf([{ name: 'a', s: { ...s, props } }])
+  assert.ok(Object.values(w.owners).every((o) => o.full))
+})

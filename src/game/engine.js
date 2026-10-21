@@ -8,7 +8,7 @@ import {
 } from './core.js'
 import { drawMinors } from './minor.js'
 import { buildScene, buildHospitalRest, buildMinorScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
-import { propById, rentOf, propPremium, upgradeCost, RISK_NAME } from './properties.js'
+import { propById, rentOf, propPremium, upgradeCost, RISK_NAME, areaMult } from './properties.js'
 import { updateQuests } from './quests.js'
 import { t, trDeep, getLang } from '../i18n.js'
 
@@ -111,15 +111,21 @@ export function roll(state, world = {}) {
       // 住院休養:不擲骰、不移動
       s.hospitalTurns -= 1
       s.dice = null
+      s.diceFaces = null
+      s.extraRoll = false
       s.scene = buildHospitalRest(s)
       s.phase = 'scene'
       return
     }
-    const dice = rng.int(1, 6)
+    // 兩顆骰子;擲出相同點數(雙骰)這一年可以再擲一次
+    const d1 = rng.int(1, 6), d2 = rng.int(1, 6)
     s.minorQueue = drawMinors(s, rng)
     s.minorTotal = s.minorQueue.length
-    s.dice = dice
-    s.pos = (s.pos + dice) % BOARD.length
+    s.dice = d1 + d2
+    s.diceFaces = [d1, d2]
+    s.extraRoll = d1 === d2
+    s.doubles = (s.doubles || 0) + (d1 === d2 ? 1 : 0)
+    s.pos = (s.pos + s.dice) % BOARD.length
     s.scene = buildScene(s, rng, BOARD[s.pos], world)
     s.phase = 'scene'
   })
@@ -142,8 +148,25 @@ export function choose(state, idx, opts = {}) {
   })
 }
 
+// 雙骰獎勵:年度大事結算完,再擲一次(不會連鎖)
+export const canRollAgain = (s) => s.phase === 'result' && !s.ended && !!s.extraRoll
+export function rollAgain(state, world = {}) {
+  return run(state, (s, rng) => {
+    if (!canRollAgain(s)) return
+    const d1 = rng.int(1, 6), d2 = rng.int(1, 6)
+    s.extraRoll = false
+    s.pendingOps = []
+    s.dice = d1 + d2
+    s.diceFaces = [d1, d2]
+    s.pos = (s.pos + s.dice) % BOARD.length
+    s.scene = buildScene(s, rng, BOARD[s.pos], world)
+    s.scene.bonusRoll = true
+    s.phase = 'scene'
+  })
+}
+
 // 年度大事結算完之後,接著發生這一年的小事(一件一件來);沒有了就回傳原狀態
-export const hasMinor = (s) => s.phase === 'result' && !s.ended && (s.minorQueue || []).length > 0
+export const hasMinor = (s) => s.phase === 'result' && !s.ended && !s.extraRoll && (s.minorQueue || []).length > 0
 export function nextMinor(state) {
   return run(state, (s) => {
     if (!hasMinor(s)) return
@@ -262,7 +285,7 @@ export function endYear(state) {
         propLoan += pay
         if (pr.mortgage.balance <= 0 || pr.mortgage.yearsLeft <= 0) pr.mortgage = null
       }
-      let rent = Math.round(rentOf(p, pr.level) * clamp(1 + rng.normal(0, p.vol), 0.4, 1.15))
+      let rent = Math.round(rentOf(p, pr.level) * areaMult(s.props, p) * clamp(1 + rng.normal(0, p.vol), 0.4, 1.15))
       const r = rng.next()
       let acc = 0
       for (const k of ['fire', 'quake', 'flood']) {
@@ -347,6 +370,7 @@ export function endYear(state) {
     s.pendingOps = []
     s.year = blankYear()
     s.minorQueue = []
+    s.extraRoll = false
     s.scene = null
     s.dice = null
 

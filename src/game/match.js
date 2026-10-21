@@ -1,7 +1,7 @@
 // 對局:你 + 電腦對手,同一個棋盤、各自的人生。排名即時更新。
 import { PERSONAS, createBotGame, botFastForward, botWantsProperty } from './bots.js'
 import { computeScore, netWorth, receiveCash, buyPropertyAt, clearOps } from './engine.js'
-import { propById } from './properties.js'
+import { propById, ownsArea } from './properties.js'
 import { t } from '../i18n.js'
 
 export function createMatch(humanState, opponents, seed) {
@@ -40,7 +40,7 @@ export function finishMatch(players) {
 export function worldOf(players) {
   const owners = {}
   players.forEach((pl, idx) => {
-    for (const [id, pr] of Object.entries(pl.s.props || {})) owners[id] = { idx, name: pl.name, level: pr.level, insured: pr.insured }
+    for (const [id, pr] of Object.entries(pl.s.props || {})) owners[id] = { idx, name: pl.name, level: pr.level, insured: pr.insured, full: ownsArea(pl.s.props, propById(id).area) }
   })
   return { owners }
 }
