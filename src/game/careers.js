@@ -43,6 +43,8 @@ export const LENGTHS = [
   { id: 'short', years: 12, title: '短局', blurb: '約 12 年,適合快速體驗。' },
   { id: 'standard', years: 20, title: '標準', blurb: '約 20 年,會經歷結婚、買房、育兒等人生大事。' },
   { id: 'long', years: 30, title: '完整人生', blurb: '約 30 年,連父母長照與退休規劃都會遇到。' },
+  { id: 'life40', years: 40, title: '四十年', blurb: '約 40 年,會看到孩子長大、上大學、獨立。' },
+  { id: 'life60', years: 60, title: '一輩子', blurb: '約 60 年,從工作、育兒、退休一路到晚年照顧。' },
 ]
 
 export const LOOKS = {

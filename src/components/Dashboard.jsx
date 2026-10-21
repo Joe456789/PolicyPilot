@@ -38,6 +38,8 @@ export default function Dashboard({ s, onQuick }) {
             {s.partner ? <span className="tag">{cap(t('已婚'))}</span> : <span className="tag">{cap(t('單身'))}</span>}
             {s.dependents > 0 && <span className="tag">{t('扶養 {n} 人', { n: s.dependents })}</span>}
             {s.house && <span className="tag">{cap(t('有房'))}</span>}
+            {(s.kids || []).length > 0 && <span className="tag">{t('孩子:{ages}', { ages: s.kids.map((k) => (k.independent ? t('已獨立') : t('{n}歲', { n: k.age }))).join(getLang() === 'en' ? ', ' : '、') })}</span>}
+            {s.retired && <span className="tag">{t('已退休')}</span>}
             {!s.partner && s.dependents > 0 && <span className="tag warn">{t('唯一收入來源')}</span>}
           </div>
           {(s.tags || []).length > 0 && (

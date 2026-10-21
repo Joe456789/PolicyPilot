@@ -745,7 +745,7 @@ function GameApp() {
               <Board3D key={gameKey} ref={boardRef} players={tokenPlayers} owners={ownersMap} onFail={() => setUse3d(false)} onStep={() => sfx.step()} onTileClick={(i) => { if (!demo && !busy) setInspect(i) }} />
             </Suspense>
           ) : (
-            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={centerSlot} owners={ownersMap} onTileClick={(i) => { if (!demo && !busy) setInspect(i) }} /></div>
+            <div className="board-2d"><Board tokens={players.map((p, i) => ({ pos: p.s.pos, look: p.look, active: i === activeIdx }))} centerSlot={null} owners={ownersMap} onTileClick={(i) => { if (!demo && !busy) setInspect(i) }} /></div>
           )}
           <div className="stage-hud">
             <div className="year-chip">
@@ -762,7 +762,7 @@ function GameApp() {
                 <button className="btn big2" onClick={() => setAskOpen(true)} disabled={busy}><MessageCircle size={18} aria-hidden /> {t('問理專')}</button>
               </div>
             )}
-            {!use3d && <div className="action-bar"><button className="btn big2" onClick={() => { setPlanTab('cover'); setPlanOpen(true) }} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
+            {!use3d && <div className="action-bar">{centerSlot}<button className="btn big2" onClick={() => { setPlanTab('cover'); setPlanOpen(true) }} disabled={g.phase !== 'plan' || busy || !!auto}><ShieldCheck size={18} aria-hidden /> {t('規劃與理財')}</button><button className="btn big2" onClick={() => setAskOpen(true)}>💬 {t('問理專')}</button></div>}
           </div>
           <Confetti burst={burst} />
         </main>
@@ -814,7 +814,7 @@ function GameApp() {
       {demo && (
         <DemoBar
           caption={demoCaption({
-            intro: !demo.introDone, stage: !!stage, yearOpen, oppTurn: activeIdx > 0 && busy, turn: g.turn, phase: g.phase, kind: g.scene?.kind, aiScene: !!aiText,
+            intro: !demo.introDone, stage: !!stage, yearOpen, lifeStage: !!g.scene?.stage && g.phase !== 'plan', oppTurn: activeIdx > 0 && busy, turn: g.turn, phase: g.phase, kind: g.scene?.kind, aiScene: !!aiText,
             payout: g.phase === 'result' && g.scene?.result ? g.scene.result.lines.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0) : 0,
           })}
           year={Math.min(g.turn + 1, g.years)} years={g.years || DEMO_YEARS} paused={demo.paused} fast={demo.fast}

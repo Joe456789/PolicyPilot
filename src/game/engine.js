@@ -7,6 +7,7 @@ import {
   canIncrease, householdIncome, round1k,
 } from './core.js'
 import { drawMinors } from './minor.js'
+import { dueStages } from './lifestages.js'
 import { buildScene, buildHospitalRest, buildMinorScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
 import { propById, rentOf, propPremium, upgradeCost, RISK_NAME, areaMult } from './properties.js'
 import { updateQuests } from './quests.js'
@@ -113,13 +114,18 @@ export function roll(state, world = {}) {
       s.dice = null
       s.diceFaces = null
       s.extraRoll = false
+      s.minorQueue = queueStages(s)
+      s.minorTotal = s.minorQueue.length
       s.scene = buildHospitalRest(s)
       s.phase = 'scene'
       return
     }
     // 兩顆骰子;擲出相同點數(雙骰)這一年可以再擲一次
     const d1 = rng.int(1, 6), d2 = rng.int(1, 6)
-    s.minorQueue = drawMinors(s, rng)
+    // 這一年的人生階段(孩子長大、退休…)排在前面;有人生階段時,隨機小事最多 1 件
+    const stages = queueStages(s)
+    const minors = drawMinors(s, rng)
+    s.minorQueue = [...stages, ...(stages.length ? minors.slice(0, 1) : minors)]
     s.minorTotal = s.minorQueue.length
     s.dice = d1 + d2
     s.diceFaces = [d1, d2]
@@ -146,6 +152,17 @@ export function choose(state, idx, opts = {}) {
     s.year.events.push({ title: sc.title, kind: sc.kind, cat: sc.cat || null, icon: sc.icon })
     s.phase = 'result'
   })
+}
+
+// 把今年到期的人生階段排進佇列,並記下「已經發生過」
+function queueStages(s) {
+  const ids = dueStages(s)
+  for (const id of ids) {
+    const [base, kid] = id.split('#')
+    if (kid != null) s.kids[Number(kid)].done.push(base)
+    else s.stagesDone.push(base)
+  }
+  return ids
 }
 
 // 雙骰獎勵:年度大事結算完,再擲一次(不會連鎖)
@@ -326,6 +343,13 @@ export function endYear(state) {
       s.year.events.push({ title: t('{card}生效:租金多收 {n} 萬', { card: CARDS.rent_boost.name, n: Math.round(extra / 10000 * 10) / 10 }), kind: 'chance', cat: 'card', icon: CARDS.rent_boost.icon })
     }
 
+    // 退休後:儲蓄年金險分年領回
+    let annuityBack = 0
+    if (s.annuityPay > 0 && s.savings > 0) {
+      annuityBack = Math.min(s.savings, s.annuityPay)
+      s.savings -= annuityBack
+      premBack += annuityBack
+    }
     s.cash += effIncome + rentIncome + premBack - s.expense - premiums - recurring - houseCost - loanService - propPrem - propLoan - dmgCost + dmgPaid
     s.year.recurringCost = recurring
 
@@ -362,7 +386,9 @@ export function endYear(state) {
     // 進入下一年
     s.turn += 1
     s.age += 1
-    s.income = Math.round(s.income * (1 + s.career.growth + rng.normal(0, 0.01)))
+    // 退休後收入是年金,只隨物價微調;還在工作就依職業成長
+    s.income = s.retired ? Math.round(s.income * 1.01) : Math.round(s.income * (1 + s.career.growth + rng.normal(0, 0.01)))
+    for (const k of s.kids || []) k.age += 1
     s.expense = Math.round(s.expense * (1.022 + s.career.growth * 0.5)) // 通膨 + 生活水準隨收入提高
     s.health = Math.min(100, s.health + 5)
     if (s.checkupYears > 0) s.checkupYears -= 1

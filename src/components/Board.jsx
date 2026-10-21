@@ -23,7 +23,14 @@ export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) 
   const me = useRef(null)
   const myPos = tokens[0]?.pos
   // 棋盤很大:你的棋子移動後,自動捲到看得見的位置
-  useEffect(() => { me.current?.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'smooth' }) }, [myPos])
+  useEffect(() => {
+    // 只捲動棋盤自己的捲軸(scrollIntoView 會連整個頁面一起捲,把擲骰按鈕捲到看不到)
+    const el = me.current
+    const box = el?.closest('.board-2d')
+    if (!el || !box) return
+    const a = el.getBoundingClientRect(), b = box.getBoundingClientRect()
+    box.scrollTo({ left: box.scrollLeft + a.left - b.left - b.width / 2 + a.width / 2, top: box.scrollTop + a.top - b.top - b.height / 2 + a.height / 2, behavior: 'smooth' })
+  }, [myPos])
   const cols = tall ? MAP_ROWS : MAP_COLS
   const rows = tall ? MAP_COLS : MAP_ROWS
   const coord = (i) => {

@@ -997,3 +997,4 @@ body[data-demo="1"] .toast { top: 100px; }
 .board-wrap .board { width: max(100%, calc(var(--cols) * 60px)); }
 @media (max-width: 720px) { .board-wrap .board { width: max(100%, calc(var(--cols) * 46px)); } }
 .board-wrap { align-items: safe center; }
+.action-bar .center-actions { display: contents; }

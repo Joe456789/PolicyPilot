@@ -4,6 +4,7 @@ import { tagMult } from './tags.js'
 import { t, trDeep, getLang } from '../i18n.js'
 import { CARDS, giveCard, hasCard, useCard } from './cards.js'
 import { minorById } from './minor.js'
+import { stageById, KID_NAMES } from './lifestages.js'
 import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
 } from './content.js'
@@ -19,8 +20,11 @@ const wOf = (d, s) => (typeof d.w === 'function' ? d.w(s) : d.w ?? 1) * tagMult(
 const seenCount = (s, id) => s.seen[id] || 0
 
 // 相同卡片重複出現時降低權重,讓一局之中的內容更豐富。
+// 退休之後不會再遇到的職場事件
+const WORK_ONLY = ['burnout', 'jobloss', 'promotion', 'job_change', 'mba']
 function pickDef(s, rng, defs, { once = true } = {}) {
   const pool = defs.filter((d) => {
+    if (s.retired && WORK_ONLY.includes(d.id)) return false
     if (d.minAge && s.age < d.minAge) return false
     if (d.minTurn && s.turn < d.minTurn) return false
     if (d.once && once && seenCount(s, d.id) > 0) return false
@@ -121,8 +125,10 @@ function buildProperty(s, rng, tile, world) {
 
 function buildEvent(s, rng) {
   const inflation = Math.pow(1.025, s.turn)
-  const healthMult = 1 + (100 - s.health) / 120
+  // 健康越差、年紀越大(55 歲以上),生病的機率越高
+  const healthMult = (1 + (100 - s.health) / 120) * (1 + Math.max(0, s.age - 55) / 40)
   const pool = EVENT_DEFS.filter((d) => {
+    if (s.retired && WORK_ONLY.includes(d.id)) return false
     if (d.minAge && s.age < d.minAge) return false
     if (d.minTurn && s.turn < d.minTurn) return false
     if (d.once && seenCount(s, d.id) > 0) return false
@@ -698,6 +704,8 @@ function resolveFxScene(s, rng, sc, choice, add) {
     fx = null
   }
   if (fx) applyFx(s, rng, fx, add)
+  if (fx?.independent && sc.base.kid != null) kidIndependent(s, sc.base.kid, add)
+  if (fx?.retire) retire(s, fx.retire, add)
   if (sc.base.lesson) add(t(sc.base.lesson), 0, 'lesson')
 }
 
@@ -708,6 +716,21 @@ function applyFx(s, rng, fx, add) {
     s.cash += got
     add(t('收入'), got)
     if (fx.investAll) { s.cash -= got; s.hold[fx.investAll] += got; add(t('買入{name}', { name: ASSETS[fx.investAll].name }), -got, 'note') }
+  }
+  // 人生階段:接下來幾年每年固定的支出(學費、補習費)
+  if (fx.recurring) {
+    const r = fx.recurring
+    s.recurring.push({ amount: r.amount, yearsLeft: r.years, label: t(r.label) })
+    add(t('接下來 {n} 年,每年{label}約 {amt}', { n: r.years, label: t(r.label), amt: wan(r.amount) }), 0, 'note')
+  }
+  // 晚年照顧:每年的照顧費,長照險可以分擔
+  if (fx.care) {
+    const perYear = PRODUCTS.ltc.tiers[s.coverage.ltc || 0].perYear || 0
+    const net = Math.max(0, fx.care - perYear)
+    s.recurring.push({ amount: net, yearsLeft: 10, label: t('長期照顧費用') })
+    add(t('長期照顧每年約 {amt}', { amt: wan(fx.care) }), 0, 'note')
+    if (perYear) add(t('長照險每年給付 {amt},自付剩 {net}', { amt: wan(perYear), net: wan(net) }), 0, 'cover')
+    else add(t('沒有長照險,照顧費全部自己付'), 0, 'warn')
   }
   // 小意外:先付錢,有對應的保險再理賠
   if (fx.hit) {
@@ -780,6 +803,7 @@ const specials = {
   },
   baby(s, rng, add) {
     s.dependents += 1
+    ;(s.kids ||= []).push({ age: 0, done: [] })
     s.cash -= 100000
     s.expense += 180000
     add(t('新生兒一次性花費'), -100000)
@@ -832,10 +856,54 @@ const specials = {
 
 // ---------- 每年的小事 ----------
 export function buildMinorScene(s, id, k, m) {
+  const st = stageById(id)
+  if (st) {
+    // 人生階段:孩子長大、自己變老(標題裡的 {kid} 換成老大、老二…)
+    const kid = st.kid == null ? '' : t(KID_NAMES[st.kid] || KID_NAMES[0])
+    const d = st.def
+    return {
+      kind: 'minor', defId: d.id, icon: d.icon, tone: 'neutral', title: t(d.title, { kid }), story: t(d.story, { kid }),
+      stage: true,
+      choices: trDeep(d.choices.map((c) => ({ ...c }))), base: { lesson: d.lesson ? t(d.lesson) : undefined, kid: st.kid },
+    }
+  }
   const d = minorById(id)
   return trDeep({
     kind: 'minor', defId: d.id, icon: d.icon, tone: 'neutral', title: d.title, story: d.story,
     tag: t('今年的小事 {k}/{m}', { k, m }),
     choices: d.choices.map((c) => ({ ...c })), base: { lesson: d.lesson },
   })
+}
+
+// 孩子畢業獨立:不再算扶養人口,生活支出減少
+function kidIndependent(s, i, add) {
+  const k = (s.kids || [])[i]
+  if (!k || k.independent) return
+  k.independent = true
+  s.dependents = Math.max(0, s.dependents - 1)
+  s.expense = Math.max(Math.round(s.expense * 0.6), s.expense - 180000)
+  add(t('孩子獨立了:扶養人口 -1,每年生活支出減少約 18 萬'), 0, 'in')
+}
+
+// 退休:收入改成勞保年金(約薪水的 35%)+ 儲蓄年金險分年領回;兼職再加原本收入的 3 成
+function retire(s, mode, add) {
+  if (mode === 'delay') {
+    s.retireAt = s.age + 3
+    s.stagesDone = (s.stagesDone || []).filter((x) => x !== 's_retire')
+    add(t('延後到 {age} 歲退休,繼續領薪水', { age: s.retireAt }), 0, 'note')
+    return
+  }
+  const salary = s.income
+  const pension = round1k(salary * 0.35)
+  s.annuityPay = round1k((s.savings || 0) / 20)
+  s.income = pension + (mode === 'part' ? round1k(salary * 0.3) : 0)
+  s.retired = true
+  s.coverage.annuity = 0
+  if (s.partner) s.partner.income = round1k(s.partner.income * 0.4)
+  s.expense = Math.round(s.expense * 0.85)
+  add(t('勞保年金每年約 {amt}', { amt: wan(pension) }), 0, 'in')
+  if (mode === 'part') add(t('兼職收入每年約 {amt}', { amt: wan(round1k(salary * 0.3)) }), 0, 'in')
+  if (s.annuityPay) add(t('儲蓄年金險開始分年領回,每年約 {amt}', { amt: wan(s.annuityPay) }), 0, 'cover')
+  else add(t('沒有準備年金險:退休後的缺口要靠存款與投資'), 0, 'warn')
+  add(t('不再工作,生活支出也降低一些'), 0, 'note')
 }

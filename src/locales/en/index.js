@@ -10,5 +10,6 @@ import extra from './extra.js'
 import minor from './minor.js'
 import shop from './shop.js'
 import regions from './regions.js'
+import lifestages from './lifestages.js'
 
-export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions }
+export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions, ...lifestages }

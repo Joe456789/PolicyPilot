@@ -16,7 +16,7 @@ const only = fi >= 0 ? args.slice(fi + 1).filter((a) => !a.startsWith('--')).map
 const CJK = /[㐀-鿿]/
 
 // 這些檔案是「靜態資料」:每個中文字串字面值都必須是英文字典的 key(顯示時由 t(資料字串) 翻譯)
-const DATA_FILES = ['src/game/content.js', 'src/game/products.js', 'src/game/careers.js', 'src/game/glossary.js', 'src/game/quests.js', 'src/game/records.js', 'src/game/endings.js', 'src/game/tags.js', 'src/game/cards.js', 'src/game/properties.js', 'src/game/minigames.js', 'src/game/banter.js', 'src/game/prologueCards.js', 'src/game/minor.js']
+const DATA_FILES = ['src/game/content.js', 'src/game/products.js', 'src/game/careers.js', 'src/game/glossary.js', 'src/game/quests.js', 'src/game/records.js', 'src/game/endings.js', 'src/game/tags.js', 'src/game/cards.js', 'src/game/properties.js', 'src/game/minigames.js', 'src/game/banter.js', 'src/game/prologueCards.js', 'src/game/minor.js', 'src/game/lifestages.js']
 
 function walk(dir, out = []) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {

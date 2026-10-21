@@ -85,7 +85,7 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
           <div className="grad-opts">
             <label>{t('人生長度')}
               <select id="len" value={length} onChange={(e) => setLength(e.target.value)}>
-                <option value="short">{t('短局(約 12 年)')}</option><option value="standard">{t('標準(約 20 年)')}</option><option value="long">{t('完整人生(約 30 年)')}</option>
+                <option value="short">{t('短局(約 12 年)')}</option><option value="standard">{t('標準(約 20 年)')}</option><option value="long">{t('完整人生(約 30 年)')}</option><option value="life40">{t('四十年(看孩子長大)')}</option><option value="life60">{t('一輩子(約 60 年,到晚年)')}</option>
               </select>
             </label>
             <label>{t('電腦對手')}

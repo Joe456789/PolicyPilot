@@ -2,7 +2,7 @@
 // 只讀取狀態,不影響遊戲。字串走 t(),英文版有對應翻譯。
 import { t } from '../i18n.js'
 
-export const DEMO_SEED = 283 // 這個種子在「平衡型」託管下,會遇到理賠、買到資產、最後領先,適合展示
+export const DEMO_SEED = 205 // 這個種子在「平衡型」託管下,會遇到理賠、買到資產、最後領先,適合展示
 export const DEMO_YEARS = 12
 
 const KIND = {
@@ -31,6 +31,7 @@ export function demoCaption(c) {
   if (c.oppTurn) return { title: t('對手回合'), text: t('電腦對手有不同個性(穩健、梭哈、保險至上、平衡),同樣的規則、不同的決策,結果差很多。') }
   if (c.turn === 0 && c.phase === 'plan') return { title: t('開局規劃'), text: t('擲骰前先配置保障、投資與貸款。電腦理專會先補強必要的保險,再把多餘的錢拿去分散投資。') }
   if (c.phase === 'plan') return { title: t('擲骰前進'), text: t('擲骰子走在彎彎繞繞的地圖上,走到哪一格,今年就發生哪一件事。') }
+  if (c.lifeStage) return { title: t('人生階段'), text: t('孩子上學、上大學、獨立,自己退休、晚年照顧:到了那個年紀一定會遇到,每一個決定都會影響之後幾十年的現金流。') }
   if (c.payout > 0) return { title: t('保險理賠!'), text: t('事前投保的保障,在壞事發生時變成現金流,不用動到投資、也不用借錢。這就是保險的價值。') + (c.aiScene ? ' ✨' : '') }
   const [title, body] = (KIND[c.kind] || KIND.tip)()
   return { title, text: body + (c.aiScene ? ' ' + t('✨ 這段情境由 Gemini 生成,金額仍由規則引擎計算。') : '') }
