@@ -267,10 +267,11 @@ function GameApp() {
       style: '穩健型', length: 'short', // i18n-ignore:'穩健型' 是比對用的內部值
     }
     planBotted.current = false
-    setDemo({ paused: false, fast: false, done: false })
+    setDemo({ paused: false, fast: false, done: false, introDone: false })
     setBotFast(false)
     setCoach(true)
     startAdult(setup, 2, DEMO_SEED)
+    setPlanOpen(false) // 先播開場運鏡,播完再打開規劃視窗
     setAuto({ persona: 'balanced', left: Infinity })
   }
   function exitDemo() {
@@ -288,7 +289,7 @@ function GameApp() {
     setAuto({ persona: personaId, left: years })
   }
   useEffect(() => {
-    if (!auto || screen !== 'game' || !g || busy || stage || askOpen || demo?.paused) return
+    if (!auto || screen !== 'game' || !g || busy || stage || askOpen || demo?.paused || (demo && !demo.introDone)) return
     const slow = !botFast
     const dw = demo && slow ? 1.8 : 1 // 展示模式放慢一點,讓觀眾看得清楚
     const wait = (yearOpen ? (slow ? 1600 : 200) : g.phase === 'scene' && g.scene?.kind === 'minigame' ? (demo && slow ? 1500 : 250) : slow ? 1000 : 150) * dw
@@ -316,6 +317,18 @@ function GameApp() {
     }, wait)
     return () => clearTimeout(id)
   }, [auto, demo?.paused, screen, g, busy, sceneReady, yearOpen, stage, planOpen, askOpen, botFast]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 展示模式:先播開場運鏡(2D 棋盤沒有運鏡,直接開始)
+  useEffect(() => {
+    if (!demo || demo.introDone || screen !== 'game') return undefined
+    let alive = true
+    const id = setTimeout(async () => {
+      await (boardRef.current?.intro?.() ?? Promise.resolve())
+      if (!alive) return
+      setDemo((d) => d && { ...d, introDone: true })
+      setPlanOpen(true)
+    }, 600)
+    return () => { alive = false; clearTimeout(id) }
+  }, [demo?.introDone, screen, gameKey]) // eslint-disable-line react-hooks/exhaustive-deps
   // 展示模式:階段回顧停留一會兒就自動關閉;body 加標記讓視窗讓出字幕列的位置
   useEffect(() => {
     if (!demo || demo.paused || !stage || stage.loading) return undefined
@@ -743,7 +756,7 @@ function GameApp() {
       {demo && (
         <DemoBar
           caption={demoCaption({
-            stage: !!stage, yearOpen, oppTurn: activeIdx > 0 && busy, turn: g.turn, phase: g.phase, kind: g.scene?.kind, aiScene: !!aiText,
+            intro: !demo.introDone, stage: !!stage, yearOpen, oppTurn: activeIdx > 0 && busy, turn: g.turn, phase: g.phase, kind: g.scene?.kind, aiScene: !!aiText,
             payout: g.phase === 'result' && g.scene?.result ? g.scene.result.lines.filter((l) => l.kind === 'cover' && l.amount > 0).reduce((a, l) => a + l.amount, 0) : 0,
           })}
           year={Math.min(g.turn + 1, g.years)} years={g.years || DEMO_YEARS} paused={demo.paused} fast={demo.fast}

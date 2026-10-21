@@ -23,6 +23,7 @@ const KIND = {
 }
 
 export function demoCaption(c) {
+  if (c.intro) return { title: t('開場'), text: t('這座城市沒有任何 3D 模型檔:地形、建築、水面與光影,全部由程式碼即時生成。點一下畫面可以跳過。') }
   if (c.ended) return { title: t('展示結束'), text: t('這就是一局完整的人生:規則引擎精算每一個數字,AI 負責情境、教練與解讀。想自己玩一次,回到標題頁開始新的人生。') }
   if (c.stage) return { title: t('階段回顧 · AI 理專'), text: t('每隔幾年,系統會整理這段時間的財務體質,AI 理專用白話文講出優點、風險與下一步建議。') }
   if (c.yearOpen) return { title: t('年度結算'), text: t('一年的收入、保費、理賠、投資報酬與資產變化一目了然;右邊的排名即時更新。') }

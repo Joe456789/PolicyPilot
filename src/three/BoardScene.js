@@ -7,6 +7,7 @@ import { t, getLang } from '../i18n.js'
 import { wan } from '../game/format.js'
 
 import { MAP_PATH, MAP_COLS, MAP_ROWS, groundCells } from '../game/map.js'
+import * as R from './realism.js'
 
 const N = MAP_PATH.length
 const S = 2 // 一格的邊長
@@ -93,12 +94,55 @@ function fillFit(g, text, x, y, maxW, weight, px, minPx = 12, zhFam = FONT_CJK) 
   g.fillText(two[1], x, y + sz * 0.5)
 }
 
+// 寫實畫風的樹:很多棵樹合併成兩個 InstancedMesh(樹幹、樹冠),效能比一棵一棵加好很多
+class TreeBatch {
+  constructor() { this.items = [] }
+  add(x, y, z, s = 1, rnd = Math.random, kind = 'round') { this.items.push({ x, y, z, s, r: rnd(), r2: rnd(), r3: rnd(), kind }) }
+  build(scene) {
+    if (!this.items.length) return
+    const bark = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 1 })
+    const leaf = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 })
+    const trunkGeo = new THREE.CylinderGeometry(0.07, 0.12, 1, 7)
+    const blobGeo = new THREE.IcosahedronGeometry(0.5, 1)
+    const trunks = new THREE.InstancedMesh(trunkGeo, bark, this.items.length)
+    const blobsPer = 5
+    const blobs = new THREE.InstancedMesh(blobGeo, leaf, this.items.length * blobsPer)
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3()
+    const greens = [0x2f5d2a, 0x3b6e2f, 0x4a7d36, 0x2b5231, 0x56803a, 0x6b7d2e]
+    const col = new THREE.Color()
+    let b = 0
+    this.items.forEach((it, i) => {
+      const h = (0.42 + it.r * 0.3) * it.s * (it.kind === 'tall' ? 1.3 : 1)
+      m.compose(pos.set(it.x, it.y + h / 2, it.z), q.identity(), sc.set(it.s, h, it.s))
+      trunks.setMatrixAt(i, m)
+      for (let k = 0; k < blobsPer; k++) {
+        const a = (k / blobsPer) * Math.PI * 2 + it.r2 * 3
+        const rr = k === 0 ? 0 : (0.22 + ((it.r * 5 + k) % 1) * 0.14) * it.s
+        const bs = (k === 0 ? 0.8 : 0.5 + ((it.r3 * 7 + k) % 1) * 0.25) * it.s * (it.kind === 'tall' ? 0.7 : 1)
+        const yy = it.y + h + (k === 0 ? 0.32 : 0.12 + k * 0.07) * it.s * (it.kind === 'tall' ? 1.8 : 1)
+        q.setFromEuler(new THREE.Euler(it.r * 3, it.r2 * 3, it.r3 * 3))
+        m.compose(pos.set(it.x + Math.cos(a) * rr, yy, it.z + Math.sin(a) * rr), q, sc.set(bs, bs * (it.kind === 'tall' ? 1.5 : 0.85), bs))
+        blobs.setMatrixAt(b, m)
+        col.setHex(greens[Math.floor(((it.r + k * 0.37) % 1) * greens.length)])
+        col.offsetHSL(0, 0, (it.r3 - 0.5) * 0.06)
+        blobs.setColorAt(b, col)
+        b++
+      }
+    })
+    for (const im of [trunks, blobs]) { im.castShadow = true; im.receiveShadow = true; scene.add(im) }
+  }
+}
+
 const priceText = (price) => (getLang() === 'en' ? wan(price) : `${Math.round(price / 10000)} 萬`) // i18n-ignore
 
 export class BoardScene {
-  constructor(container, board) {
+  constructor(container, board, opts = {}) {
     this.container = container
     this.board = board
+    // 畫風:real 寫實(天空、水面反光、後製)| toon 卡通(原本的樣子)
+    this.real = opts.style !== 'toon'
+    // 手機或核心數少的裝置:寫實畫風但關掉最吃效能的水面反射與光暈
+    this.lite = this.real && (window.innerWidth < 700 || (navigator.hardwareConcurrency || 8) <= 4)
     this.tweens = []
     this.tokens = []
     this.disposed = false
@@ -111,14 +155,14 @@ export class BoardScene {
 
     const w = container.clientWidth || 800
     const h = container.clientHeight || 600
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
+    const renderer = new THREE.WebGLRenderer({ antialias: !this.real, alpha: false, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     renderer.setSize(w, h)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    renderer.toneMappingExposure = this.real ? 0.95 : 1.05
     container.appendChild(renderer.domElement)
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.touchAction = 'none'
@@ -137,11 +181,23 @@ export class BoardScene {
     scene.fog = new THREE.Fog(0xcfeaf7, 60, 135)
     this.scene = scene
 
-    this.camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 200)
+    this.camera = new THREE.PerspectiveCamera(38, w / h, 0.1, this.real ? 4000 : 200)
+    if (this.real) {
+      const { sky: skyMesh, sun, env } = R.makeSky(renderer)
+      this.sunDir = sun
+      this.env = env
+      scene.add(skyMesh)
+      scene.background = null
+      scene.environment = env
+      scene.environmentIntensity = 0.75
+      scene.fog = new THREE.FogExp2(0xdcb48c, 0.0095)
+    }
     this.buildLights()
     this.buildWorld()
     this.buildDice()
     this.bindInput()
+    if (this.real) this.fx = R.makeComposer(renderer, scene, this.camera, { bloom: !this.lite })
+    this.frameTimes = []
 
     this.ro = new ResizeObserver(() => this.resize())
     this.ro.observe(container)
@@ -153,6 +209,20 @@ export class BoardScene {
   // ---------- 建構 ----------
   buildLights() {
     const { scene } = this
+    if (this.real) {
+      scene.add(new THREE.HemisphereLight(0xd6c8ff, 0x5a4a30, 0.6))
+      const sun = new THREE.DirectionalLight(0xffa04f, 7.5)
+      sun.position.copy(this.sunDir).multiplyScalar(70)
+      sun.castShadow = true
+      const ms = this.lite ? 2048 : 4096
+      sun.shadow.mapSize.set(ms, ms)
+      const sc = sun.shadow.camera
+      sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.near = 1; sc.far = 160
+      sun.shadow.bias = -0.0003
+      sun.shadow.normalBias = 0.03
+      scene.add(sun)
+      return
+    }
     scene.add(new THREE.HemisphereLight(0xffffff, 0xb7d9c4, 1.05))
     const sun = new THREE.DirectionalLight(0xfff3dc, 2.2)
     sun.position.set(12, 28, 12)
@@ -166,6 +236,7 @@ export class BoardScene {
   }
 
   buildWorld() {
+    if (this.real) return this.buildWorldReal()
     const { scene } = this
     // 水面與草地島嶼(橢圓形,比棋盤大一圈)
     const water = new THREE.Mesh(
@@ -219,6 +290,227 @@ export class BoardScene {
     scene.add(this.ring)
   }
 
+  // ---------- 寫實畫風的世界 ----------
+  buildWorldReal() {
+    const { scene } = this
+    this.islandR = { x: HW + 9, z: HH + 9 }
+    // 海面:有天空倒影的水(手機版用簡單的反光材質)
+    const simpleWater = () => {
+      const water = new THREE.Mesh(new THREE.CircleGeometry(400, 48), new THREE.MeshStandardMaterial({ color: 0x1d4b5c, roughness: 0.12, metalness: 0.4 }))
+      water.rotation.x = -Math.PI / 2
+      water.position.y = -0.8
+      scene.add(water)
+    }
+    this.lowWater = simpleWater
+    if (this.lite) simpleWater()
+    else {
+      this.water = R.makeWater(400, this.sunDir, scene.fog)
+      this.water.position.y = -0.8
+      scene.add(this.water)
+    }
+    // 沙灘 + 草地島
+    const beach = new THREE.Mesh(new THREE.CylinderGeometry(1.07, 1.16, 1.0, 72), new THREE.MeshStandardMaterial({ map: R.sandTex(10), roughness: 0.95 }))
+    beach.scale.set(this.islandR.x, 1, this.islandR.z)
+    beach.position.y = -1.27
+    beach.receiveShadow = true
+    scene.add(beach)
+    const grass = new THREE.Mesh(new THREE.CircleGeometry(1, 72), new THREE.MeshStandardMaterial({ map: R.grassTex(14), roughness: 1 }))
+    grass.scale.set(this.islandR.x, this.islandR.z, 1)
+    grass.rotation.x = -Math.PI / 2
+    grass.position.y = -0.74
+    grass.receiveShadow = true
+    scene.add(grass)
+    this.trees = new TreeBatch()
+    this.buildScenery()
+    this.clouds = []
+
+    // 棋盤底座:深色木頭
+    const wood = new THREE.MeshStandardMaterial({ map: R.woodTex(1), roughness: 0.55, metalness: 0 })
+    const baseGeo = new RoundedBoxGeometry(S + 0.55, 0.9, S + 0.55, 3, 0.18)
+    for (let i = 0; i < N; i++) {
+      const p = tileXZ(i)
+      const base = new THREE.Mesh(baseGeo, wood)
+      base.position.set(p.x, -0.1, p.z)
+      base.castShadow = true
+      base.receiveShadow = true
+      scene.add(base)
+    }
+    this.buildTiles()
+    this.buildCityReal()
+    this.trees.build(scene)
+    this.cars = []
+
+    this.ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.95, 0.06, 12, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffd38a, transparent: true, opacity: 0.95, toneMapped: false }),
+    )
+    this.ring.rotation.x = Math.PI / 2
+    this.ring.visible = false
+    scene.add(this.ring)
+  }
+
+  // 中央是一座「台北 101」風格的高塔;街區是有窗戶燈光的樓房;缺口是有蓮花的池塘
+  buildCityReal() {
+    const rnd = mulberry(20260601)
+    const group = new THREE.Group()
+    const { inner, bay } = groundCells()
+    const paving = new THREE.MeshStandardMaterial({ map: R.pavingTex(1), roughness: 0.85 })
+    const lawn = new THREE.MeshStandardMaterial({ map: R.grassTex(2), roughness: 1 })
+    const plateGeo = new RoundedBoxGeometry(S - 0.05, 0.16, S - 0.05, 3, 0.04)
+    const walls = [[196, 190, 180], [222, 210, 186], [168, 92, 70], [235, 232, 224], [150, 158, 166], [205, 178, 150]]
+    const facades = walls.map((w, i) => {
+      const f = R.facadeTex(w, i + 3)
+      return new THREE.MeshStandardMaterial({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.75 })
+    })
+    const roofFlat = new THREE.MeshStandardMaterial({ color: 0x6f6a62, roughness: 0.9 })
+    const roofTile = new THREE.MeshStandardMaterial({ map: R.roofTex([150, 62, 42]), roughness: 0.7 })
+
+    let plaza = inner[0]
+    const mid = (c) => Math.hypot(c.c - (MAP_COLS - 1) / 2, c.r - (MAP_ROWS - 1) / 2)
+    for (const c of inner) if (mid(c) < mid(plaza)) plaza = c
+    const tp = cellXZ(plaza.c, plaza.r)
+    this.towerPos = tp
+    const isPlaza = (c) => Math.abs(c.c - plaza.c) <= 1 && Math.abs(c.r - plaza.r) <= 1
+
+    for (const cell of inner) {
+      const p = cellXZ(cell.c, cell.r)
+      const plate = new THREE.Mesh(plateGeo, paving)
+      plate.position.set(p.x, 0.36, p.z)
+      plate.receiveShadow = true
+      group.add(plate)
+      if (cell === plaza) { this.buildTower(group, p); continue }
+      if (isPlaza(cell)) { this.trees.add(p.x + (rnd() - 0.5) * 0.8, 0.44, p.z + (rnd() - 0.5) * 0.8, 0.75, rnd); continue }
+      const n = 1 + Math.floor(rnd() * 2)
+      for (let k = 0; k < n; k++) {
+        const w = 0.7 + rnd() * 0.45, d = 0.7 + rnd() * 0.45, h = 0.6 + rnd() * 1.0
+        const ox = n === 1 ? (rnd() - 0.5) * 0.3 : (k ? 0.42 : -0.42), oz = (rnd() - 0.5) * 0.5
+        const fac = facades[Math.floor(rnd() * facades.length)]
+        const pitched = rnd() < 0.3
+        const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [fac, fac, roofFlat, roofFlat, fac, fac])
+        b.position.set(p.x + ox, 0.44 + h / 2, p.z + oz)
+        b.castShadow = true
+        b.receiveShadow = true
+        group.add(b)
+        if (pitched) {
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, 0.45, 4), roofTile)
+          roof.position.set(p.x + ox, 0.44 + h + 0.22, p.z + oz)
+          roof.rotation.y = Math.PI / 4
+          roof.scale.set(w / Math.max(w, d), 1, d / Math.max(w, d))
+          roof.castShadow = true
+          group.add(roof)
+        } else {
+          // 屋頂女兒牆 + 水塔:台灣街景常見的樣子
+          const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.08, d + 0.04), roofFlat)
+          lip.position.set(p.x + ox, 0.44 + h + 0.04, p.z + oz)
+          group.add(lip)
+          if (rnd() < 0.5) {
+            const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.18, 12), new THREE.MeshStandardMaterial({ color: 0xd8d8d0, metalness: 0.6, roughness: 0.35 }))
+            tank.position.set(p.x + ox + 0.15, 0.44 + h + 0.17, p.z + oz - 0.1)
+            tank.castShadow = true
+            group.add(tank)
+          }
+        }
+      }
+      if (rnd() < 0.6) this.trees.add(p.x + (rnd() - 0.5) * 1.3, 0.44, p.z + (rnd() > 0.5 ? 0.8 : -0.8), 0.55, rnd)
+    }
+
+    // 缺口:草地與蓮花池
+    const pondMat = new THREE.MeshStandardMaterial({ color: 0x173f4a, roughness: 0.05, metalness: 0.6 })
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x3f7a35, roughness: 0.7, side: THREE.DoubleSide })
+    const lotusMat = new THREE.MeshStandardMaterial({ color: 0xf2a3b8, roughness: 0.6, emissive: 0x3a0f18, emissiveIntensity: 0.4 })
+    bay.forEach((cell, i) => {
+      const p = cellXZ(cell.c, cell.r)
+      const plate = new THREE.Mesh(plateGeo, lawn)
+      plate.position.set(p.x, 0.36, p.z)
+      plate.receiveShadow = true
+      group.add(plate)
+      if ((cell.c + cell.r) % 3 === 1 && i % 2 === 0) {
+        const pond = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.05, 36), pondMat)
+        this.pondPos = this.pondPos || new THREE.Vector3(p.x, 0.5, p.z)
+        pond.position.set(p.x, 0.455, p.z)
+        group.add(pond)
+        for (let k = 0; k < 6; k++) {
+          const a = rnd() * Math.PI * 2, r = rnd() * 0.55
+          const pad = new THREE.Mesh(new THREE.CircleGeometry(0.1 + rnd() * 0.06, 14, 0.3, Math.PI * 1.8), padMat)
+          pad.rotation.x = -Math.PI / 2
+          pad.position.set(p.x + Math.cos(a) * r, 0.485, p.z + Math.sin(a) * r)
+          group.add(pad)
+          if (k % 2 === 0) {
+            const lotus = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), lotusMat)
+            lotus.scale.y = 1.3
+            lotus.position.set(pad.position.x, 0.53, pad.position.z)
+            group.add(lotus)
+          }
+        }
+      } else {
+        this.trees.add(p.x + (rnd() - 0.5) * 0.9, 0.44, p.z + (rnd() - 0.5) * 0.9, 0.8 + rnd() * 0.3, rnd)
+        if (rnd() < 0.5) this.trees.add(p.x + (rnd() - 0.5) * 1.2, 0.44, p.z + (rnd() - 0.5) * 1.2, 0.55, rnd, 'tall')
+      }
+    })
+
+    // 路燈:沿著路徑每隔幾格一盞,燈泡會發光(後製光暈),其中幾盞真的會照亮周圍
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2e, metalness: 0.7, roughness: 0.4 })
+    const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffc56b, emissiveIntensity: 6 })
+    let lit = 0
+    for (let i = 3; i < N; i += 5) {
+      const a = tileXZ(i), b = tileXZ((i + 1) % N)
+      // 放在格子的外側邊緣
+      const dir = new THREE.Vector3().subVectors(b, a).normalize()
+      const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(1.12)
+      const x = a.x + side.x + dir.x * 0.9, z = a.z + side.z + dir.z * 0.9
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 1.1, 8), poleMat)
+      pole.position.set(x, 0.9, z)
+      pole.castShadow = true
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), bulbMat)
+      bulb.position.set(x, 1.48, z)
+      this.lampPos = this.lampPos || new THREE.Vector3(x, 1.4, z)
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.1, 8), poleMat)
+      cap.position.set(x, 1.58, z)
+      group.add(pole, bulb, cap)
+      if (lit++ < 4 && !this.lite) {
+        const L = new THREE.PointLight(0xffc27a, 3.5, 5, 2)
+        L.position.set(x, 1.4, z)
+        group.add(L)
+      }
+    }
+    this.scene.add(group)
+  }
+
+  // 台北 101 風格的高塔:八節往外張的塔身 + 尖頂,節與節之間有暖光燈帶
+  buildTower(group, p) {
+    const glass = new THREE.MeshStandardMaterial({ color: 0x86b8ad, metalness: 0.7, roughness: 0.16 })
+    const band = new THREE.MeshStandardMaterial({ color: 0x6d7d78, emissive: 0xffb75e, emissiveIntensity: 1.4 })
+    const podium = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x8f9a98, metalness: 0.4, roughness: 0.5 }))
+    podium.position.set(p.x, 0.69, p.z)
+    group.add(podium)
+    const mats = [glass, band, podium.material]
+    let y = 0.94
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.1, 0.62), glass)
+    trunk.position.set(p.x, y + 0.55, p.z)
+    group.add(trunk)
+    y += 1.1
+    for (let k = 0; k < 8; k++) {
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.36, 0.4, 4, 1), glass)
+      seg.rotation.y = Math.PI / 4
+      seg.position.set(p.x, y + 0.2, p.z)
+      group.add(seg)
+      const ring = new THREE.Mesh(new THREE.BoxGeometry(0.71, 0.014, 0.71), band)
+      ring.position.set(p.x, y + 0.41, p.z)
+      group.add(ring)
+      y += 0.42
+    }
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.42), glass)
+    top.position.set(p.x, y + 0.25, p.z)
+    const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.06, 1.0, 8), new THREE.MeshStandardMaterial({ color: 0xcfd6d6, metalness: 0.9, roughness: 0.2 }))
+    spire.position.set(p.x, y + 1.0, p.z)
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), band)
+    tip.position.set(p.x, y + 1.52, p.z)
+    mats.push(spire.material)
+    group.add(top, spire, tip)
+    group.traverse((o) => { if (o.isMesh) { o.castShadow = true } })
+    this.fadeMats = mats
+  }
+
   buildScenery() {
     const rnd = mulberry(777)
     const trunkM = new THREE.MeshStandardMaterial({ color: 0x8a5a3c })
@@ -234,11 +526,12 @@ export class BoardScene {
       }
       return null
     }
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < (this.real ? 70 : 90); i++) {
       const pt = spot(1.8, 20)
       if (!pt) continue
       const { x, z } = pt
       const s = 0.8 + rnd() * 0.9
+      if (this.real) { this.trees.add(x, -0.74, z, s * 0.95, rnd, rnd() < 0.4 ? 'tall' : 'round'); continue }
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.16 * s, 0.9 * s, 8), trunkM)
       trunk.position.set(x, -0.3 + 0.45 * s, z)
       const crown = new THREE.Mesh(new THREE.ConeGeometry(0.65 * s, 1.7 * s, 8), leaf[Math.floor(rnd() * 3)])
@@ -246,7 +539,8 @@ export class BoardScene {
       crown.castShadow = true
       this.scene.add(trunk, crown)
     }
-    const wall = [0xf9d5c7, 0xfde4a8, 0xc9e4f5, 0xe6d7f5]
+    const wall = this.real ? [0xe8e0d0, 0xd9c8a8, 0xcfc9c0, 0xe2d6c2] : [0xf9d5c7, 0xfde4a8, 0xc9e4f5, 0xe6d7f5]
+    const roofMat = this.real ? new THREE.MeshStandardMaterial({ map: R.roofTex([140, 58, 40]), roughness: 0.75 }) : null
     for (let i = 0; i < 10; i++) {
       const pt = spot(3, 9)
       if (!pt) continue
@@ -254,7 +548,7 @@ export class BoardScene {
       const h = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.1, 1.4, 2, 0.08), new THREE.MeshStandardMaterial({ color: wall[i % 4] }))
       h.position.set(x, -0.15, z)
       h.rotation.y = rnd() * Math.PI
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.8, 4), new THREE.MeshStandardMaterial({ color: 0xd96a4b }))
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.8, 4), roofMat || new THREE.MeshStandardMaterial({ color: 0xd96a4b }))
       roof.position.set(x, 0.8, z)
       roof.rotation.y = h.rotation.y + Math.PI / 4
       h.castShadow = true
@@ -341,9 +635,11 @@ export class BoardScene {
     this.artImgs = {}
     const geo = new RoundedBoxGeometry(S - 0.14, 0.26, S - 0.14, 3, 0.07)
     const decalGeo = new THREE.PlaneGeometry(S - 0.34, S - 0.34)
+    // 寫實畫風:格子是石板,文字貼紙會受光照,但保留一點自發光讓字在黃昏也看得清楚
+    const stone = this.real ? new THREE.MeshStandardMaterial({ map: R.stoneTex([222, 214, 198]), roughness: 0.62 }) : null
     this.board.forEach((tile, i) => {
       const p = tileXZ(i)
-      const mat = new THREE.MeshStandardMaterial({ color: 0xfffdf5, roughness: 0.55 })
+      const mat = stone || new THREE.MeshStandardMaterial({ color: 0xfffdf5, roughness: 0.55 })
       const m = new THREE.Mesh(geo, mat)
       m.position.set(p.x, 0.43, p.z)
       m.castShadow = true
@@ -351,7 +647,9 @@ export class BoardScene {
       this.scene.add(m)
       // 色條(格子外側邊)
       const tex = this.drawTileTex(i, null)
-      const decal = new THREE.Mesh(decalGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true }))
+      const decal = new THREE.Mesh(decalGeo, this.real
+        ? new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.22, transparent: true, roughness: 0.8 })
+        : new THREE.MeshBasicMaterial({ map: tex, transparent: true }))
       decal.rotation.x = -Math.PI / 2
       decal.position.set(p.x, 0.565, p.z)
       this.scene.add(decal)
@@ -441,6 +739,7 @@ export class BoardScene {
       group.add(lawn)
       if ((cell.c + cell.r) % 3 === 1 && i % 2 === 0) {
         const pond = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.05, 28), pondMat)
+        this.pondPos = this.pondPos || new THREE.Vector3(p.x, 0.5, p.z)
         pond.position.set(p.x, 0.46, p.z)
         group.add(pond)
       } else {
@@ -501,6 +800,8 @@ export class BoardScene {
         const tex = this.drawTileTex(i, img)
         decal.material.map?.dispose?.()
         decal.material.map = tex
+      if (decal.material.emissiveMap) decal.material.emissiveMap = tex
+        if (decal.material.emissiveMap) decal.material.emissiveMap = tex
         decal.material.needsUpdate = true
       }
       img.src = url
@@ -514,6 +815,7 @@ export class BoardScene {
       const tex = this.drawTileTex(i, this.artImgs[i] || null)
       decal.material.map?.dispose?.()
       decal.material.map = tex
+      if (decal.material.emissiveMap) decal.material.emissiveMap = tex
       decal.material.needsUpdate = true
     })
     // 出售牌文字:讓 setOwners 重畫所有「無人持有」的標記
@@ -739,7 +1041,8 @@ export class BoardScene {
     this.mode = mode
     const d = this.baseDist || 33
     this.orbit.tDist = mode === 'dice' ? d * 0.6 : mode === 'token' ? d * 0.68 : d
-    this.orbit.tPol = mode === 'board' ? 0.78 : 0.7
+    // 寫實畫風的鏡頭壓低一點,看得到地平線與天空,比較有電影感
+    this.orbit.tPol = this.real ? (mode === 'board' ? 0.86 : 0.98) : mode === 'board' ? 0.78 : 0.7
   }
 
   focusPlayer(i) {
@@ -794,6 +1097,55 @@ export class BoardScene {
     })
   }
 
+  // ---------- 開場運鏡 ----------
+  // 像參考影片那樣,從小東西的特寫慢慢拉遠:塔尖 → 路燈 → 天際線橫移 → 起點與棋子 → 全景。點一下畫面可以跳過。
+  playIntro() {
+    const V = (x, y, z) => new THREE.Vector3(x, y, z)
+    const tp = this.towerPos || V(0, 0, 0)
+    const st = tileXZ(0)
+    const lamp = this.lampPos || tileXZ(3)
+    const shots = [
+      // 1 塔尖特寫,繞半圈
+      { from: V(tp.x + 2.6, 5.4, tp.z + 2.6), to: V(tp.x - 2.4, 6.3, tp.z + 2.8), look: V(tp.x, 5.6, tp.z), lookTo: V(tp.x, 5.2, tp.z), d: 3.2 },
+      // 2 路燈與街區
+      { from: V(lamp.x + 2.4, 1.5, lamp.z + 2.2), to: V(lamp.x + 1.4, 1.9, lamp.z - 1.4), look: V(lamp.x, 1.3, lamp.z), d: 2.6 },
+      // 3 低角度橫移:城市天際線與天空
+      { from: V(-HW - 3, 3.0, HH + 6), to: V(HW + 3, 3.4, HH + 6), look: V(-2, 1.2, 0), lookTo: V(2, 1.2, 0), d: 4.2 },
+      // 4 起點格與棋子
+      { from: V(st.x + 3.2, 3.4, st.z + 3.6), to: V(st.x + 2.2, 2.4, st.z + 2.6), look: V(st.x, 0.8, st.z), d: 2.8 },
+    ]
+    const t1 = st
+    // 最後一顆:從資產格拉到遊戲用的全景視角
+    const o = this.orbit
+    const sp = Math.sin(o.tPol), cp = Math.cos(o.tPol)
+    const end = V(Math.sin(o.tAz) * sp * this.baseDist, cp * this.baseDist, Math.cos(o.tAz) * sp * this.baseDist)
+    // 5 拉回遊戲用的全景
+    shots.push({ from: V(t1.x + 2.2, 2.4, t1.z + 2.6), to: end, look: V(t1.x, 0.8, t1.z), lookTo: V(0, 0.2, 0), d: 3.6 })
+    return new Promise((resolve) => {
+      let i = 0
+      const labels = []
+      for (const tk of this.tokens) tk.group.traverse((o) => { if (o.isSprite) { labels.push(o); o.visible = false } })
+      const finish = () => {
+        for (const l of labels) l.visible = true
+        this.cine = null
+        this.renderer.domElement.removeEventListener('pointerdown', finish)
+        o.az = o.tAz; o.pol = o.tPol; o.dist = o.tDist
+        this.camTarget.set(0, 0, 0)
+        resolve()
+      }
+      this.cine = {
+        shot: shots[0], t: 0,
+        next: () => {
+          i++
+          if (i >= shots.length || this.disposed) return finish()
+          this.cine.shot = shots[i]
+          this.cine.t = 0
+        },
+      }
+      this.renderer.domElement.addEventListener('pointerdown', finish)
+    })
+  }
+
   // ---------- 動畫工具 ----------
   tween(duration, fn, delay = 0) {
     return new Promise((resolve) => {
@@ -838,6 +1190,7 @@ export class BoardScene {
     const h = this.container.clientHeight
     if (!w || !h) return
     this.renderer.setSize(w, h)
+    this.fx?.setSize(w, h)
     this.camera.aspect = w / h
     // 依畫面比例擺鏡頭:寬螢幕沿著棋盤長邊看;直立或窄的畫面把棋盤轉 90 度,讓長邊對著螢幕的長邊
     const aspect = w / h
@@ -847,7 +1200,7 @@ export class BoardScene {
     const dWide = Math.max(long / (k * aspect), (short * flat) / k)
     const dTall = Math.max(short / (k * aspect), (long * flat) / k)
     const tall = dTall < dWide
-    this.baseDist = Math.max(20, Math.min((tall ? dTall : dWide) * 1.05, 80))
+    this.baseDist = Math.max(20, Math.min((tall ? dTall : dWide) * (this.real ? 0.97 : 1.05), 80))
     this.orbit.dist = this.baseDist
     if (!this.userRotated) { this.orbit.tAz = tall ? Math.PI / 2 : 0; if (!this.fitted) this.orbit.az = this.orbit.tAz; this.fitted = true }
     this.setMode(this.mode || 'board')
@@ -918,6 +1271,19 @@ export class BoardScene {
       m.depthWrite = m.opacity > 0.9
     }
 
+    // 開場運鏡進行中:鏡頭位置由 cine 控制
+    if (this.cine) {
+      const c = this.cine
+      c.t += dt
+      const k = ease.inOut(Math.min(1, c.t / c.shot.d))
+      this.camera.position.lerpVectors(c.shot.from, c.shot.to, k)
+      const look = new THREE.Vector3().lerpVectors(c.shot.look, c.shot.lookTo || c.shot.look, k)
+      this.camera.lookAt(look)
+      if (c.t >= c.shot.d) c.next()
+      this.present(dt, 0.7)
+      return
+    }
+
     // 相機:緩動跟隨焦點棋子
     const o = this.orbit
     o.az += (o.tAz - o.az) * 0.08
@@ -936,7 +1302,35 @@ export class BoardScene {
       this.camTarget.z + Math.cos(o.az) * sp * o.dist,
     )
     this.camera.lookAt(this.camTarget.x, 0.2, this.camTarget.z)
-    this.renderer.render(this.scene, this.camera)
+    // 移軸景深:跟著棋子或骰子時比較明顯,全景時輕一點
+    this.present(dt, this.mode === 'board' ? 0.45 : 0.85)
+  }
+
+  present(dt, tiltGoal) {
+    if (this.fx) {
+      if (this.water) this.water.material.uniforms.time.value += dt * 0.35
+      const g = this.fx.grade.uniforms
+      if (!this.degraded) g.tilt.value += (tiltGoal - g.tilt.value) * 0.05
+      this.fx.composer.render(dt)
+      this.watchFps(dt)
+    } else this.renderer.render(this.scene, this.camera)
+  }
+
+  // 效能保護:寫實畫風連續太慢(平均每格超過 45ms)就關掉光暈、移軸與水面反射
+  watchFps(dt) {
+    if (this.degraded) return
+    this.frameTimes.push(dt)
+    if (this.frameTimes.length < 120) return
+    const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
+    this.frameTimes = []
+    if (avg < 0.045) return
+    this.degraded = true
+    this.fx.bloomPass.enabled = false
+    this.fx.grade.uniforms.tilt.value = 0
+    this.fx.grade.enabled = false
+    if (this.water) { this.water.visible = false; this.lowWater?.() }
+    this.renderer.setPixelRatio(1)
+    this.resize()
   }
 
   dispose() {
@@ -949,6 +1343,8 @@ export class BoardScene {
       const m = o.material
       if (m) (Array.isArray(m) ? m : [m]).forEach((x) => { x.map?.dispose?.(); x.dispose?.() })
     })
+    if (this.fx) { this.fx.composer.renderTarget1.dispose(); this.fx.composer.renderTarget2.dispose(); this.fx.composer.dispose?.() }
+    this.env?.dispose?.()
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }

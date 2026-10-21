@@ -4,7 +4,7 @@ import { sfx } from './sfx.js'
 import { setLang } from './i18n.js'
 
 const KEY = 'policypilot.settings'
-export const DEFAULTS = { theme: 'auto', scale: 1, reduceMotion: false, colorblind: false, volume: 0.8, anime: true, lang: 'zh' }
+export const DEFAULTS = { theme: 'auto', scale: 1, reduceMotion: false, colorblind: false, volume: 0.8, anime: true, lang: 'zh', scene3d: 'real' }
 
 export function loadSettings() {
   let s = { ...DEFAULTS }
@@ -25,6 +25,10 @@ export function applySettings(s) {
   root.dataset.motion = s.reduceMotion ? 'reduce' : 'full'
   root.dataset.cb = s.colorblind ? '1' : '0'
   root.dataset.style = s.anime ? 'anime' : 'soft'
+  if (root.dataset.scene3d !== s.scene3d) {
+    root.dataset.scene3d = s.scene3d
+    window.dispatchEvent(new CustomEvent('pp-scene3d', { detail: s.scene3d }))
+  }
   document.body.style.zoom = s.scale === 1 ? '' : String(s.scale)
   sfx.setVolume(s.volume)
   setLang(s.lang)

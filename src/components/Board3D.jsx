@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { BoardScene } from '../three/BoardScene.js'
 import { BOARD } from '../game/engine.js'
 import { loadArt } from '../art.js'
@@ -11,11 +11,18 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
   const scene = useRef(null)
   const latest = useRef({ players, onStep })
   latest.current = { players, onStep, owners }
+  // 3D 畫風(設定面板切換時重建場景,棋子位置沿用目前的)
+  const [style, setStyle] = useState(() => document.documentElement.dataset.scene3d || 'real')
+  useEffect(() => {
+    const on = (e) => setStyle(e.detail)
+    window.addEventListener('pp-scene3d', on)
+    return () => window.removeEventListener('pp-scene3d', on)
+  }, [])
 
   useEffect(() => {
     let sc
     try {
-      sc = new BoardScene(host.current, BOARD)
+      sc = new BoardScene(host.current, BOARD, { style })
     } catch (e) {
       console.warn('3D 初始化失敗,改用 2D 棋盤', e) // i18n-ignore
       onFail?.()
@@ -34,7 +41,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     })
     return () => { sc.dispose(); scene.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [style])
 
   // 語言切換:用新語言重畫格子貼圖與出售牌
   const lang = getLang()
@@ -56,6 +63,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep },
     overview: () => scene.current?.overview(),
     teleport: (i, pos) => scene.current?.teleport(i, pos),
     setActiveTile: (pos) => scene.current?.setActiveTile(pos),
+    intro: () => scene.current?.playIntro() ?? Promise.resolve(),
     resetPlayers: (ps) => {
       scene.current?.setPlayers(ps.map((p) => ({ look: p.look, name: p.name, pos: p.pos })))
     },

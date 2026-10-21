@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap } from 'lucide-react'
+import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap, Box } from 'lucide-react'
 import { useSettings } from '../settings.js'
 import { sfx } from '../sfx.js'
 import { resetTutorial } from './Tutorial.jsx'
@@ -8,6 +8,7 @@ import { t, useLang } from '../i18n.js'
 const THEMES = [['light', '淺色', Sun], ['dark', '深色', Moon], ['auto', '跟隨系統', MonitorCog]] // i18n-ignore
 const LANGS = [['zh', '繁體中文'], ['en', 'English']] // i18n-ignore
 const SCALES = [[1, '標準'], [1.12, '大'], [1.25, '特大']] // i18n-ignore
+const SCENES = [['real', '寫實電影'], ['toon', '卡通積木']] // i18n-ignore
 
 function Seg({ value, options, onChange, label, raw }) {
   return (
@@ -65,6 +66,11 @@ export default function SettingsLayer() {
             <section>
               <h3>{t('外觀')}</h3>
               <Seg label="主題" value={s.theme} options={THEMES} onChange={(v) => set({ theme: v })} />
+            </section>
+            <section>
+              <h3><Box size={16} aria-hidden /> {t('3D 棋盤畫風')}</h3>
+              <Seg label="3D 棋盤畫風" value={s.scene3d} options={SCENES} onChange={(v) => set({ scene3d: v })} />
+              <p className="muted small">{t('寫實電影:黃昏天空、水面倒影、窗戶燈光與景深,較吃效能;電腦太慢時會自動降低特效。')}</p>
             </section>
             <section>
               <h3><Type size={16} aria-hidden /> {t('介面大小')}</h3>
