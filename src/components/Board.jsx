@@ -47,7 +47,6 @@ export default function Board({ tokens, centerSlot, owners = {}, onTileClick }) 
           const { r, c } = coord(i)
           return (
             <div key={i} onClick={() => onTileClick?.(i)} className={`tile tile-${tile.type} ${tokens.some((t) => t.pos === i && t.active) ? 'is-here' : ''}`} style={{ gridRow: r + 1, gridColumn: c + 1, '--area': areaById(tile.area)?.color }}>
-              {i > 0 && BOARD[i - 1].area !== tile.area && <span className="tile-area">{t(areaById(tile.area).name)}</span>}
               <span className="tile-n">{i === 0 ? '' : i}</span>
               {owners[i] && <span className={`tile-own o${owners[i].ownerIdx}`} title={`Lv${owners[i].level}`}>Lv{owners[i].level}</span>}
               <span className="tile-ico" aria-hidden>{tile.icon}</span>

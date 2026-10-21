@@ -12,6 +12,7 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep, o
   const latest = useRef({ players, onStep })
   latest.current = { players, onStep, owners, onTileClick }
   // 3D 畫風(設定面板切換時重建場景,棋子位置沿用目前的)
+  const [ready, setReady] = useState(false)
   const [style, setStyle] = useState(() => document.documentElement.dataset.scene3d || 'real')
   useEffect(() => {
     const on = (e) => setStyle(e.detail)
@@ -29,6 +30,8 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep, o
       return undefined
     }
     scene.current = sc
+    setReady(false)
+    sc.ready?.then(() => { if (scene.current === sc) setReady(true) })
     sc.onStep = (pos, i) => latest.current.onStep?.(pos, i)
     sc.onTileClick = (i) => latest.current.onTileClick?.(i)
     sc.setPlayers(latest.current.players.map((p) => ({ look: p.look, name: p.name, pos: p.pos })))
@@ -70,7 +73,12 @@ const Board3D = forwardRef(function Board3D({ players, owners, onFail, onStep, o
     },
   }))
 
-  return <div className="board3d" ref={host} role="img" aria-label={t('3D 遊戲棋盤')} />
+  return (
+    <>
+      <div className="board3d" ref={host} role="img" aria-label={t('3D 遊戲棋盤')} />
+      {!ready && <div className="board3d-loading">{t('3D 棋盤載入中…')}</div>}
+    </>
+  )
 })
 
 export default Board3D

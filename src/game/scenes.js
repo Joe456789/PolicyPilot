@@ -9,7 +9,7 @@ import {
 } from './content.js'
 import { PRODUCTS, payoutFor } from './products.js'
 import { MINIGAMES, MINIGAME_IDS, MINIGAME_REWARD } from './minigames.js'
-import { areaById, ownsArea, AREA_BONUS, areaProps } from './properties.js'
+import { areaById, ownsArea, AREA_BONUS, AREA_NEED, areaCount } from './properties.js'
 import { propByTile, propById, LEVELS, rentOf, tollOf, upgradeCost, propPremium, mortgagePayment, localNews, baseRent, RISK_NAME } from './properties.js'
 import {
   ASSETS, ASSET_ORDER, round1k, clamp, cover, canIncrease, analyzeGaps, householdIncome, holdingsTotal,
@@ -97,7 +97,7 @@ function buildProperty(s, rng, tile, world) {
   }
   if (owner) {
     const toll = Math.round((tollOf(p, owner.level) * (owner.full ? AREA_BONUS : 1)) / 1000) * 1000
-    const fullNote = owner.full ? t('對方擁有整個「{area}」,過路費 ×1.5。', { area: t(areaById(p.area).name) }) : ''
+    const fullNote = owner.full ? t('對方在「{area}」擁有 {n} 處以上,過路費 ×1.5。', { area: t(areaById(p.area).name), n: AREA_NEED }) : ''
     return scene({
       ...common, story: t('這處資產屬於「{owner}」({level})。你借住在他的地段,需要付過路費。{news}', { owner: owner.name, level: LEVELS[owner.level].name, news: fullNote + news }),
       base: { propId: p.id, status: 'rival', owner: owner.name, ownerIdx: owner.idx, toll },
@@ -615,13 +615,11 @@ export function acquireProperty(s, p, mode, add) {
     add(t('全額購買{name}', { name: p.name }), -price)
   }
   add(t('每年租金約 {rent};天災會造成修繕費,記得投保財產險', { rent: wan(baseRent(p)) }), 0, 'note')
-  // 區域連鎖:同一區全部買齊,租金與過路費 ×1.5
+  // 區域連鎖:同一區擁有 3 處以上,租金與過路費 ×1.5
   const area = areaById(p.area)
-  if (ownsArea(s.props, p.area)) add(t('🎉 你集齊了整個「{area}」!這一區的租金與過路費 ×1.5', { area: t(area.name) }), 0, 'cover')
-  else {
-    const have = areaProps(p.area).filter((x) => s.props[x.id]).length
-    add(t('「{area}」已擁有 {n}/{m} 處,集齊整區租金與過路費 ×1.5', { area: t(area.name), n: have, m: areaProps(p.area).length }), 0, 'note')
-  }
+  const have = areaCount(s.props, p.area)
+  if (have === AREA_NEED) add(t('🎉 你在「{area}」已擁有 {n} 處!這一區的租金與過路費 ×1.5', { area: t(area.name), n: have }), 0, 'cover')
+  else if (have < AREA_NEED) add(t('你在「{area}」擁有 {n} 處,再買 {k} 處,這一區的租金與過路費 ×1.5', { area: t(area.name), n: have, k: AREA_NEED - have }), 0, 'note')
 }
 
 export function upgradeProp(s, p, add) {

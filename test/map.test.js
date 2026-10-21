@@ -38,7 +38,7 @@ import { createGame, roll, choose, canRollAgain, rollAgain, endYear } from '../s
 import { AREAS, ownsArea, areaProps } from '../src/game/properties.js'
 import { worldOf } from '../src/game/match.js'
 
-test('100 格:7 個區域依序排列,每區都有地產', () => {
+test('100 格:北中南東 4 區依序排列,每區都有地產', () => {
   assert.equal(BOARD.length, 100)
   const order = [...new Set(BOARD.map((b) => b.area))]
   assert.deepEqual(order, AREAS.map((a) => a.id))
@@ -69,11 +69,11 @@ test('兩顆骰子:點數 2~12;雙骰可以再擲一次且不連鎖', () => {
   assert.ok(doubles > 10, `雙骰次數 ${doubles}`)
 })
 
-test('區域連鎖:集齊整區,過路費資訊標記 full', () => {
+test('區域加成:同區 3 處以上,過路費資訊標記 full', () => {
   const s = createGame({ name: 't', career: 'office', background: 'normal', style: 'steady', length: 'short' }, 1)
-  const props = Object.fromEntries(areaProps('islands').map((p) => [p.id, { level: 1, insured: false }]))
-  assert.ok(ownsArea(props, 'islands'))
-  assert.ok(!ownsArea({ [areaProps('islands')[0].id]: { level: 1 } }, 'islands'))
+  const props = Object.fromEntries(areaProps('east').slice(0, 3).map((p) => [p.id, { level: 1, insured: false }]))
+  assert.ok(ownsArea(props, 'east'), '同區 3 處就有加成')
+  assert.ok(!ownsArea(Object.fromEntries(areaProps('east').slice(0, 2).map((p) => [p.id, { level: 1 }])), 'east'))
   const w = worldOf([{ name: 'a', s: { ...s, props } }])
   assert.ok(Object.values(w.owners).every((o) => o.full))
 })

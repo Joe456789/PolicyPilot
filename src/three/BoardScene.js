@@ -64,7 +64,7 @@ function canvasTex(w, h, draw) {
   draw(c.getContext('2d'), w, h)
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 4
+  tex.anisotropy = 8
   return tex
 }
 
@@ -192,12 +192,22 @@ export class BoardScene {
       scene.environmentIntensity = 0.75
       scene.fog = new THREE.FogExp2(0xdcb48c, 0.0055)
     }
+    const T = [performance.now()]
     this.buildLights()
     this.buildWorld()
+    T.push(performance.now())
     this.buildDice()
     this.bindInput()
     if (this.real) this.fx = R.makeComposer(renderer, scene, this.camera, { bloom: !this.lite })
     this.frameTimes = []
+    T.push(performance.now())
+    // 效能紀錄(除錯用):建構場景花了多久
+    window.__pp3d = { build: Math.round(T[1] - T[0]), fx: Math.round(T[2] - T[1]) }
+    // 先在背景把著色器編譯好再開始畫,避免一進棋盤就卡住好幾秒(Windows 上特別明顯)
+    this.started = false
+    this.ready = (renderer.compileAsync ? renderer.compileAsync(scene, this.camera) : Promise.resolve())
+      .catch(() => {})
+      .then(() => { this.started = true; window.__pp3d.compiled = Math.round(performance.now() - T[0]) })
 
     this.ro = new ResizeObserver(() => this.resize())
     this.ro.observe(container)
@@ -610,7 +620,10 @@ export class BoardScene {
         g.fillText(String(i), 8, 40)
       })
     }
-    return canvasTex(160, 160, (g, w, h) => {
+    // 畫在 256px 的畫布上(座標仍以 160 為準),字比較銳利
+    return canvasTex(256, 256, (g) => {
+      g.scale(1.6, 1.6)
+      const w = 160
       g.fillStyle = '#' + color.toString(16).padStart(6, '0')
       g.fillRect(0, 0, w, 16)
       g.font = '78px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
@@ -631,7 +644,7 @@ export class BoardScene {
     })
   }
 
-  // 區域:每格底下一圈區域色的邊框;每一區第一格上方有區域名稱的看板
+  // 區域:每格底下一圈區域色的邊框(北、中、南、東各一色)
   buildAreas() {
     const rim = new RoundedBoxGeometry(S - 0.02, 0.08, S - 0.02, 2, 0.03)
     const mats = {}
@@ -645,32 +658,6 @@ export class BoardScene {
       this.scene.add(m)
     })
     this.areaSigns = []
-    for (const a of AREAS) {
-      const i = this.board.findIndex((tile) => tile.area === a.id)
-      if (i < 0) continue
-      const c = tileXZ(i), nx = tileXZ(i + 1)
-      // 看板立在格子外側(離棋盤中心較遠的那一邊),不擋住格子
-      const dir = new THREE.Vector3().subVectors(nx, c).normalize()
-      const nrm = new THREE.Vector3(-dir.z, 0, dir.x)
-      if (nrm.dot(c) < 0) nrm.negate()
-      const p = c.clone().addScaledVector(nrm, 1.25)
-      const tex = canvasTex(320, 80, (g, w, h) => {
-        g.fillStyle = a.color
-        g.beginPath(); g.roundRect(4, 6, w - 8, h - 12, 20); g.fill()
-        g.fillStyle = '#fff'
-        g.textAlign = 'center'; g.textBaseline = 'middle'
-        fillFit(g, `📍 ${t(a.name)}`, w / 2, h / 2 + 2, w - 24, 800, 34, 16)
-      })
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }))
-      sp.scale.set(4.2, 1.05, 1)
-      sp.position.set(p.x, 3.2, p.z)
-      sp.renderOrder = 9
-      this.scene.add(sp)
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.7, 6), new THREE.MeshStandardMaterial({ color: 0x555555 }))
-      pole.position.set(p.x, 1.8, p.z)
-      this.scene.add(pole)
-      this.areaSigns.push({ sp, a })
-    }
   }
 
   buildTiles() {
@@ -1389,6 +1376,7 @@ export class BoardScene {
   }
 
   present(dt, tiltGoal) {
+    if (!this.started) return
     if (this.fx) {
       if (this.water) this.water.material.uniforms.time.value += dt * 0.35
       const g = this.fx.grade.uniforms

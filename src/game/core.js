@@ -6,7 +6,7 @@ import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
 import { t, getLang } from '../i18n.js'
 
-// 棋盤:100 格,沿著 map.js 的路徑環島一圈,依序經過 7 個區域;28 格資產格 + 事件、機會、行情、小遊戲等。
+// 棋盤:100 格,沿著 map.js 的路徑環島一圈,依序經過北、中、南、東 4 區;28 格資產格 + 事件、機會、行情、小遊戲等。
 import { PROPERTIES, propById, AREAS } from './properties.js'
 const P = (id) => {
   const p = PROPERTIES.find((x) => x.id === id)
@@ -26,7 +26,7 @@ const TILE = {
   shop: { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
 }
 // 每一區佔幾格(加起來 100;第一區含起點)
-const AREA_SIZE = { north: 16, taoz: 13, central: 14, yunchia: 14, kaoping: 14, islands: 11, east: 18 }
+const AREA_SIZE = { north: 27, central: 23, south: 27, east: 23 }
 // 非資產格依序填入的格子種類(每 24 格一輪,比例和原本的棋盤相近)
 const FILL = ['event', 'chance', 'minigame', 'milestone', 'market', 'event', 'chance', 'advisor', 'event', 'minigame', 'shop', 'chance',
   'event', 'hospital', 'milestone', 'bank', 'event', 'minigame', 'chance', 'market', 'event', 'tax', 'chance', 'milestone']
