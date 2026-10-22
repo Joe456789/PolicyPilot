@@ -1,6 +1,8 @@
 import { wan, signed } from '../game/format.js'
 import { useArt, sceneArtIds } from '../art.js'
-import { t } from '../i18n.js'
+import { t, getLang } from '../i18n.js'
+import { TIP_DEFS } from '../game/content.js'
+import { THEME_NAME } from '../game/db/index.js'
 
 // 英文字典裡有些詞是小寫術語(句中用),當成標題/按鈕時首字母大寫;中文不受影響
 const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
@@ -121,6 +123,11 @@ export function YearModal({ s, onNext, last }) {
           <b>{wan(h.netWorth)}</b>
           <em className={delta >= 0 ? 'pos' : 'neg'}>{delta >= 0 ? '▲' : '▼'} {wan(Math.abs(delta))}</em>
         </div>
+        {(() => {
+          // 每年一則理財觀念(市場波動 / 資產配置 / 風險管理 / 保險保障輪流出現)
+          const tp = TIP_DEFS[(s.turn * 7 + (s.seed % 13)) % TIP_DEFS.length]
+          return <div className="year-tip"><b>📘 {t('今年的理財觀念')}{tp.theme ? ` · ${t(THEME_NAME[tp.theme])}` : ''}</b><span><b>{t(tp.title)}</b>{getLang() === 'en' ? ': ' : ':'}{t(tp.story)}</span></div>
+        })()}
         <button className="btn primary wide" onClick={onNext}>{last ? t('查看人生結算') : t('進入下一年')}</button>
       </div>
     </div>

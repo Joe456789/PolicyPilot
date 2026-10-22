@@ -26,7 +26,7 @@ import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
 import { t, useLang, getLang } from './i18n.js'
-import { saveGame, loadSave, clearSave } from './save.js'
+import { saveGame, loadSave, clearSave, loadRecent, saveRecent } from './save.js'
 import AutopilotMenu from './components/AutopilotMenu.jsx'
 import DemoBar from './components/DemoBar.jsx'
 import TileInfo from './components/TileInfo.jsx'
@@ -214,7 +214,8 @@ function GameApp() {
   // ---------- 進入棋盤 ----------
   function startAdult(setup, opp, seedOverride) {
     const seed = seedOverride ?? seedOf()
-    const h = createGame(setup, seed)
+    // 展示模式用固定劇本,不套用跨局記憶
+    const h = createGame(seedOverride != null ? setup : { ...setup, recent: loadRecent() }, seed)
     const m = createMatch(h, opp, seed)
     playersRef.current = m.players
     banterTurns.current.clear()
@@ -654,6 +655,7 @@ function GameApp() {
       ending: computeEnding(h, score),
     }
     const fr = demo ? [] : recordGame(ctx).fresh // 展示模式的對局不計入成就與戰績
+    if (!demo) saveRecent(Object.keys(h.seen))
     if (demo) setDemo((d) => d && { ...d, done: true })
     setRanks(rk)
     setFresh(fr)

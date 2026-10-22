@@ -18,6 +18,8 @@ import {
 
 const wOf = (d, s) => (typeof d.w === 'function' ? d.w(s) : d.w ?? 1) * tagMult(s, d)
 const seenCount = (s, id) => s.seen[id] || 0
+// 前幾局剛看過的內容,權重降到 3 成,減少重複感
+const recentMult = (s, id) => ((s.recent || []).includes(id) ? 0.3 : 1)
 
 // 相同卡片重複出現時降低權重,讓一局之中的內容更豐富。
 // 退休之後不會再遇到的職場事件
@@ -32,7 +34,7 @@ function pickDef(s, rng, defs, { once = true } = {}) {
     return true
   })
   if (!pool.length) return null
-  return rng.weighted(pool, (d) => wOf(d, s) / (1 + seenCount(s, d.id) * 1.2))
+  return rng.weighted(pool, (d) => (wOf(d, s) * recentMult(s, d.id)) / (1 + seenCount(s, d.id) * 1.2))
 }
 
 // 場景建好之後統一翻譯(英文模式):資料檔(content.js)來的靜態文字在這裡轉成英文;中文模式原樣回傳。
@@ -54,6 +56,7 @@ function buildSceneRaw(s, rng, tile, world = {}) {
     case 'tax': return buildTax(s)
     case 'hospital': return buildHospital(s, rng)
     case 'minigame': return buildMinigame(s, rng)
+    case 'quiz': return buildQuiz(s, rng)
     case 'rest': return rng.next() < 0.6 ? buildQuiz(s, rng) : buildTip(s, rng)
     default: return buildTip(s, rng)
   }
@@ -136,7 +139,7 @@ function buildEvent(s, rng) {
     return true
   })
   const d = rng.weighted(pool, (x) => {
-    const w = wOf(x, s)
+    const w = wOf(x, s) * recentMult(s, x.id)
     return ['medical', 'critical', 'disability'].includes(x.cat) ? w * healthMult : w
   })
   const rangeVal = (r) => round1k(rng.int(r[0], r[1]) * inflation)
@@ -329,7 +332,8 @@ function buildMinigame(s, rng) {
 }
 
 function buildQuiz(s, rng) {
-  const unseen = QUIZ_DEFS.map((q, i) => i).filter((i) => !s.seen['quiz' + i])
+  const fresh = QUIZ_DEFS.map((q, i) => i).filter((i) => !s.seen['quiz' + i] && !(s.recent || []).includes('quiz' + i))
+  const unseen = fresh.length ? fresh : QUIZ_DEFS.map((q, i) => i).filter((i) => !s.seen['quiz' + i])
   const idx = unseen.length ? rng.pick(unseen) : rng.int(0, QUIZ_DEFS.length - 1)
   const q = QUIZ_DEFS[idx]
   return scene({
@@ -710,6 +714,20 @@ function resolveFxScene(s, rng, sc, choice, add) {
 }
 
 function applyFx(s, rng, fx, add) {
+  if (fx.invest2) {
+    const amt = spendable(s, fx.invest2.pct)
+    if (amt > 0) { s.cash -= amt; s.hold[fx.invest2.cls] += amt; add(t('買入{name}', { name: ASSETS[fx.invest2.cls].name }), -amt, 'note') }
+  }
+  // 資產配置:把投資部位重新分配成目標比例
+  if (fx.rebalance) rebalance(s, fx.rebalance, add)
+  // 借錢投資:貸款增加,錢放進股票型 ETF
+  if (fx.borrowInvest) {
+    const a = fx.borrowInvest
+    s.loan += a
+    s.hold.stock += a
+    add(t('信用貸款 {amt},全部買入股票型 ETF', { amt: wan(a) }), 0, 'warn')
+    add(t('之後每年要付利息並攤還本金;市場下跌時虧損也會被放大'), 0, 'note')
+  }
   // 小事件:依年收入發一筆錢(可以直接拿去投資)
   if (fx.incomeCash) {
     const got = round1k(s.income * fx.incomeCash)
@@ -791,6 +809,9 @@ function applyFx(s, rng, fx, add) {
     }
   }
 }
+
+// 給規劃面板用(家庭計畫:結婚、生小孩)
+export const applySpecial = (s, rng, name, add) => specials[name](s, rng, add)
 
 const specials = {
   marry(s, rng, add) {
@@ -906,4 +927,28 @@ function retire(s, mode, add) {
   if (s.annuityPay) add(t('儲蓄年金險開始分年領回,每年約 {amt}', { amt: wan(s.annuityPay) }), 0, 'cover')
   else add(t('沒有準備年金險:退休後的缺口要靠存款與投資'), 0, 'warn')
   add(t('不再工作,生活支出也降低一些'), 0, 'note')
+}
+
+// 資產配置:target 是比例物件,或 'age'(100 減年齡法則)、'safety'(先補足 6 個月預備金)
+function rebalance(s, target, add) {
+  const total = ASSET_ORDER.reduce((a, k) => a + s.hold[k], 0)
+  if (target === 'safety') {
+    const need = Math.max(0, Math.round(s.expense / 2) - Math.max(0, s.cash) - s.hold.deposit)
+    let moved = 0
+    for (const k of ['spec', 'stock', 'bond']) {
+      const m = Math.min(s.hold[k], need - moved)
+      if (m > 0) { s.hold[k] -= m; s.hold.deposit += m; moved += m }
+    }
+    if (moved > 0) add(t('把 {amt} 從投資轉到定存,當作緊急預備金', { amt: wan(moved) }), 0, 'note')
+    else add(t('你的現金與定存已經夠 6 個月生活費了'), 0, 'note')
+    return
+  }
+  if (total < 10000) { add(t('目前幾乎沒有投資部位,可以先從定期定額開始'), 0, 'note'); return }
+  let w = target
+  if (target === 'age') {
+    const st = clamp((100 - s.age) / 100, 0.2, 0.8)
+    w = { deposit: 0.1, bond: Math.max(0, 0.9 - st), stock: st, spec: 0 }
+  }
+  for (const k of ASSET_ORDER) s.hold[k] = Math.round(total * (w[k] || 0))
+  add(t('重新配置 {amt}:定存 {d}%、債券 {b}%、股票 ETF {st}%、個股 {sp}%', { amt: wan(total), d: Math.round((w.deposit || 0) * 100), b: Math.round((w.bond || 0) * 100), st: Math.round((w.stock || 0) * 100), sp: Math.round((w.spec || 0) * 100) }), 0, 'note')
 }

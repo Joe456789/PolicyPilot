@@ -4,6 +4,7 @@ import { run, clamp, round1k, householdIncome } from './core.js'
 import { CARDS, MAX_CARDS, hasCard, giveCard } from './cards.js'
 import { t } from '../i18n.js'
 import { wan } from './format.js'
+import { applySpecial } from './scenes.js'
 
 // ---------- 商店 ----------
 // 免災金牌不賣:真實世界買不到「壞事不發生」,只能買保險。
@@ -121,5 +122,35 @@ export function sellHome(state) {
     s.coverage.home = 0
     s.flash = t('賣掉房子,扣掉房貸與費用拿回 {amt};之後要重新租屋,住宅火險也一併解約。', { amt: wan(net) })
     s.year.events.push({ title: t('賣掉自住房'), kind: 'milestone', icon: '🔑' })
+  })
+}
+
+// ---------- 家庭計畫 ----------
+// 結婚、生小孩也可以在規劃時主動決定(不必等走到人生里程碑格)
+export function familyBlock(s, what) {
+  if (s.phase !== 'plan') return t('只能在擲骰前決定')
+  if (what === 'marry') {
+    if (s.partner) return t('你已經結婚了')
+    if (s.age > 60) return t('這個年紀的人生里程碑,交給緣分吧')
+    if (s.cash < 300000) return t('婚禮與新家約需 30 萬現金')
+  } else {
+    if (!s.partner) return t('先結婚(或有伴侶)才能規劃生小孩')
+    if (s.age > 45) return t('45 歲以後就不在遊戲的生育規劃範圍了')
+    if ((s.kids || []).filter((k) => !k.independent).length >= 3) return t('已經有 3 個孩子了')
+    if (s.babyYear === s.turn) return t('今年已經迎接過新生命了')
+    if (s.cash < 100000) return t('新生兒一次性花費約需 10 萬現金')
+  }
+  return null
+}
+
+export function family(state, what) {
+  return run(state, (s, rng) => {
+    const why = familyBlock(s, what)
+    if (why) { s.flash = why; return }
+    const lines = []
+    applySpecial(s, rng, what === 'marry' ? 'marry' : 'baby', (label) => lines.push(label))
+    if (what === 'baby') s.babyYear = s.turn
+    s.flash = lines.filter(Boolean).join(' ')
+    s.year.events.push({ title: what === 'marry' ? t('結婚了') : t('迎接新生命'), kind: 'milestone', icon: what === 'marry' ? '💍' : '👶' })
   })
 }

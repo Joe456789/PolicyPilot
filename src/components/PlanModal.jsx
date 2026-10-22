@@ -1,6 +1,6 @@
 import MarketChart from './MarketChart.jsx'
 import { Shield, TrendingUp, Building2, Landmark, Home, ShoppingBag } from 'lucide-react'
-import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, buyCard, buyCar, sellCar, buyHome, sellHome } from '../game/purchases.js'
+import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, buyCard, buyCar, sellCar, buyHome, sellHome, family, familyBlock } from '../game/purchases.js'
 import { CARDS, MAX_CARDS } from '../game/cards.js'
 import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
@@ -8,7 +8,7 @@ import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor,
 import { ASSETS, ASSET_ORDER, canIncrease, recommended, analyzeGaps, householdIncome, holdingsTotal } from '../game/engine.js'
 import { wan } from '../game/format.js'
 import { PROPERTIES, LEVELS, rentOf, baseRent, upgradeCost, propPremium, tollOf, RISK_NAME } from '../game/properties.js'
-import { t } from '../i18n.js'
+import { t, getLang } from '../i18n.js'
 
 // 英文字典裡有些詞是小寫術語(句中用),當成標題/按鈕時首字母大寫;中文不受影響
 const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
@@ -193,6 +193,17 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
             {tab === 'life' && (
               <>
                 <div className="note-box">🏠 {t('不用等擲骰,規劃時就能買車、買房或賣掉。車子和房子都會改變每年支出,也會多出需要的保險(汽車險、住宅火險、壽險)。')}</div>
+                <h4 className="life-h">👨‍👩‍👧 {t('家庭計畫')}</h4>
+                {[['marry', '💍', '結婚', '婚禮與新家 -30 萬,配偶也有收入;家庭支出增加,記得檢視壽險'], ['baby', '👶', '生小孩', '新生兒 -10 萬,每年支出 +18 萬;孩子會長大、上學、上大學(人生階段)']].map(([k, ic, n, d]) => {
+                  const why = familyBlock(s, k)
+                  return (
+                    <div key={k} className="life-card">
+                      <div><b>{ic} {t(n)}</b><small>{t(d)}</small>{why && <small className="neg">{why}</small>}</div>
+                      <button className="btn primary" disabled={!!why} onClick={() => onAct(family, k)}>{t('決定')}</button>
+                    </div>
+                  )
+                })}
+                {(s.kids || []).length > 0 && <p className="muted small">{t('孩子:{ages}', { ages: s.kids.map((kd) => (kd.independent ? t('已獨立') : t('{n}歲', { n: kd.age }))).join(getLang() === 'en' ? ', ' : '、') })}</p>}
                 <h4 className="life-h">🏡 {t('自住房')}</h4>
                 {s.house ? (
                   <div className="life-card">

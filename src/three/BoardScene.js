@@ -17,7 +17,7 @@ const HH = (MAP_ROWS * S) / 2
 const TYPE_COLOR = {
   start: 0x00915a, event: 0xff6b57, chance: 0xf97316, market: 0x3b82f6, bonus: 0xf5b301,
   shop: 0x0ea5e9, milestone: 0x14b8a6, advisor: 0x8b5cf6, tax: 0x64748b, rest: 0x84cc16,
-  hospital: 0xec4899, bank: 0x0d9488, minigame: 0x6366f1, property: 0xb7791f,
+  hospital: 0xec4899, bank: 0x0d9488, minigame: 0x6366f1, property: 0xb7791f, quiz: 0x0891b2,
 }
 
 // 與 2D 棋盤共用 map.js 的彎曲路徑座標;世界原點放在整個棋盤的中心

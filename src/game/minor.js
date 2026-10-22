@@ -2,7 +2,9 @@
 // 金額小、選項簡單,但累積起來就是理財習慣;有些小意外也會用到保險(醫療、責任、住宅)。
 // 選項的 fx 和機會卡同一套(scenes.js 的 applyFx);hit 是「小意外」:先付錢,有保險再理賠。
 
-export const MINOR_DEFS = [
+import { DB } from './db/index.js'
+
+const BASE_MINOR_DEFS = [
   {
     id: 'm_phone', icon: '📱', title: '手機摔裂了',
     story: '早上趕捷運,手機從口袋滑出去,螢幕裂成蜘蛛網。',
@@ -177,9 +179,14 @@ export const MINOR_DEFS = [
   },
 ]
 
+export const MINOR_DEFS = [...BASE_MINOR_DEFS, ...DB.minors]
+
 // 這一年要發生哪些小事:1 件,有時 2 件;同一局不會重複太多次
 export function drawMinors(s, rng) {
-  const pool = MINOR_DEFS.filter((d) => (!d.req || d.req(s)) && (s.seen[d.id] || 0) < 2)
+  const all = MINOR_DEFS.filter((d) => (!d.req || d.req(s)) && (s.seen[d.id] || 0) < 2)
+  // 優先選前幾局沒出現過的
+  const fresh = all.filter((d) => !(s.recent || []).includes(d.id))
+  const pool = fresh.length >= 2 ? fresh : all
   const n = rng.next() < 0.45 ? 2 : 1
   const out = []
   for (let k = 0; k < n && pool.length; k++) {

@@ -998,3 +998,6 @@ body[data-demo="1"] .toast { top: 100px; }
 @media (max-width: 720px) { .board-wrap .board { width: max(100%, calc(var(--cols) * 46px)); } }
 .board-wrap { align-items: safe center; }
 .action-bar .center-actions { display: contents; }
+.tile-quiz { --c: #0891b2; }
+.year-tip { display: grid; gap: 4px; text-align: left; background: var(--tint-blue); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 13.5px; line-height: 1.55; }
+.year-tip > b { font-size: 13px; color: var(--on-blue); }

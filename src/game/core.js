@@ -25,12 +25,13 @@ const TILE = {
   hospital: { type: 'hospital', label: '醫院', icon: '🏥' }, // i18n-ignore
   bank: { type: 'bank', label: '銀行', icon: '🏦' }, // i18n-ignore
   shop: { type: 'shop', label: '理財商城', icon: '🛒' }, // i18n-ignore
+  quiz: { type: 'quiz', label: '保險小學堂', icon: '🎓' }, // i18n-ignore
 }
 // 每一區佔幾格(加起來 100;第一區含起點)
 const AREA_SIZE = { north: 27, central: 23, south: 27, east: 23 }
 // 非資產格依序填入的格子種類(每 24 格一輪,比例和原本的棋盤相近)
-const FILL = ['event', 'chance', 'minigame', 'milestone', 'market', 'event', 'chance', 'advisor', 'event', 'minigame', 'shop', 'chance',
-  'event', 'hospital', 'milestone', 'bank', 'event', 'minigame', 'chance', 'market', 'event', 'tax', 'chance', 'milestone']
+const FILL = ['event', 'chance', 'minigame', 'milestone', 'market', 'event', 'quiz', 'advisor', 'event', 'minigame', 'shop', 'chance',
+  'event', 'hospital', 'milestone', 'bank', 'event', 'quiz', 'chance', 'market', 'event', 'tax', 'chance', 'milestone']
 function buildBoard() {
   const out = []
   let f = 0
@@ -121,6 +122,8 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     pos: 0,
     dice: null,
     kids: initialKids(startAge, st?.dependents || 0),
+    // 前幾局出現過的內容(跨局記憶),這一局會降低它們再出現的機率
+    recent: Array.isArray(setup.recent) ? setup.recent.slice(0, 400) : [],
     stagesDone: [],
     retired: false,
     annuityPay: 0,

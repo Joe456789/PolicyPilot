@@ -17,3 +17,15 @@ export function loadSave() {
 }
 
 export const clearSave = () => { try { localStorage.removeItem(KEY) } catch { /* 忽略 */ } }
+
+// 跨局記憶:記下最近 2 局出現過的事件/題目,下一局降低它們再出現的機率(減少重複感)
+const RECENT = 'policypilot.recent.v1'
+export function loadRecent() {
+  try { return [...new Set((JSON.parse(localStorage.getItem(RECENT) || '[]') || []).flat())] } catch { return [] }
+}
+export function saveRecent(ids) {
+  try {
+    const games = JSON.parse(localStorage.getItem(RECENT) || '[]') || []
+    localStorage.setItem(RECENT, JSON.stringify([ids.slice(0, 200), ...games].slice(0, 2)))
+  } catch { /* 忽略 */ }
+}

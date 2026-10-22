@@ -97,3 +97,18 @@ test('買房與賣房:頭期款、房貸、負擔上限', () => {
   assert.ok(s.cash > cash1)
   assert.equal(s.coverage.home, 0)
 })
+
+import { family, familyBlock } from '../src/game/purchases.js'
+test('家庭計畫:先結婚才能生小孩;生小孩會新增孩子並增加支出', () => {
+  let s = { ...createGame(base, 8), cash: 2e6 }
+  assert.ok(familyBlock(s, 'baby'), '單身不能生小孩')
+  s = family(s, 'marry')
+  assert.ok(s.partner)
+  const e0 = s.expense
+  s = family(s, 'baby')
+  assert.equal(s.kids.length, 1)
+  assert.equal(s.dependents, 1)
+  assert.ok(s.expense > e0)
+  s = family(s, 'baby')
+  assert.equal(s.kids.length, 1, '同一年只能一次')
+})

@@ -8,6 +8,8 @@
 //   gamble {lossP, lose:{cashPct}, win:{cashPct}}  以機率決定輸贏
 //   coverage 'topGap' 或 {id, tier}   special 特殊處理    lesson 學習重點
 
+import { DB } from './db/index.js'
+
 const lo = (a, b) => [a, b]
 
 // ---------- 生活事件(健康、意外、職場、家庭、房產)----------
@@ -157,7 +159,7 @@ export const EVENT_DEFS = [
 ]
 
 // ---------- 機會卡(需要決策,常和理財與保險觀念有關)----------
-export const CHANCE_DEFS = [
+const BASE_CHANCE_DEFS = [
   {
     id: 'hot_tip', icon: '🔥', title: '同事報明牌:這檔個股一定噴',
     story: '午餐時間,同事神祕兮兮地說某檔個股有內線,保證三個月翻倍。你要跟嗎?',
@@ -497,7 +499,7 @@ export const MILESTONE_DEFS = [
 // ---------- 市場行情 ----------
 // 市場行情:取材自近二十多年常見的市場情境(僅為教學用的「靈感」,不代表真實數字)。
 // headline 是情境新聞標題(虛構),analog 說明它對應的歷史情境,note 是投資觀念。
-export const MARKET_DEFS = [
+const BASE_MARKET_DEFS = [
   { id: 'ai_boom', icon: '🚀', title: '科技股大噴發', story: '新技術帶動資金湧入,股市一路走高。', ret: 0.24, rebound: 0, w: 2,
     headline: '【財經快訊】AI 概念全面起飛,指數一年大漲兩成', analog: '類似 2023 年前後由新技術題材帶動的多頭行情', note: '好行情時最容易追高。紀律地分批投入,比預測高點更重要。' },
   { id: 'steady', icon: '📈', title: '緩步走升的一年', story: '景氣平穩,市場小幅成長。', ret: 0.06, rebound: 0, w: 3,
@@ -527,7 +529,7 @@ export const MARKET_DEFS = [
 ]
 
 // ---------- 理財小學堂(純學習卡)----------
-export const TIP_DEFS = [
+const BASE_TIP_DEFS = [
   { icon: '🧮', title: '72 法則', story: '用 72 除以年報酬率,大約就是資產翻倍需要的年數:年報酬 6%,約 12 年翻倍。' },
   { icon: '📉', title: '最大風險是「被迫賣出」', story: '真正的虧損常發生在需要用錢時剛好遇到低點。緊急預備金與保障,就是避免你被迫賣在最低點。' },
   { icon: '⚖️', title: '風險與報酬成正比', story: '想要高報酬,就必須接受高風險。如果有人跟你說「高報酬、零風險」,那一定有問題。' },
@@ -550,7 +552,7 @@ export const TIP_DEFS = [
 ]
 
 // ---------- 保險小測驗 ----------
-export const QUIZ_DEFS = [
+const BASE_QUIZ_DEFS = [
   {
     q: '「住院日額險」和「實支實付醫療險」最大的差別是?', options: ['日額險依住院天數定額給付,實支實付依實際收據給付', '兩者完全一樣', '日額險只有車禍才賠'], answer: 0,
     why: '日額險按天給固定金額,補貼看護與請假等雜支;實支實付則依實際醫療單據理賠。兩者可以搭配。',
@@ -633,3 +635,9 @@ export const QUIZ_DEFS = [
     why: '報酬與風險成正比。保證高報酬、零風險,多半是詐騙手法。',
   },
 ]
+
+// ---------- 合併主題題庫(src/game/db)----------
+export const CHANCE_DEFS = [...BASE_CHANCE_DEFS, ...DB.chances]
+export const MARKET_DEFS = [...BASE_MARKET_DEFS, ...DB.markets]
+export const TIP_DEFS = [...BASE_TIP_DEFS, ...DB.tips]
+export const QUIZ_DEFS = [...BASE_QUIZ_DEFS, ...DB.quizzes]
