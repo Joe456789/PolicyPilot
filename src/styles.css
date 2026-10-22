@@ -820,7 +820,32 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 :root[data-style="anime"] .settings-fab { border: 2.5px solid var(--ol); box-shadow: 3px 3px 0 var(--ol-shadow); }
 
 /* 標題頁:放射線背景與貼紙感 */
-:root[data-style="anime"] .screen.title::before { content: ''; position: fixed; inset: 0; z-index: -1; background: repeating-conic-gradient(from 0deg at 50% 38%, rgba(255, 209, 102, 0.18) 0 5deg, transparent 5deg 12deg); animation: burstSpin 90s linear infinite; }
+/* 標題頁背景:暖色光暈 + 很淡、往外淡出的光芒(慢慢轉)+ 緩慢閃爍的光點,和寫實封面圖搭配 */
+:root[data-style="anime"] .screen.title { --glow: rgba(255, 196, 92, 0.32); --ray: rgba(255, 214, 120, 0.13); --spark: rgba(222, 160, 50, 0.85); }
+:root[data-theme="dark"][data-style="anime"] .screen.title { --glow: rgba(255, 170, 70, 0.24); --ray: rgba(255, 200, 110, 0.09); --spark: rgba(255, 226, 170, 0.75); }
+:root[data-style="anime"] .screen.title::before {
+  content: ''; position: fixed; inset: -60vmax; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, var(--ray) 0 3deg, transparent 3deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 22vmax, transparent 62vmax);
+  mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 22vmax, transparent 62vmax);
+  filter: blur(6px); animation: burstSpin 160s linear infinite;
+}
+:root[data-style="anime"] .screen.title::after {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 85% 70% at 50% 40%, var(--glow), transparent 72%),
+    radial-gradient(circle at 12% 22%, var(--spark) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 84% 16%, var(--spark) 0 2px, transparent 3px),
+    radial-gradient(circle at 76% 64%, var(--spark) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 20% 72%, var(--spark) 0 2px, transparent 3px),
+    radial-gradient(circle at 92% 42%, var(--spark) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 6% 48%, var(--spark) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 60% 90%, var(--spark) 0 2px, transparent 3px),
+    radial-gradient(circle at 36% 8%, var(--spark) 0 1.5px, transparent 2.5px);
+  animation: titleTwinkle 5s ease-in-out infinite alternate;
+}
+@keyframes titleTwinkle { from { opacity: 0.55; } to { opacity: 1; } }
+[data-motion='reduce'] .screen.title::before, [data-motion='reduce'] .screen.title::after { animation: none; }
 :root[data-style="anime"] .title-card h1 { -webkit-text-stroke: 0; filter: drop-shadow(3px 3px 0 var(--ol)); }
 :root[data-style="anime"] .title-badge { transform: rotate(-2deg); border: 2px solid var(--ol); box-shadow: 2px 2px 0 var(--ol-shadow); font-weight: 900; }
 :root[data-style="anime"] .title-hero { border: 3px solid var(--ol); box-shadow: 6px 6px 0 var(--ol-shadow); }
