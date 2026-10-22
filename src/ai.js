@@ -1,7 +1,11 @@
 import { t, trDeep, getLang } from './i18n.js'
 
 // 前端呼叫自家後端(後端再呼叫 Gemini)。任何失敗一律回傳 null,由畫面使用離線備援文字。
+// 靜態網頁版(GitHub Pages)沒有後端:不呼叫 API,全部用離線題庫與規則式回饋
+const STATIC = !!import.meta.env?.VITE_STATIC
+
 async function post(path, body, timeout = 12000) {
+  if (STATIC) return null
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), timeout)
   try {
@@ -23,6 +27,7 @@ async function post(path, body, timeout = 12000) {
 }
 
 export async function aiHealth() {
+  if (STATIC) return { ai: false }
   try {
     const res = await fetch('/api/health')
     if (!res.ok) return { ai: false }

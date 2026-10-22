@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  // BASE:部署在子路徑時設定(GitHub Pages 用 /PolicyPilot/),本機與 Cloud Run 維持 /
+  base: process.env.BASE || '/',
   plugins: [react()],
   server: {
     host: true,

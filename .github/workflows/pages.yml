@@ -1,0 +1,47 @@
+# 把遊戲打包成靜態網頁,部署到 GitHub Pages(https://joe456789.github.io/PolicyPilot/)。
+# 靜態版沒有後端:不呼叫 Gemini(金鑰不會出現在網頁裡),AI 文字改用內建的離線題庫與規則式回饋。
+# 第一次使用前,要到 repo 的 Settings → Pages,把 Source 設成「GitHub Actions」。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [claude/lucid-fermat-rlqnmr, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test test/*.test.js
+      - run: npx vite build
+        env:
+          BASE: /PolicyPilot/
+          VITE_STATIC: '1'
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

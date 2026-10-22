@@ -68,6 +68,14 @@ npm test                    # 規則引擎測試
 
 網址參數(錄影/除錯用):`?seed=11` 固定同一局;`?auto=1&career=engineer&len=short&opp=2` 略過成長篇直接進棋盤(career: office/engineer/nurse/sales/freelancer/teacher;len: short/standard/long;opp: 電腦對手 0~3)。
 
+## 部署到 GitHub Pages(靜態網頁,免費)
+
+網址:**https://joe456789.github.io/PolicyPilot/**
+
+推到 `claude/lucid-fermat-rlqnmr` 或 `main` 分支時,`.github/workflows/pages.yml` 會自動跑測試、打包並部署。第一次要先到 repo 的 **Settings → Pages**,把 **Source** 設成 **GitHub Actions**(只要設一次)。
+
+靜態網頁沒有後端,所以 **不會呼叫 Gemini**(金鑰也不會出現在網頁裡):AI 事件、理專回答與教練回饋改用內建的離線題庫與規則式回饋,其他功能(3D 棋盤、機器學習模型、存檔、觀念圖鑑…)都一樣。要用 Gemini 的完整版,請用下面的 Cloud Run 部署。本機也可以模擬:`BASE=/PolicyPilot/ VITE_STATIC=1 npx vite build`。
+
 ## 部署到 Google Cloud Run
 
 ```bash

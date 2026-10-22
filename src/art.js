@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 
 let manifest = null
+// 部署在子路徑(例如 GitHub Pages 的 /PolicyPilot/)時,圖片路徑要跟著 base 走
+export const ART_BASE = `${import.meta.env?.BASE_URL ?? '/'}art/`
 let pending = null
 
 export function loadArt() {
   if (!pending) {
-    pending = fetch('/art/manifest.json')
+    pending = fetch(`${ART_BASE}manifest.json`)
       .then((r) => (r.ok ? r.json() : {}))
       .catch(() => ({}))
       .then((m) => { manifest = m && typeof m === 'object' ? m : {}; return manifest })
@@ -21,7 +23,7 @@ export function useArt() {
   useEffect(() => { if (!m) loadArt().then(setM) }, [m])
   return (ids) => {
     if (!m) return null
-    for (const id of [].concat(ids)) if (id && m[id]) return `/art/${m[id]}`
+    for (const id of [].concat(ids)) if (id && m[id]) return `${ART_BASE}${m[id]}`
     return null
   }
 }
