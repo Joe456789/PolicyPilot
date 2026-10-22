@@ -12,5 +12,6 @@ import shop from './shop.js'
 import regions from './regions.js'
 import lifestages from './lifestages.js'
 import db from './db.js'
+import ml from './ml.js'
 
-export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions, ...lifestages, ...db }
+export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions, ...lifestages, ...db, ...ml }

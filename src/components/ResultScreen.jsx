@@ -4,6 +4,7 @@ import Avatar from './Avatar.jsx'
 import { buildReport, counterfactual, recommended, netWorth, evalQuests } from '../game/engine.js'
 import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import LifeTimeline from './LifeTimeline.jsx'
+import StyleCard from './StyleCard.jsx'
 import ShareCard from './ShareCard.jsx'
 import PrintReport from './PrintReport.jsx'
 import AchievementPopups from './AchievementPopups.jsx'
@@ -188,6 +189,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
         </ul>
       </section>
 
+      <StyleCard s={s} />
       <LifeTimeline s={s} />
 
       <section className="card">

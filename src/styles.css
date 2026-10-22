@@ -1001,3 +1001,31 @@ body[data-demo="1"] .toast { top: 100px; }
 .tile-quiz { --c: #0891b2; }
 .year-tip { display: grid; gap: 4px; text-align: left; background: var(--tint-blue); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 13.5px; line-height: 1.55; }
 .year-tip > b { font-size: 13px; color: var(--on-blue); }
+
+/* ---------- AI 風險預測卡 ---------- */
+.risk-card { border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--surface); display: grid; gap: 6px; }
+.risk-h { display: flex; justify-content: space-between; align-items: baseline; }
+.risk-h b { font-size: 14px; }
+.risk-p { font-size: 22px; font-weight: 900; }
+.risk-card.lv-low .risk-p { color: var(--green-text); }
+.risk-card.lv-mid .risk-p { color: #b7791f; }
+.risk-card.lv-high .risk-p { color: var(--red-text); }
+.risk-bar { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.risk-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #3fb950, #f5a524, #e5484d); }
+.risk-sub { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.risk-why { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.risk-foot { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.4; }
+/* ---------- AI 理財性格分析 ---------- */
+.style-card { display: grid; gap: 8px; }
+.style-head { display: flex; gap: 12px; align-items: center; }
+.style-ico { font-size: 36px; }
+.style-head b { display: block; font-size: 20px; }
+.style-head small { color: var(--muted); }
+.style-bars { display: grid; gap: 6px; }
+.style-row { display: grid; grid-template-columns: 110px 1fr 64px; gap: 8px; align-items: center; font-size: 13px; }
+.style-row b { text-align: right; }
+.style-track { position: relative; height: 10px; border-radius: 99px; background: var(--surface-3); }
+.style-track .you { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--green); }
+.style-track .typ { position: absolute; top: -3px; width: 3px; height: 16px; background: var(--ink); border-radius: 2px; transform: translateX(-1px); }
+.style-advice { margin: 0; background: var(--tint-amber); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; }
+.learned-box { border: 2px dashed var(--line); border-radius: 14px; padding: 10px 12px; margin: 8px 0; font-size: 13px; } .learned-box ul { margin: 6px 0; padding-left: 18px; line-height: 1.55; }

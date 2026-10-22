@@ -8,7 +8,9 @@ export function createMatch(humanState, opponents, seed) {
   const rngPick = [...PERSONAS]
   // 依 seed 決定對手出場順序(可重現)
   rngPick.sort((a, b) => ((a.id.charCodeAt(0) * 31 + seed) % 7) - ((b.id.charCodeAt(0) * 31 + seed) % 7))
-  const chosen = rngPick.slice(0, opponents)
+  // 兩位以上對手時,一定有一位是 AI 學習型(強化學習訓練出來的)
+  const learned = rngPick.find((p) => p.id === 'learned')
+  const chosen = opponents >= 2 ? [learned, ...rngPick.filter((p) => p !== learned)].slice(0, opponents) : rngPick.slice(0, opponents)
   const players = [{ id: 'you', human: true, name: humanState.player.name, title: humanState.player.title, look: humanState.player.look, s: humanState }]
   chosen.forEach((p, i) => {
     players.push({

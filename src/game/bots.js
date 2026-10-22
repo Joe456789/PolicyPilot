@@ -7,10 +7,12 @@ import {
   createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction, hasMinor, nextMinor, canRollAgain, rollAgain,
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
-import { PRODUCT_ORDER, totalPremium } from './products.js'
+import { PRODUCT_ORDER, PRODUCTS, totalPremium } from './products.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './prologue.js'
 import { propById, upgradeCost } from './properties.js'
 import { t } from '../i18n.js'
+import { decodePolicy } from './ml/policy.js'
+import LEARNED_POLICY from './ml/learnedPolicy.json' with { type: 'json' }
 
 export const PERSONAS = [
   {
@@ -38,6 +40,10 @@ export const PERSONAS = [
     panic: false, risk: 0.4, love: 0.5, quiz: 0.65, study: 'study',
   },
 ]
+
+// AI 學習型:用演化策略(強化學習)訓練出來的第五位電腦玩家(scripts/ml/train-bot.mjs)
+export const LEARNED = decodePolicy(LEARNED_POLICY.theta)
+PERSONAS.push(LEARNED)
 
 // ---------- 成長篇(自動)----------
 function botLifeSetup(p, seed, length, opponents, startAge = 22) {
@@ -77,6 +83,11 @@ function applyCoverage(s, p, keep = false) {
   const rec = recommended(s)
   const hi = householdIncome(s)
   let target = { ...rec }
+  if (p.coverMap) {
+    // AI 學習型:每一項保險學到的是「不買 / 照建議 / 建議再多一級」
+    target = {}
+    for (const [id, m] of Object.entries(p.coverMap)) target[id] = m === 0 ? 0 : Math.min(PRODUCTS[id].tiers.length - 1, (rec[id] || 0) + (m === 2 ? 1 : 0))
+  }
   if (p.cover === 'none') target = {}
   if (p.cover === 'late') target = s.age >= 32 ? { medical: 1 } : {}
   if (p.cover === 'max') {
@@ -89,7 +100,7 @@ function applyCoverage(s, p, keep = false) {
     if (want > cur && !canIncrease(s, id)) continue
     // 保費上限:避免買到破產
     const trial = { ...s.coverage, [id]: want }
-    if (want > cur && totalPremium(trial, s.age) / hi > 0.17) continue
+    if (want > cur && totalPremium(trial, s.age) / hi > (p.premiumCap || 0.17)) continue
     if (want !== cur && !(keep && want < cur)) s = setCoverage(s, id, want)
   }
   return s
@@ -114,7 +125,7 @@ function applyInvest(s, p) {
 // keep:代玩家託管時用,只會補強保障,不會把玩家原本買的降級
 export function botPlan(s, p, { keep = false } = {}) {
   s = applyCoverage(s, p, keep)
-  if (p.love > 0.3) for (const id of Object.keys(s.props)) if (!s.props[id].insured && s.ap > 0) s = propAction(s, id, 'insure')
+  if (p.insureProps ?? p.love > 0.3) for (const id of Object.keys(s.props)) if (!s.props[id].insured && s.ap > 0) s = propAction(s, id, 'insure')
   s = applyInvest(s, p)
   return s
 }
@@ -188,6 +199,11 @@ export function botWantsProperty(s, p, prop) {
   const liquid = liquidOf(s)
   const mo = s.expense / 12
   const price = prop.price
+  if (p.prop) {
+    if (liquid - price >= p.prop.months * mo) return 'cash'
+    if (p.prop.loan && liquid - price * 0.3 >= p.prop.months * mo) return 'loan'
+    return null
+  }
   if (p.id === 'steady') {
     if (liquid - price >= 12 * mo && price <= liquid * 0.45) return 'cash'
     return null
@@ -210,7 +226,7 @@ function botProperty(s, p, sc) {
     return m === 'cash' ? idxOf('buy_cash') : m === 'loan' ? idxOf('buy_loan') : idxOf('skip')
   }
   const mine = s.props[base.propId]
-  if (!mine.insured && p.love > 0.3) return idxOf('insure')
+  if (!mine.insured && (p.insureProps ?? p.love > 0.3)) return idxOf('insure')
   if (mine.level < 3 && p.risk > 0.3 && liquidOf(s) > upgradeCost(prop, mine.level) + 8 * (s.expense / 12)) return idxOf('upgrade')
   return idxOf('skip')
 }

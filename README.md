@@ -42,6 +42,14 @@ Cardif InsurHack 2026 · 題目 1-1。以**大富翁**為主體:擲骰、走格�
 沒有金鑰時自動使用內建題庫與規則式回饋。每局約 15 到 25 次 AI 呼叫,後端有每 IP、每日與全站上限,超過時自動改用離線題庫。
 規則層是純函式、可重現,之後做連線多人只需要同步「操作」。
 
+## 自行訓練的機器學習(不呼叫外部 AI)
+三個模型都用遊戲自己的模擬資料訓練,參數是幾 KB 的 JSON,在瀏覽器裡直接推論,離線也能用:
+- **財務風險預測**(邏輯斯迴歸):預測未來 8 年發生財務危機的機率,並列出主要原因;測試集準確率 88.6%、AUC 0.87。
+- **理財性格分析**(k-means 分群):結算時把整局行為歸類成 5 種理財性格,和同類型平均比較。
+- **學習型電腦對手**(演化策略):「演算法阿智」自己玩了 6,720 局學出策略,測試集平均積分高於所有手寫個性。
+
+說明與數據見 [docs/ML.md](docs/ML.md);重新訓練:`npm run ml:train`。
+
 ## 本機執行
 
 ```bash
@@ -65,8 +73,8 @@ gcloud run deploy policypilot --source . --region asia-east1 --allow-unauthentic
 
 ## 結構
 
-- `src/game/` 規則引擎:`properties.js` 地產、`cards.js` 手牌、`tags.js` 人生標籤、`starts.js` 開局年齡、`prologueCards.js` 成長篇卡池、`coach.js` 教練提示、`banter.js` 對手台詞、`endings.js` 結局、`glossary.js` 小辭典、`minigames.js` 小遊戲設定、`prologue.js` 成長篇、`core.js` 狀態與建議、`scenes.js` 場景、`engine.js` 動作與年度結算、`scoring.js` 評分與平行人生、`quests.js` 任務、`bots.js` 電腦對手、`match.js` 對局與排名、`records.js` 成就戰績、`content.js` 題庫、`products.js` 保障商品
+- `src/game/` 規則引擎:`properties.js` 地產、`cards.js` 手牌、`tags.js` 人生標籤、`starts.js` 開局年齡、`prologueCards.js` 成長篇卡池、`coach.js` 教練提示、`banter.js` 對手台詞、`endings.js` 結局、`glossary.js` 小辭典、`minigames.js` 小遊戲設定、`prologue.js` 成長篇、`core.js` 狀態與建議、`scenes.js` 場景、`engine.js` 動作與年度結算、`scoring.js` 評分與平行人生、`quests.js` 任務、`bots.js` 電腦對手、`match.js` 對局與排名、`records.js` 成就戰績、`content.js` 題庫、`products.js` 保障商品、`ml/` 機器學習模型(推論與訓練好的參數)
 - `src/three/BoardScene.js` 3D 棋盤;`src/sfx.js` 音效
 - `src/components/` 棋盤、規劃面板、事件卡、結算頁(平行人生對照圖)
-- `scripts/` 插圖生成腳本(`gen-art.mjs`);`public/art/` 生成的插圖
+- `scripts/` 插圖生成腳本(`gen-art.mjs`)、`scripts/ml/` 模型訓練腳本;`public/art/` 生成的插圖
 - `server/` Express + Gemini 代理與提示詞(`prompts.js`)

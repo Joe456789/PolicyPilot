@@ -11,7 +11,8 @@
     "start": "node server/index.js",
     "test": "node --test test/*.test.js",
     "art": "node --env-file-if-exists=.env scripts/gen-art.mjs",
-    "art:dry": "node scripts/gen-art.mjs --dry"
+    "art:dry": "node scripts/gen-art.mjs --dry",
+    "ml:train": "node scripts/ml/train-risk.mjs 2500 && node scripts/ml/train-style.mjs 1500 && node scripts/ml/train-bot.mjs 40"
   },
   "dependencies": {
     "express": "^4.21.2",

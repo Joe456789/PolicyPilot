@@ -461,6 +461,7 @@ function snapshot(s, f) {
     houseEquity: s.house ? Math.round(s.house.value - s.house.balance) : 0,
     netWorth: netWorth(s),
     coverage: { ...s.coverage },
+    hold: { ...s.hold },
     rec,
     protRatio: protRatio(s, rec),
     assetKinds: ASSET_ORDER.filter((k) => s.hold[k] > 0).length,

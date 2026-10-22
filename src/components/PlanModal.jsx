@@ -1,4 +1,6 @@
 import MarketChart from './MarketChart.jsx'
+import RiskCard from './RiskCard.jsx'
+import LearnedAdvice from './LearnedAdvice.jsx'
 import { Shield, TrendingUp, Building2, Landmark, Home, ShoppingBag } from 'lucide-react'
 import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, buyCard, buyCar, sellCar, buyHome, sellHome, family, familyBlock } from '../game/purchases.js'
 import { CARDS, MAX_CARDS } from '../game/cards.js'
@@ -260,6 +262,8 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
           </section>
 
           <section>
+            <RiskCard s={s} />
+            <LearnedAdvice s={s} />
             <h3>📋 {t('目前狀態')}</h3>
             <div className="summary">
               <div className="sum-row"><span>{t('現金')}</span><b>{wan(s.cash)}</b></div>

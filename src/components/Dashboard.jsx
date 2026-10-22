@@ -5,6 +5,7 @@ import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, holdingsTotal, houseEquity, netWorth, householdIncome } from '../game/engine.js'
 import { wan, signed } from '../game/format.js'
 import AnimNum from './AnimNum.jsx'
+import RiskCard from './RiskCard.jsx'
 import { propById, rentOf } from '../game/properties.js'
 import { t, getLang } from '../i18n.js'
 
@@ -62,6 +63,8 @@ export default function Dashboard({ s, onQuick }) {
           ))}
         </div>
       )}
+
+      <RiskCard s={s} compact />
 
       <div className="stats">
         <Stat label={t('淨資產')} num={nw} fmt={(v) => wan(v)} value={wan(nw)} tone={nw < 0 ? 'bad' : 'ok'} />
