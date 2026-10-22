@@ -160,6 +160,9 @@ export function botChoose(s, p) {
       return p.id === 'allin' ? Math.min(1, last) : 0
     }
     case 'minor':
+      // 盤中行情:會恐慌的人殺低、積極的人加碼,其他人不動
+      if (sc.defId === 'mkt_flash') return p.panic && sc.tone === 'bad' ? 1 : p.risk > 0.6 ? 0 : 2
+    // falls through
     case 'chance': {
       let best = 0, bestV = -1e9
       sc.choices.forEach((c, i) => {

@@ -3,6 +3,7 @@ import { useArt, sceneArtIds } from '../art.js'
 import { t, getLang } from '../i18n.js'
 import { TIP_DEFS } from '../game/content.js'
 import { THEME_NAME } from '../game/db/index.js'
+import ClaimPanel from './ClaimPanel.jsx'
 
 // 英文字典裡有些詞是小寫術語(句中用),當成標題/按鈕時首字母大寫;中文不受影響
 const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
@@ -26,7 +27,7 @@ const KIND = {
   property: () => t('資產格'),
 }
 
-export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel, tips }) {
+export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, loadingAi, continueLabel, tips, claim, onFileClaim }) {
   const result = scene.result
   const artUrl = useArt()(sceneArtIds(scene))
   return (
@@ -80,9 +81,10 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
                 </li>
               ))}
             </ul>
-            <button className="btn primary wide" onClick={onContinue}>
+            {claim && <ClaimPanel key={claim.amount + claim.need.join()} claim={claim} onFile={onFileClaim} />}
+            {(!claim || claim.filed) && <button className="btn primary wide" onClick={onContinue}>
               {continueLabel || (scene.cat === 'death' ? t('查看結果') : t('繼續 → 年度結算'))}
-            </button>
+            </button>}
           </>
         )}
       </div>

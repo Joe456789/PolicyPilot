@@ -1,7 +1,8 @@
 import MarketChart from './MarketChart.jsx'
 import RiskCard from './RiskCard.jsx'
 import LearnedAdvice from './LearnedAdvice.jsx'
-import { Shield, TrendingUp, Building2, Landmark, Home, ShoppingBag } from 'lucide-react'
+import { Shield, TrendingUp, Building2, Landmark, Home, ShoppingBag, Handshake } from 'lucide-react'
+import DealsPanel from './DealsPanel.jsx'
 import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, buyCard, buyCar, sellCar, buyHome, sellHome, family, familyBlock } from '../game/purchases.js'
 import { CARDS, MAX_CARDS } from '../game/cards.js'
 import { coachInvest, coachLoan } from '../game/coach.js'
@@ -17,7 +18,7 @@ const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
 
 const STEPS = [50000, 100000, 300000, 1000000]
 
-export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onRepay, onPropAction, onAct, onClose, coach, title = t('年度規劃'), initialTab = 'cover' }) {
+export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onRepay, onPropAction, onAct, onClose, players, onDeal, coach, title = t('年度規劃'), initialTab = 'cover' }) {
   const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(100000)
   const rec = recommended(s)
@@ -42,7 +43,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
         {s.turn === 0 && s.player.intro && <div className="note-box intro-box">📖 <b>{t('你的起點:')}</b>{s.player.intro}</div>}
 
         <div className="tabs" role="tablist">
-          {[['cover', t('保障'), Shield], ['invest', t('理財'), TrendingUp], ['assets', t('資產'), Building2], ['loan', cap(t('貸款')), Landmark], ['life', cap(t('生活')), Home], ['shop', t('商店'), ShoppingBag]].map(([k, n, Icon]) => (
+          {[['cover', t('保障'), Shield], ['invest', t('理財'), TrendingUp], ['assets', t('資產'), Building2], ['loan', cap(t('貸款')), Landmark], ['life', cap(t('生活')), Home], ['shop', t('商店'), ShoppingBag], ['deal', t('交易'), Handshake]].map(([k, n, Icon]) => (
             <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><Icon size={17} aria-hidden /> {n}</button>
           ))}
         </div>
@@ -242,6 +243,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
               </>
             )}
 
+            {tab === 'deal' && <DealsPanel players={players} onDeal={onDeal} />}
             {tab === 'shop' && (
               <>
                 <div className="note-box">🛒 {t('用現金買手牌,條件成立時自動生效。每年最多買 {n} 張,手牌最多 {m} 張。「免災金牌」買不到:現實中沒有讓壞事不發生的東西,只有保險。', { n: SHOP_PER_YEAR, m: MAX_CARDS })}</div>

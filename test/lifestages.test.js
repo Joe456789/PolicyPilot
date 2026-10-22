@@ -7,10 +7,15 @@ import { dueStages, KID_STAGES } from '../src/game/lifestages.js'
 const base = { name: 't', career: 'engineer', background: 'comfy', style: 'steady' }
 
 test('一輩子(60 年):孩子一路長大到獨立,自己 65 歲前後退休,中途不出錯', () => {
-  let s = createGame({ ...base, length: 'life60' }, 17)
-  assert.equal(s.years, 60)
-  s = { ...s, kids: [{ age: 1, done: [] }], dependents: 1 }
-  s = botFastForward(s, PERSONAS.find((p) => p.id === 'balanced'))
+  // 這個測試看的是人生階段,不是壽命:挑一個能活到最後的種子
+  let s
+  for (let seed = 17; seed < 60; seed++) {
+    s = createGame({ ...base, length: 'life60' }, seed)
+    assert.equal(s.years, 60)
+    s = { ...s, kids: [{ age: 1, done: [] }], dependents: 1 }
+    s = botFastForward(s, PERSONAS.find((p) => p.id === 'balanced'))
+    if (s.ended?.reason !== 'death') break
+  }
   assert.equal(s.phase, 'ended')
   const kid = s.kids[0]
   for (const id of ['k_kinder', 'k_school', 'k_cram', 'k_college', 'k_grad']) assert.ok(kid.done.includes(id), id)

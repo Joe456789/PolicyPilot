@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap, Box, BookOpen } from 'lucide-react'
+import { Settings, Sun, Moon, MonitorCog, X, Volume2, Type, Eye, RotateCcw, Sparkles, GraduationCap, Zap, Box, BookOpen, Library } from 'lucide-react'
 import { useSettings } from '../settings.js'
 import { sfx } from '../sfx.js'
 import { resetTutorial } from './Tutorial.jsx'
 import HelpModal from './HelpModal.jsx'
+import CodexModal from './CodexModal.jsx'
 import { t, useLang } from '../i18n.js'
 
 const THEMES = [['light', '淺色', Sun], ['dark', '深色', Moon], ['auto', '跟隨系統', MonitorCog]] // i18n-ignore
@@ -40,11 +41,14 @@ export default function SettingsLayer() {
   const [s, set, reset] = useSettings()
   const [open, setOpen] = useState(false)
   const [help, setHelp] = useState(false)
-  // 其他畫面(例如標題頁)可以用事件打開玩法說明
+  const [codex, setCodex] = useState(false)
+  // 其他畫面(例如標題頁)可以用事件打開玩法說明、觀念圖鑑
   useEffect(() => {
     const on = () => setHelp(true)
+    const onCodex = () => setCodex(true)
     window.addEventListener('pp-help', on)
-    return () => window.removeEventListener('pp-help', on)
+    window.addEventListener('pp-codex', onCodex)
+    return () => { window.removeEventListener('pp-help', on); window.removeEventListener('pp-codex', onCodex) }
   }, [])
   useEffect(() => {
     if (!open) return undefined
@@ -96,6 +100,7 @@ export default function SettingsLayer() {
             </section>
             <div className="set-actions">
               <button className="btn" onClick={() => { setOpen(false); setHelp(true) }}><BookOpen size={16} aria-hidden /> {t('玩法說明')}</button>
+              <button className="btn" onClick={() => { setOpen(false); setCodex(true) }}><Library size={16} aria-hidden /> {t('觀念圖鑑')}</button>
               <button className="btn" onClick={() => { resetTutorial(); setOpen(false) }}><GraduationCap size={16} aria-hidden /> {t('重看新手教學')}</button>
               <button className="btn set-reset" onClick={reset}><RotateCcw size={16} aria-hidden /> {t('恢復預設')}</button>
             </div>
@@ -103,6 +108,7 @@ export default function SettingsLayer() {
         </div>
       )}
       {help && <HelpModal onClose={() => setHelp(false)} />}
+      {codex && <CodexModal onClose={() => setCodex(false)} />}
     </>
   )
 }

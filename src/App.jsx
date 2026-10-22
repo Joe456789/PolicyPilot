@@ -1,3 +1,6 @@
+import { settleLoans, loanRequest } from './game/deals.js'
+import FxLayer, { fx } from './components/FxLayer.jsx'
+import { fileClaim, claimPending, correctPicks } from './game/claims.js'
 import { coachScene } from './game/coach.js'
 import { classifyBanter, offlineLine, shouldSpeak } from './game/banter.js'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -26,7 +29,8 @@ import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.
 import Tutorial from './components/Tutorial.jsx'
 import { Volume2, VolumeX, FastForward, Box, Grid2x2, RotateCcw, BedDouble, Dices, ShieldCheck, MessageCircle, BarChart3, Flag } from 'lucide-react'
 import { t, useLang, getLang } from './i18n.js'
-import { saveGame, loadSave, clearSave, loadRecent, saveRecent } from './save.js'
+import { saveGame, loadSave, clearSave, loadRecent, saveRecent, saveCodex } from './save.js'
+import { collectedIn } from './game/codex.js'
 import AutopilotMenu from './components/AutopilotMenu.jsx'
 import DemoBar from './components/DemoBar.jsx'
 import TileInfo from './components/TileInfo.jsx'
@@ -91,6 +95,7 @@ function GameApp() {
   const [shake, setShake] = useState(false)
   const [ranks, setRanks] = useState(null)
   const [fresh, setFresh] = useState([])
+  const [newCards, setNewCards] = useState([]) // 這局新點亮的觀念卡
   const [askOpen, setAskOpen] = useState(false)
   const [debugMg, setDebugMg] = useState(params.get('mg')) // 開發用:?mg=wheel 直接開啟某個小遊戲
   const token = useRef(0)
@@ -323,6 +328,7 @@ function GameApp() {
         if (cur.scene.kind === 'minigame') return onMinigameDone({ stars: botStars(cur, persona) })
         return onChoose(botChoose(cur, persona))
       }
+      if (cur.phase === 'result' && claimPending(cur)) return onFileClaim(correctPicks(cur))
       if (cur.phase === 'result') { if (!hasMinor(cur) && !canRollAgain(cur)) setAuto((a) => a && { ...a, left: a.left - 1 }); return onContinue() }
     }, wait)
     return () => clearTimeout(id)
@@ -426,6 +432,7 @@ function GameApp() {
     }
     commit(0, ng)
     rolling.current = false
+    if (ng.extraRoll) { fx('doubles'); sfx.doubles() }
     if (ng.extraRoll) showToast({ icon: '🎲', title: t('雙骰!{a} + {b}', { a: ng.diceFaces[0], b: ng.diceFaces[1] }), text: t('這件事結束後可以再擲一次'), tone: 'good' }, 2200)
     requestAi(ng)
     sfx.card()
@@ -516,12 +523,33 @@ function GameApp() {
     react(ng.scene)
   }
 
+  // 和對手交易(收購 / 出售地產、借錢給對手)
+  function onDeal(fn, ...args) {
+    const { players: np, note } = fn(playersRef.current, ...args)
+    if (!note) return
+    playersRef.current = np
+    setPlayers(np)
+    setFeed((f) => [{ id: ++uid, icon: '🤝', who: t('你'), text: note, tone: 'good' }, ...f].slice(0, 12))
+    showToast({ icon: '🤝', title: t('交易完成'), text: note, tone: 'good' }, 2000)
+    sfx.coin()
+  }
+
+  function onFileClaim(picks) {
+    const ng = fileClaim(human(), picks)
+    commit(0, ng)
+    sfx.stamp()
+    if (ng.claim?.filed?.missing.length) { fx('pending', t('理賠金延到下一年入帳')); setTimeout(() => sfx.bad(), 200) } else { fx('approved', `+${wan(ng.claim.amount)}`); setTimeout(() => sfx.claim(), 200) }
+  }
+
   async function onContinue() {
+    if (claimPending(human())) return // 理賠還沒申請
     // 雙骰獎勵:先再擲一次
     if (canRollAgain(human())) return onRollAgain()
     // 年度大事之後,還有這一年的小事就先處理
     if (hasMinor(human())) {
-      commit(0, nextMinor(human()))
+      const nm = nextMinor(human())
+      commit(0, nm)
+      if (nm.scene?.defId === 'mkt_flash') { const up = nm.scene.tone === 'good'; fx(up ? 'rally' : 'crash', nm.scene.title); if (up) sfx.rally(); else sfx.crash() }
       setAiText(null)
       sfx.card()
       return
@@ -615,10 +643,20 @@ function GameApp() {
         const bi = { id: ++uid, icon: '💥', who: t(pl.name), text: t('{age} 歲破產出局!資金斷裂、資產被拍賣', { age: s.ended.age }), tone: 'bad' }
         setFeed((f) => [bi, ...f].slice(0, 12))
         showToast({ icon: '💥', title: t('{name} 破產出局', { name: pl.name }), text: t('現金見底、資產被拍賣'), tone: 'bad' }, 2200)
+        fx('bankrupt', t(pl.name))
         sfx.bad()
       }
       if (!botFast) await sleep(500)
     }
+    // 借給對手的錢:每一輪結束收一次款;有對手手頭緊就提醒你
+    const { players: lp, notes: ln } = settleLoans(playersRef.current)
+    if (ln.length) {
+      playersRef.current = lp
+      setPlayers(lp)
+      setFeed((f) => [...ln.map((n) => ({ id: ++uid, icon: n.icon, who: t('你'), text: n.text, tone: n.tone })), ...f].slice(0, 12))
+    }
+    const req = playersRef.current[0].s.phase !== 'ended' && loanRequest(playersRef.current)
+    if (req) setFeed((f) => [{ id: ++uid, icon: '💬', who: t(req.name), text: t('想跟你借 {amt},打開規劃的「交易」分頁看看', { amt: wan(req.amount) }), tone: '' }, ...f].slice(0, 12))
     setActiveIdx(0)
     b?.overview()
     setBusy(false)
@@ -662,6 +700,7 @@ function GameApp() {
     }
     const fr = demo ? [] : recordGame(ctx).fresh // 展示模式的對局不計入成就與戰績
     if (!demo) saveRecent(Object.keys(h.seen))
+    setNewCards(demo ? [] : saveCodex(collectedIn(h)))
     if (demo) setDemo((d) => d && { ...d, done: true })
     setRanks(rk)
     setFresh(fr)
@@ -716,7 +755,7 @@ function GameApp() {
   if (screen === 'result') {
     return (
       <>
-        <ResultScreen s={g} aiOn={aiInfo.ai} ranks={ranks} fresh={fresh} onAgain={() => setScreen('create')} onRecords={() => setScreen('records')} />
+        <ResultScreen s={g} aiOn={aiInfo.ai} ranks={ranks} fresh={fresh} newCards={newCards} onAgain={() => setScreen('create')} onRecords={() => setScreen('records')} />
         {demo && <DemoBar caption={demoCaption({ ended: true })} done onExit={exitDemo} onRestart={startDemo} />}
       </>
     )
@@ -812,13 +851,16 @@ function GameApp() {
           onAct={(fn, ...args) => commit(0, fn(human(), ...args))}
           initialTab={planTab}
           world={worldOf(players)}
+          players={players}
+          onDeal={onDeal}
           onClose={() => setPlanOpen(false)}
         />
       )}
       {showScene && scene.kind === 'minigame' && g.phase === 'scene' && <MiniGameModal key={scene.defId + g.turn} game={scene.base.game} s={g} onDone={onMinigameDone} />}
-      {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} tips={coach && g.phase === 'scene' ? coachScene(g, scene) : null} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} />}
+      {showScene && !(scene.kind === 'minigame' && g.phase === 'scene') && <SceneModal scene={scene} tips={coach && g.phase === 'scene' ? coachScene(g, scene) : null} phase={g.phase} onChoose={onChoose} onContinue={onContinue} aiTag={!!aiText} loadingAi={loadingAi} claim={g.phase === 'result' ? g.claim : null} onFileClaim={onFileClaim} />}
       <Tutorial enabled={g.turn === 0 && !params.get('auto') && !params.get('notut') && !demo} planOpen={planOpen} />
       {yearOpen && <YearModal s={g} onNext={onYearNext} last={g.phase === 'ended'} />}
+      <FxLayer />
       {demo && (
         <DemoBar
           caption={demoCaption({
@@ -870,6 +912,7 @@ function Title({ aiInfo, onStart, onRecords, save, onResume, onDemo }) {
           <button className="btn huge2" onClick={onRecords}>🏅 {t('成就與戰績')}</button>
           <button className="btn huge2" onClick={onDemo}>🎬 {t('展示模式')}</button>
           <button className="btn huge2" onClick={() => window.dispatchEvent(new Event('pp-help'))}>📖 {t('玩法說明')}</button>
+          <button className="btn huge2" onClick={() => window.dispatchEvent(new Event('pp-codex'))}>📚 {t('觀念圖鑑')}</button>
         </div>
         <ol className="how">
           <li><b>{t('1 創角')}</b>{t('可從出生開始,或直接進棋盤')}</li>

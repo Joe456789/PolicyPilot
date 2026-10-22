@@ -65,5 +65,9 @@ export const sfx = {
   claim() { [659, 784, 988, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', gain: 0.1, delay: i * 0.1 })); noise(0.3, { gain: 0.05, delay: 0.35, hp: 4000 }) },
   quest() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.2, { type: 'sine', gain: 0.1, delay: i * 0.08 })) },
   fanfare() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', gain: 0.1, delay: i * 0.12 })) },
+  doubles() { [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, 0.12, { type: 'square', gain: 0.045, delay: i * 0.06 })) },
+  crash() { noise(0.5, { gain: 0.09, hp: 200 }); tone(220, 0.5, { type: 'sawtooth', gain: 0.06, slide: -120 }) },
+  rally() { [392, 494, 587, 784].forEach((f, i) => tone(f, 0.14, { type: 'triangle', gain: 0.08, delay: i * 0.07 })) },
+  stamp() { noise(0.08, { gain: 0.16, hp: 300 }); tone(110, 0.12, { type: 'sine', gain: 0.12 }) },
   click() { tone(660, 0.04, { type: 'sine', gain: 0.05 }) },
 }

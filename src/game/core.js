@@ -77,7 +77,9 @@ export const propEquity = (s) => Object.values(s.props || {}).reduce((a, p) => a
 export const householdIncome = (s) => s.income + (s.partner ? s.partner.income : 0)
 
 export function netWorth(s) {
-  return Math.round(s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + houseEquity(s) + propEquity(s) - s.loan)
+  // lent:借給對手、還沒收回的本金;iou:欠其他玩家的錢
+  const lent = (s.lent || []).reduce((a, l) => a + l.balance, 0)
+  return Math.round(s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + houseEquity(s) + propEquity(s) + lent - s.loan - (s.iou || 0))
 }
 
 // 從 0 開始:由創角結果建立初始狀態。

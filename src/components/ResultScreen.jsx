@@ -47,7 +47,7 @@ const PARTS = [
   ['quests', '人生任務', 10], // i18n-ignore
 ]
 
-export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords }) {
+export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, newCards = [], onRecords }) {
   const lang = useLang()
   const report = buildReport(s)
   const { score } = report
@@ -189,6 +189,12 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, onRecords
         </ul>
       </section>
 
+      {newCards.length > 0 && (
+        <section className="card codex-new">
+          <h3>📚 {t('這局點亮了 {n} 張新的觀念卡', { n: newCards.length })}</h3>
+          <button className="btn" onClick={() => window.dispatchEvent(new Event('pp-codex'))}>{t('打開觀念圖鑑')}</button>
+        </section>
+      )}
       <StyleCard s={s} />
       <LifeTimeline s={s} />
 

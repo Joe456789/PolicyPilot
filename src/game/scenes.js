@@ -9,6 +9,8 @@ import {
   EVENT_DEFS, CHANCE_DEFS, BONUS_DEFS, MILESTONE_DEFS, MARKET_DEFS, TIP_DEFS, QUIZ_DEFS,
 } from './content.js'
 import { PRODUCTS, payoutFor } from './products.js'
+import { openClaim } from './claims.js'
+import { buildFlashScene, applyFlash } from './flash.js'
 import { MINIGAMES, MINIGAME_IDS, MINIGAME_REWARD } from './minigames.js'
 import { areaById, ownsArea, AREA_BONUS, AREA_NEED, areaCount } from './properties.js'
 import { propByTile, propById, LEVELS, rentOf, tollOf, upgradeCost, propPremium, mortgagePayment, localNews, baseRent, RISK_NAME } from './properties.js'
@@ -346,7 +348,7 @@ function buildQuiz(s, rng) {
 function buildTip(s, rng) {
   const tp = rng.pick(TIP_DEFS)
   return scene({
-    kind: 'tip', defId: 'tip', icon: tp.icon, title: tp.title, story: tp.story, base: {},
+    kind: 'tip', defId: 'tip' + TIP_DEFS.indexOf(tp), icon: tp.icon, title: tp.title, story: tp.story, base: {},
     choices: [{ label: t('學到了'), hint: '', tag: 'ok' }],
   })
 }
@@ -408,6 +410,7 @@ function resolveEvent(s, sc, choice, add) {
   for (const [k, label] of pays) {
     if (payout[k]) { s.cash += payout[k]; add(t(label), payout[k], 'cover') }
   }
+  openClaim(s, payout, { cat: sc.cat, carRepair: b.carRepair, label: sc.title })
   if (medicalCost > 0 && ['medical', 'critical'].includes(sc.cat) && hasCard(s, 'medaid')) {
     const aid = Math.min(300000, Math.round(medicalCost * 0.5), Math.max(0, medicalCost - payout.total))
     if (aid > 0 && useCard(s, 'medaid')) { s.cash += aid; add(t('{icon} 醫療補助卡:減免自付費用', { icon: CARDS.medaid.icon }), aid, 'cover') }
@@ -714,6 +717,7 @@ function resolveFxScene(s, rng, sc, choice, add) {
 }
 
 function applyFx(s, rng, fx, add) {
+  if (fx.flash) applyFlash(s, fx.flash, add, spendable)
   if (fx.invest2) {
     const amt = spendable(s, fx.invest2.pct)
     if (amt > 0) { s.cash -= amt; s.hold[fx.invest2.cls] += amt; add(t('買入{name}', { name: ASSETS[fx.invest2.cls].name }), -amt, 'note') }
@@ -757,7 +761,7 @@ function applyFx(s, rng, fx, add) {
     s.cash -= cost
     add(t(h.label), -cost)
     const p = payoutFor(s.coverage, { cat: h.cat, medicalCost: h.medical || 0, otherCost: h.other || 0, income: s.income, years: 0, accident: !!h.accident })
-    if (p.total > 0) { s.cash += p.total; s.year.payout += p.total; add(t('保險理賠'), p.total, 'cover') }
+    if (p.total > 0) { s.cash += p.total; s.year.payout += p.total; add(t('保險理賠'), p.total, 'cover'); openClaim(s, p, { cat: h.cat, label: h.label }) }
     else add(t('沒有對應的保險,全部由自己承擔'), 0, 'warn')
   }
   if (fx.cash) { s.cash += fx.cash; add(t(fx.cash > 0 ? '收入' : '花費'), fx.cash) }
@@ -794,7 +798,7 @@ function applyFx(s, rng, fx, add) {
     s.cash -= r.cost
     add(t(r.label || '意外損失'), -r.cost)
     const p = payoutFor(s.coverage, { cat: r.cat, otherCost: r.cost })
-    if (p.total) { s.cash += p.total; s.year.payout += p.total; add(t('旅平險給付'), p.travel, 'cover') }
+    if (p.total) { s.cash += p.total; s.year.payout += p.total; add(t('旅平險給付'), p.travel, 'cover'); openClaim(s, p, { cat: r.cat, label: r.label }) }
     else add(t('沒有對應的保險,全部由自己承擔'), 0, 'warn')
   }
   if (fx.coverage) {
@@ -877,6 +881,7 @@ const specials = {
 
 // ---------- 每年的小事 ----------
 export function buildMinorScene(s, id, k, m) {
+  if (id === 'mkt_flash') return buildFlashScene(s)
   const st = stageById(id)
   if (st) {
     // 人生階段:孩子長大、自己變老(標題裡的 {kid} 換成老大、老二…)

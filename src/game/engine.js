@@ -1,5 +1,7 @@
 // 遊戲規則引擎(公開介面)。所有金額、機率、保險給付都在這裡「確定性」計算。
 // AI(Gemini)只負責文字與教練回饋,不會改動任何數字。
+import { settleDue } from './claims.js'
+import { flashDue, settleFlash } from './flash.js'
 import { CARDS, useCard } from './cards.js'
 import { PRODUCTS, totalPremium } from './products.js'
 import {
@@ -126,6 +128,7 @@ export function roll(state, world = {}) {
     const stages = queueStages(s)
     const minors = drawMinors(s, rng)
     s.minorQueue = [...stages, ...(stages.length ? minors.slice(0, 1) : minors)]
+    if (flashDue(s)) s.minorQueue.push('mkt_flash') // 盤中行情
     s.minorTotal = s.minorQueue.length
     s.dice = d1 + d2
     s.diceFaces = [d1, d2]
@@ -140,6 +143,7 @@ export function roll(state, world = {}) {
 export function choose(state, idx, opts = {}) {
   return run(state, (s, rng) => {
     if (s.phase !== 'scene' || !s.scene) return
+    if (s.claim?.filed) s.claim = null // 上一件事的理賠已經申請完了
     const sc = s.scene
     const choice = sc.choices[idx] || sc.choices[0]
     sc.picked = idx
@@ -362,6 +366,7 @@ export function endYear(state) {
       spec: clamp(1.5 * m - 0.02 + rng.normal(0, 0.22), -0.85, 2.0),
     }
     for (const k of ASSET_ORDER) s.hold[k] = Math.round(Math.max(0, s.hold[k] * (1 + returns[k])))
+    settleFlash(s, returns.stock)
     // 投資型保單:帳戶價值隨市場波動、扣除費用;前兩年扣費特別高。
     const ilTier = PRODUCTS.invlinked.tiers[s.coverage.invlinked || 0]
     if (s.ilv > 0 || ilTier.invest) {
@@ -395,6 +400,8 @@ export function endYear(state) {
     s.ap = 2
     s.pendingOps = []
     s.year = blankYear()
+    s.claim = null
+    settleDue(s) // 去年缺件的理賠金,補件後今年入帳
     s.minorQueue = []
     s.extraRoll = false
     s.scene = null
