@@ -1040,10 +1040,20 @@ export class BoardScene {
     t.group.position.set(p.x + (t.offset?.x || 0), p.y, p.z + (t.offset?.z || 0))
   }
 
+  // 同一個棋子的移動排隊執行,不會兩段動畫同時跑(同時跑會走過頭,下一次就繞一整圈)
   moveToken(i, toPos) {
+    const t = this.tokens[i]
+    if (!t) return Promise.resolve()
+    t.chain = (t.chain || Promise.resolve()).then(() => this.walkToken(i, toPos))
+    return t.chain
+  }
+
+  walkToken(i, toPos) {
     const t = this.tokens[i]
     const steps = (toPos - t.pos + N) % N
     if (!steps) return Promise.resolve()
+    // 兩顆骰子最多走 12 格;超過代表畫面和遊戲位置不同步,直接跳過去,不要繞一圈
+    if (steps > 12) { this.teleport(i, toPos); return Promise.resolve() }
     t.busy = true
     this.focusIdx = i
     this.setMode('token')

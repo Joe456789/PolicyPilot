@@ -103,6 +103,7 @@ function GameApp() {
     setPlayers(ps)
   }, [])
   const human = () => playersRef.current[0].s
+  const rolling = useRef(false) // 擲骰動畫進行中:連點兩下不會擲兩次
 
   // 對手說話:先用 AI 產生的句子(若有),否則用離線台詞。每次最多一句,避免洗版。
   const banterAi = useRef({})
@@ -400,7 +401,8 @@ function GameApp() {
   // ---------- 你的回合 ----------
   async function onRoll() {
     const cur = human()
-    if (busy || cur.phase !== 'plan') return
+    if (busy || rolling.current || cur.phase !== 'plan') return
+    rolling.current = true
     setBusy(true)
     setSceneReady(false)
     setAiText(null)
@@ -423,6 +425,7 @@ function GameApp() {
       await sleep(900 + ng.dice * 120)
     }
     commit(0, ng)
+    rolling.current = false
     if (ng.extraRoll) showToast({ icon: '🎲', title: t('雙骰!{a} + {b}', { a: ng.diceFaces[0], b: ng.diceFaces[1] }), text: t('這件事結束後可以再擲一次'), tone: 'good' }, 2200)
     requestAi(ng)
     sfx.card()
@@ -431,6 +434,8 @@ function GameApp() {
   }
 
   async function onRollAgain() {
+    if (rolling.current || !canRollAgain(human())) return
+    rolling.current = true
     setBusy(true)
     setSceneReady(false)
     setAiText(null)
@@ -444,6 +449,7 @@ function GameApp() {
       b.setActiveTile(ng.pos)
     } else await sleep(900 + ng.dice * 80)
     commit(0, ng)
+    rolling.current = false
     requestAi(ng)
     sfx.card()
     setSceneReady(true)
