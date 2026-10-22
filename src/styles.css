@@ -882,7 +882,7 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
 .journey.stage-uni { background: linear-gradient(160deg, #cfe9ff, #e9ddff); }
 .journey.stage-work { background: linear-gradient(160deg, #ffe5a8, #c9f0dc); }
 :root[data-theme="dark"] .journey { filter: brightness(0.62) saturate(1.1); }
-.journey::before { content: ''; position: absolute; inset: -20%; background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255, 255, 255, 0.35) 0 6deg, transparent 6deg 14deg); animation: burstSpin 40s linear infinite; }
+.journey::before { content: ''; position: absolute; inset: -60vmax; background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.35) 0 6deg, transparent 6deg 14deg); animation: burstSpin 40s linear infinite; } /* 放大到畫面好幾倍,轉到斜角時四個角才不會露出方形邊 */
 .journey-icons span { position: absolute; bottom: -40px; font-size: 42px; opacity: 0; animation: jFloat 3.2s ease-in infinite; }
 @keyframes jFloat { 0% { transform: translateY(0) rotate(-10deg); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(-105vh) rotate(14deg); opacity: 0; } }
 .journey-main { position: relative; display: grid; justify-items: center; gap: 10px; width: min(92vw, 460px); text-align: center; color: #1f2a37; }
