@@ -312,8 +312,8 @@ blockquote p { margin-top: 6px; line-height: 1.7; }
 
 /* ---------- v2:創角、理財、階段分析 ---------- */
 .creator-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 900px) { .creator-grid { grid-template-columns: 1fr; } }
 .who { position: sticky; top: 12px; display: grid; gap: 14px; }
+@media (max-width: 900px) { .creator-grid { grid-template-columns: 1fr; } .who { position: static; } } /* 直排時外型面板不固定,否則會蓋住下面的個性與志向 */
 .who-preview { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .field { display: grid; gap: 6px; font-weight: 700; font-size: 14px; }
 .field input { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; background: var(--surface); }
