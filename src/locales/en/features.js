@@ -114,4 +114,8 @@ export default {
   '股市急跌': 'Market plunge',
   '股市大漲': 'Market rally',
   '理賠金延到下一年入帳': 'Payout delayed to next year',
+
+  // 學習報告 PDF
+  '報告產生中…': 'Creating report…',
+  '保險大富翁學習報告': 'PolicyPilot-learning-report',
 }

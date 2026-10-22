@@ -17,6 +17,7 @@ import { coachFallback } from '../game/fallback.js'
 import { wan } from '../game/format.js'
 import { ai } from '../ai.js'
 import { t, useLang } from '../i18n.js'
+import { downloadReportPdf } from '../reportPdf.js'
 
 // 把 {name} 佔位換成 <b>…</b>(先翻譯再切開,中文輸出與原本逐字相同)
 function rich(key, vars, boldKeys) {
@@ -49,6 +50,20 @@ const PARTS = [
 
 export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, newCards = [], onRecords }) {
   const lang = useLang()
+  const [pdfBusy, setPdfBusy] = useState(false)
+  // 下載 PDF:直接產生檔案;萬一失敗(例如瀏覽器不支援),退回瀏覽器的列印視窗
+  async function onPdf() {
+    const el = document.querySelector('.print-report')
+    if (!el) return window.print()
+    setPdfBusy(true)
+    try {
+      await downloadReportPdf(el, `${t('保險大富翁學習報告')}-${s.player.name}.pdf`)
+    } catch {
+      window.print()
+    } finally {
+      setPdfBusy(false)
+    }
+  }
   const report = buildReport(s)
   const { score } = report
   const ps = propSummary(s)
@@ -102,7 +117,7 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, newCards 
       </section>
 
       <div className="res-tools">
-        <button className="btn" onClick={() => window.print()}><Printer size={16} aria-hidden /> {t('下載 PDF 學習報告')}</button>
+        <button className="btn" disabled={pdfBusy} onClick={onPdf}><Printer size={16} aria-hidden /> {pdfBusy ? t('報告產生中…') : t('下載 PDF 學習報告')}</button>
       </div>
 
       <div className="res-top">

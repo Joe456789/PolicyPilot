@@ -720,23 +720,29 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
   @page { size: A4; margin: 14mm; }
   :root, :root[data-theme="dark"] { --paper: #fff; --cream: #fff; --ink: #111; --ink-2: #222; --muted: #555; --line: #bbb; --surface: #fff; --surface-2: #f3f3f3; color-scheme: light; }
   body { background: #fff !important; zoom: 1 !important; }
-  .settings-fab, .tour, .ach-pop, .overlay { display: none !important; }
+  .settings-fab, .tour, .ach-pop, .overlay, .demo-bar, .fx-layer, .toast { display: none !important; }
   .screen.result > *:not(.print-report) { display: none !important; }
   .screen.result { padding: 0 !important; background: none !important; }
   .print-report { display: block !important; color: #111; font-size: 11.5pt; line-height: 1.6; }
   .print-report * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .pr-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00915a; padding-bottom: 8px; margin-bottom: 10px; }
-  .pr-head h1 { font-size: 22pt; color: #006b43; } .pr-head p { color: #555; }
-  .pr-score { text-align: center; } .pr-score b { display: block; font-size: 30pt; color: #006b43; line-height: 1; } .pr-score span { font-weight: 800; }
-  .print-report h2 { font-size: 13.5pt; margin: 14px 0 6px; padding-left: 8px; border-left: 5px solid #f5a524; break-after: avoid; }
-  .pr-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10.5pt; break-inside: auto; }
-  .pr-table th, .pr-table td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
-  .pr-table th { background: #f1efe5; width: 18%; } .pr-gap th, .pr-years th { width: auto; }
-  .pr-table tr { break-inside: avoid; }
-  .pr-script { border: 1px solid #ccc; border-left: 5px solid #00915a; padding: 6px 10px; margin: 6px 0; break-inside: avoid; }
-  .pr-note { color: #555; font-size: 10pt; } .pr-foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #bbb; font-size: 9pt; color: #666; }
-  .print-report svg { max-width: 100%; height: auto; }
 }
+/* 學習報告的版面(列印與「下載 PDF」共用) */
+.print-report.pdf-render {
+  display: block; position: fixed; left: -10000px; top: 0; width: 760px; padding: 28px 32px; background: #fff; color: #111; font-size: 15px; line-height: 1.6;
+  --paper: #fff; --cream: #fff; --ink: #111; --ink-2: #222; --muted: #555; --line: #bbb; --surface: #fff; --surface-2: #f3f3f3;
+}
+.print-report.pdf-render h2 { color: #111; }
+.pr-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00915a; padding-bottom: 8px; margin-bottom: 10px; }
+.pr-head h1 { font-size: 22pt; color: #006b43; } .pr-head p { color: #555; }
+.pr-score { text-align: center; } .pr-score b { display: block; font-size: 30pt; color: #006b43; line-height: 1; } .pr-score span { font-weight: 800; }
+.print-report h2 { font-size: 13.5pt; margin: 14px 0 6px; padding-left: 8px; border-left: 5px solid #f5a524; break-after: avoid; }
+.pr-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10.5pt; break-inside: auto; }
+.pr-table th, .pr-table td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+.pr-table th { background: #f1efe5; width: 18%; } .pr-gap th, .pr-years th { width: auto; }
+.pr-table tr { break-inside: avoid; }
+.pr-script { border: 1px solid #ccc; border-left: 5px solid #00915a; padding: 6px 10px; margin: 6px 0; break-inside: avoid; }
+.pr-note { color: #555; font-size: 10pt; } .pr-foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #bbb; font-size: 9pt; color: #666; }
+.print-report svg { max-width: 100%; height: auto; }
 
 /* 深色模式:文字對比修正(以自動對比度掃描為準) */
 :root[data-theme="dark"] { --green-text: #7fe0b4; --red-text: #ff8a8f; }
