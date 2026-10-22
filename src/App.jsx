@@ -109,6 +109,8 @@ function GameApp() {
   }, [])
   const human = () => playersRef.current[0].s
   const rolling = useRef(false) // 擲骰動畫進行中:連點兩下不會擲兩次
+  // 3D 動畫最多等這麼久:分頁在背景、場景被重建時動畫可能停住,不能讓遊戲卡死
+  const anim = (p, ms) => Promise.race([Promise.resolve(p).catch(() => {}), sleep(ms)])
 
   // 對手說話:先用 AI 產生的句子(若有),否則用離線台詞。每次最多一句,避免洗版。
   const banterAi = useRef({})
@@ -227,6 +229,7 @@ function GameApp() {
     banterTurns.current.clear()
     banterAi.current = {}
     setPlayers(m.players)
+    rolling.current = false
     setGameKey((k) => k + 1)
     setActiveIdx(0)
     setFeed([])
@@ -250,6 +253,7 @@ function GameApp() {
     banterTurns.current.clear()
     banterAi.current = {}
     setPlayers(d.players)
+    rolling.current = false
     setGameKey((k) => k + 1)
     setActiveIdx(0)
     setFeed(d.feed || [])
@@ -410,57 +414,64 @@ function GameApp() {
     if (busy || rolling.current || cur.phase !== 'plan') return
     rolling.current = true
     setBusy(true)
-    setSceneReady(false)
-    setAiText(null)
-    setActiveIdx(0)
-    sfx.unlock()
-    sfx.dice()
-    const ng = roll(cur, worldOf(playersRef.current))
-    const b = boardRef.current
-    if (ng.dice == null) {
-      // 住院休養:這一回合不擲骰、不移動
-      b?.focus(0)
-      await sleep(700)
-      b?.setActiveTile(ng.pos)
-    } else if (b) {
-      await b.rollDice(ng.diceFaces)
-      b.hideDice()
-      await b.moveToken(0, ng.pos)
-      b.setActiveTile(ng.pos)
-    } else {
-      await sleep(900 + ng.dice * 120)
+    try {
+      setSceneReady(false)
+      setAiText(null)
+      setActiveIdx(0)
+      sfx.unlock()
+      sfx.dice()
+      const ng = roll(cur, worldOf(playersRef.current))
+      const b = boardRef.current
+      if (ng.dice == null) {
+        // 住院休養:這一回合不擲骰、不移動
+        b?.focus(0)
+        await sleep(700)
+        b?.setActiveTile(ng.pos)
+      } else if (b) {
+        await anim(b.rollDice(ng.diceFaces), 7000)
+        b.hideDice()
+        await anim(b.moveToken(0, ng.pos), 9000)
+        b.setActiveTile(ng.pos)
+      } else {
+        await sleep(900 + ng.dice * 120)
+      }
+      commit(0, ng)
+      if (ng.extraRoll) { fx('doubles'); sfx.doubles() }
+      if (ng.extraRoll) showToast({ icon: '🎲', title: t('雙骰!{a} + {b}', { a: ng.diceFaces[0], b: ng.diceFaces[1] }), text: t('這件事結束後可以再擲一次'), tone: 'good' }, 2200)
+      requestAi(ng)
+      sfx.card()
+    } finally {
+      // 不論動畫有沒有出錯,都要解鎖,否則之後永遠不能擲骰
+      rolling.current = false
+      setSceneReady(true)
+      setBusy(false)
     }
-    commit(0, ng)
-    rolling.current = false
-    if (ng.extraRoll) { fx('doubles'); sfx.doubles() }
-    if (ng.extraRoll) showToast({ icon: '🎲', title: t('雙骰!{a} + {b}', { a: ng.diceFaces[0], b: ng.diceFaces[1] }), text: t('這件事結束後可以再擲一次'), tone: 'good' }, 2200)
-    requestAi(ng)
-    sfx.card()
-    setSceneReady(true)
-    setBusy(false)
   }
 
   async function onRollAgain() {
     if (rolling.current || !canRollAgain(human())) return
     rolling.current = true
     setBusy(true)
-    setSceneReady(false)
-    setAiText(null)
-    sfx.dice()
-    const ng = rollAgain(human(), worldOf(playersRef.current))
-    const b = boardRef.current
-    if (b) {
-      await b.rollDice(ng.diceFaces)
-      b.hideDice()
-      await b.moveToken(0, ng.pos)
-      b.setActiveTile(ng.pos)
-    } else await sleep(900 + ng.dice * 80)
-    commit(0, ng)
-    rolling.current = false
-    requestAi(ng)
-    sfx.card()
-    setSceneReady(true)
-    setBusy(false)
+    try {
+      setSceneReady(false)
+      setAiText(null)
+      sfx.dice()
+      const ng = rollAgain(human(), worldOf(playersRef.current))
+      const b = boardRef.current
+      if (b) {
+        await anim(b.rollDice(ng.diceFaces), 7000)
+        b.hideDice()
+        await anim(b.moveToken(0, ng.pos), 9000)
+        b.setActiveTile(ng.pos)
+      } else await sleep(900 + ng.dice * 80)
+      commit(0, ng)
+      requestAi(ng)
+      sfx.card()
+    } finally {
+      rolling.current = false
+      setSceneReady(true)
+      setBusy(false)
+    }
   }
 
   async function requestAi(ng) {
