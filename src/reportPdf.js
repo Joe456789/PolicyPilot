@@ -41,8 +41,20 @@ export async function downloadReportPdf(el, filename) {
       y = end
       page++
     }
+    const blob = pdf.output('blob')
+    // 在 Claude 線上版(嵌入的頁面)裡不能直接下載,要透過平台的存檔功能,會跳出確認視窗
+    const downloads = window.claude?.use ? await window.claude.use('downloads') : null
+    if (downloads) {
+      try {
+        await downloads.save({ filename, data: blob })
+        return
+      } catch (e) {
+        if (e?.code === 'declined' || e?.code === 'rate_limited') return // 使用者取消,不要再跳一次
+        // 其他錯誤:退回一般下載
+      }
+    }
     // 自己建立下載連結,檔名(含中文)才不會變成 download
-    const url = URL.createObjectURL(pdf.output('blob'))
+    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = filename
