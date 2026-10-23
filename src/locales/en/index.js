@@ -14,5 +14,6 @@ import lifestages from './lifestages.js'
 import db from './db.js'
 import ml from './ml.js'
 import features from './features.js'
+import v5 from './v5.js'
 
-export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions, ...lifestages, ...db, ...ml, ...features }
+export default { ...game, ...data, ...prologue, ...coach, ...ui1, ...ui2, ...settings, ...extra, ...minor, ...shop, ...regions, ...lifestages, ...db, ...ml, ...features, ...v5 }

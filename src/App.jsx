@@ -23,6 +23,7 @@ import {
   createGame, roll, choose, endYear, hasMinor, nextMinor, canRollAgain, rollAgain, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
   computeScore, evalQuests, directorInfo, applyAiScene, propAction,
 } from './game/engine.js'
+import { histYearOf } from './game/history.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
 import { PERSONAS, botPlan, botAct, botChoose, botStars, botMinors } from './game/bots.js'
 import { createMatch, rank, finishMatch, worldOf, applyOps } from './game/match.js'
@@ -63,6 +64,7 @@ function GameApp() {
   const [lifeLoading, setLifeLoading] = useState(false)
   const [length, setLength] = useState('standard')
   const [opponents, setOpponents] = useState(2)
+  const [histStart, setHistStart] = useState(0) // 0 = 模擬行情;年份 = 照台股真實歷史走
   // 對局
   const [players, setPlayers] = useState([])
   const playersRef = useRef([])
@@ -159,6 +161,8 @@ function GameApp() {
       }
       const age = Number(params.get('age') || 22)
       if (age > 22) setup.start = adultStart({ age, bgId: setup.background, careerId: setup.career, seed: seedOf() })
+      // ?hist=2008:股市照台股 2008 年起的真實行情走
+      if (params.get('hist')) setup.market = { mode: 'history', start: Number(params.get('hist')) }
       startAdult(setup, Number(params.get('opp') ?? 2))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -366,7 +370,7 @@ function GameApp() {
 
   function onPickCareer(careerId) {
     sfx.fanfare()
-    startAdult(lifeToSetup(life, careerId, length, opponents), opponents)
+    startAdult({ ...lifeToSetup(life, careerId, length, opponents), market: histStart ? { mode: 'history', start: histStart } : null }, opponents)
   }
 
   // ---------- 提示 / 特效 ----------
@@ -759,6 +763,8 @@ function GameApp() {
         setLength={setLength}
         opponents={opponents}
         setOpponents={setOpponents}
+        histStart={histStart}
+        setHistStart={setHistStart}
       />
     )
   }
@@ -808,7 +814,7 @@ function GameApp() {
           <div className="stage-hud">
             <div className="year-chip">
               <Avatar look={g.player.look} size={30} ring={false} />
-              <span><b>{t('{age} 歲', { age: g.age })}</b> · {t('第 {n} / {m} 年', { n: Math.min(g.turn + 1, g.years), m: g.years })}{players.length > 1 && activeIdx > 0 ? ` · ${t('{name}的回合', { name: players[activeIdx].name })}` : ''}</span>
+              <span><b>{t('{age} 歲', { age: g.age })}</b> · {t('第 {n} / {m} 年', { n: Math.min(g.turn + 1, g.years), m: g.years })}{histYearOf(g) ? ` · ${t('台股 {year} 年', { year: histYearOf(g).year })}` : ''}{players.length > 1 && activeIdx > 0 ? ` · ${t('{name}的回合', { name: players[activeIdx].name })}` : ''}</span>
             </div>
             {auto && !demo && <div className="auto-chip" role="status"><i className="pulse" aria-hidden /> {Number.isFinite(auto.left) ? t('電腦託管中 · 還剩 {n} 年', { n: Math.max(0, auto.left) }) : t('電腦託管中 · 到結束')} <button onClick={() => stopAuto()}>{t('接手')}</button></div>}
             <Toast toast={toast} />

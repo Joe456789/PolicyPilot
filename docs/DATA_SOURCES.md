@@ -21,6 +21,45 @@
 | 2025 年詐騙財損 893.26 億元、受理 16.2 萬件 | 內政部警政署 165 打詐儀錶板 | 檢警詐騙電話、出租帳戶、假門票、LINE 借錢、投資群組、防詐講座 | [台視新聞](https://news.ttv.com.tw/news/11501190003200W) |
 | 台股加權指數 2022 年全年下跌 22.4% | 臺灣證券交易所(財經媒體整理) | 帳面少兩成、下跌的市場行情 | [今周刊](https://www.businesstoday.com.tw/article/category/183008/post/202301030004/) |
 
+## 歷史行情模式:台股加權指數年底收盤
+
+選「台股真實歷史」時,每一年的股市報酬 = 當年年底收盤 ÷ 前一年年底收盤 − 1(資料在 `src/game/history.js`)。
+加權指數是**價格指數**,不含股利,所以遊戲裡的報酬比真實的「含息報酬」略低;2025 年以後回到模擬行情。
+測試 `test/history.test.js` 會把算出來的年報酬和下表「公布的漲跌幅」逐年比對。
+
+| 年 | 年底收盤 | 全年漲跌 | 查證來源 |
+|---|---|---|---|
+| 1999 | 8,448.84 | (基期) | 由 2000 年收盤與全年跌點 3,704.90 回推 |
+| 2000 | 4,743.94 | −43.85% | Wikipedia TAIEX 年度表 |
+| 2001 | 5,551.24 | +17.02% | Wikipedia TAIEX 年度表 |
+| 2002 | 4,452.45 | −19.79% | Wikipedia TAIEX 年度表 |
+| 2003 | 5,890.69 | +32.30% | Wikipedia TAIEX 年度表 |
+| 2004 | 6,139.69 | +4.2% | [中央銀行 2004 年報](https://www.cbc.gov.tw/public/data/publications/year2004/financial-60-65.pdf) |
+| 2005 | 6,548.34 | +6.6% | [證交所 Fact Book 2006](https://www.twse.com.tw/downloads/zh/about/company/factbook/2006/web/0.0105.htm)、[央行 2005 年報](https://www.cbc.gov.tw/public/data/publications/year2005/05ar_ii-6.pdf) |
+| 2006 | 7,823.72 | +19.48% | 央行年報(7,823.7) |
+| 2007 | 8,506.28 | +8.7% | [證交所 Fact Book 2008](https://www.twse.com.tw/downloads/zh/about/company/factbook/2008/0.0105.htm)、央行 2007 年報 |
+| 2008 | 4,591.22 | −46.02% | [證交所 60 週年刊](https://www.twse.com.tw/staticFiles/product/publication/twse60/html/174/) |
+| 2009 | 8,188.11 | +78.34% | [證交所 60 週年刊](https://www.twse.com.tw/staticFiles/product/publication/twse60/html/174/) |
+| 2010 | 8,972.50 | +9.58% | [證交所 Fact Book 2011](https://www.twse.com.tw/downloads/zh/about/company/factbook/2011/0.0105.htm) |
+| 2011 | 7,072.08 | −21.18% | [證交所 Fact Book 2012](https://www.twse.com.tw/downloads/zh/about/company/factbook/2012/0.0105.htm) |
+| 2012 | 7,699.50 | +8.87% | [央行 2013 年報](https://www.cbc.gov.tw/en/public/Attachment/463016195271.PDF) |
+| 2013 | 8,611.51 | +11.85% | [證交所 Fact Book 2014](https://www.twse.com.tw/downloads/zh/about/company/factbook/2014/0.0105.htm) |
+| 2014 | 9,307.26 | +8.08% | [今周刊(TEJ 年度統計)](https://www.businesstoday.com.tw/article/category/183008/post/202512310015/) |
+| 2015 | 8,338.06 | −10.41% | [證交所 Fact Book 2016](https://www.twse.com.tw/downloads/zh/about/company/factbook/2016/0.0105.html) |
+| 2016 | 9,253.50 | +10.98% | [中央社](https://www.cna.com.tw/news/afe/201612300211.aspx)、今周刊(TEJ) |
+| 2017 | 10,642.86 | +15.01% | [Yahoo 股市(引證交所統計)](https://tw.stock.yahoo.com/) |
+| 2018 | 9,727.41 | −8.60% | Yahoo 股市(引證交所統計) |
+| 2019 | 11,997.14 | +23.33% | [台灣英文新聞](https://www.taiwannews.com.tw/zh/news/3847785)、證交所 108 年年報 |
+| 2020 | 14,732.53 | +22.8% | [中央社](https://www.cna.com.tw/news/afe/202012310240.aspx) |
+| 2021 | 18,218.84 | +23.66% | [中央社](https://www.cna.com.tw/news/firstnews/202112300397.aspx) |
+| 2022 | 14,137.69 | −22.4% | Goodinfo 年 K 線、[今周刊](https://www.businesstoday.com.tw/article/category/183008/post/202301030004/) |
+| 2023 | 17,930.81 | +26.83% | [聯合新聞網](https://money.udn.com/money/story/5607/9237541) |
+| 2024 | 23,035.10 | +28.47% | [聯合新聞網](https://money.udn.com/money/story/5607/9237541)、[工商時報](https://www.ctee.com.tw/news/20241228700045-430201) |
+| 2025 | 28,963.6 | +25.73% | [聯合新聞網](https://money.udn.com/money/story/5607/9237541)、[中央社](https://www.cna.com.tw/news/afe/202512310246.aspx) |
+
+每一年旁邊的「發生了什麼」(例如 2008 年金融海嘯、2020 年疫情)是簡短的歷史背景,方便玩家連結真實事件;
+行情格的劇情**不交給 AI 改寫**,避免改錯史實。
+
 ## 刻意沒有放的數據
 
 - **2008 年金融海嘯台股跌幅**:不同來源的數字不一致(全年跌幅與高低點跌幅混用),查不到可靠的單一數字,所以不放。

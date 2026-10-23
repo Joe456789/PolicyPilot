@@ -73,9 +73,9 @@ function botLifeSetup(p, seed, length, opponents, startAge = 22) {
   return lifeToSetup(l, pick.id, length, opponents)
 }
 
-export function createBotGame(p, seed, length, startAge = 22) {
+export function createBotGame(p, seed, length, startAge = 22, market = null) {
   const setup = botLifeSetup(p, seed, length, 0, startAge)
-  return createGame(setup, seed)
+  return createGame({ ...setup, market }, seed)
 }
 
 // ---------- 年度規劃 ----------

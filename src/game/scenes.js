@@ -11,6 +11,7 @@ import {
 import { PRODUCTS, payoutFor } from './products.js'
 import { openClaim } from './claims.js'
 import { buildFlashScene, applyFlash } from './flash.js'
+import { histYearOf, taiexYear } from './history.js'
 import { MINIGAMES, MINIGAME_IDS, MINIGAME_REWARD } from './minigames.js'
 import { areaById, ownsArea, AREA_BONUS, AREA_NEED, areaCount } from './properties.js'
 import { propByTile, propById, LEVELS, rentOf, tollOf, upgradeCost, propPremium, mortgagePayment, localNews, baseRent, RISK_NAME } from './properties.js'
@@ -171,7 +172,33 @@ function buildChance(s, rng) {
   })
 }
 
+const MARKET_CHOICES = (up) => [
+  { label: t('繼續持有,耐心等待'), hint: t('不動作'), tag: 'hold' },
+  { label: up ? t('獲利了結,賣出股票類資產') : t('先賣出,避免再跌'), hint: t('把股票與個股轉成現金'), tag: 'sell' },
+  { label: t('趁機加碼(現金的 30% 買 ETF)'), hint: t('提高股票型 ETF 部位'), tag: 'buy' },
+]
+const signPct = (r) => `${r >= 0 ? '+' : ''}${(r * 100).toFixed(1)}%`
+
+// 歷史行情模式:行情格顯示「今年」真實發生的台股行情。AI 不改寫(避免改錯史實)。
+function buildHistMarket(s, h) {
+  const up = h.ret >= 0
+  const hasRisk = s.hold.stock + s.hold.spec > 0
+  const nx = taiexYear(h.year + 1)
+  return scene({
+    kind: 'market', aiable: false, defId: 'taiex', icon: up ? '📈' : '📉', tone: up ? 'good' : 'bad',
+    title: t('{year} 年:{news}', { year: h.year, news: t(h.news) }),
+    story: t('這是台股真實發生過的一年。你要怎麼處理手上的股票類資產?') + (hasRisk ? '' : t('。你目前沒有持有股票類資產,這次和你的資產無關,但也許是個進場的機會。')),
+    lesson: nx
+      ? t('真實歷史:台股 {year} 年全年 {pct},隔年({next} 年){npct}。短期漲跌難以預測,事先定好配置比猜高低點重要。', { year: h.year, pct: signPct(h.ret), next: nx.year, npct: signPct(nx.ret) })
+      : t('真實歷史:台股 {year} 年全年 {pct}。短期漲跌難以預測,事先定好配置比猜高低點重要。', { year: h.year, pct: signPct(h.ret) }),
+    base: { ret: h.ret, rebound: 0, house: null, hist: { year: h.year, close: h.close, prev: h.prev } },
+    choices: MARKET_CHOICES(up),
+  })
+}
+
 function buildMarket(s, rng) {
+  const h = histYearOf(s)
+  if (h) return buildHistMarket(s, h)
   const m = pickDef(s, rng, MARKET_DEFS, { once: false })
   const up = m.ret >= 0
   const hasRisk = s.hold.stock + s.hold.spec > 0
@@ -180,11 +207,7 @@ function buildMarket(s, rng) {
     story: paren(t(m.headline), t(m.analog)) + (hasRisk ? '' : t('。你目前沒有持有股票類資產,這次和你的資產無關,但也許是個進場的機會。')),
     lesson: t(m.note),
     base: { ret: m.ret, rebound: m.rebound, house: m.house ?? null },
-    choices: [
-      { label: t('繼續持有,耐心等待'), hint: t('不動作'), tag: 'hold' },
-      { label: up ? t('獲利了結,賣出股票類資產') : t('先賣出,避免再跌'), hint: t('把股票與個股轉成現金'), tag: 'sell' },
-      { label: t('趁機加碼(現金的 30% 買 ETF)'), hint: t('提高股票型 ETF 部位'), tag: 'buy' },
-    ],
+    choices: MARKET_CHOICES(up),
   })
 }
 

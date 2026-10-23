@@ -5,6 +5,7 @@ import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js
 import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
 import { initialKids } from './lifestages.js'
+import { normalizeMarket } from './history.js'
 import { t, getLang } from '../i18n.js'
 
 // 棋盤:100 格,沿著 map.js 的路徑環島一圈,依序經過北、中、南、東 4 區;28 格資產格 + 事件、機會、行情、小遊戲等。
@@ -116,6 +117,8 @@ export function createGame(setup, seed = Math.floor(Math.random() * 100000)) {
     },
     career,
     length: length.id,
+    // 市場行情:null = 模擬行情;{ mode: 'history', start } = 照台股真實歷史走
+    market: normalizeMarket(setup.market),
     // 太長的局最多玩到 90 歲
     years: Math.min(length.years, 90 - startAge),
     turn: 0,

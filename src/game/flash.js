@@ -9,6 +9,8 @@ const riskyHold = (s) => s.hold.stock + s.hold.spec
 
 // 這一年會不會有盤中行情:手上有股票類資產,而且大約一半的年份
 export function flashDue(s) {
+  // 歷史行情模式不出現盤中行情,年度漲跌才會和真實資料一致
+  if (s.market?.mode === 'history') return false
   return riskyHold(s) >= 100000 && hash(s.seed * 7919 + s.turn * 104729) < 0.45
 }
 

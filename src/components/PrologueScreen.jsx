@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import SceneModal from './SceneModal.jsx'
 import { MAJORS, PROLOGUE_LENGTH } from '../game/prologue.js'
+import { HIST_STARTS } from '../game/history.js'
 import { TAGS } from '../game/tags.js'
 import { wan } from '../game/format.js'
 import { sfx } from '../sfx.js'
@@ -12,7 +13,7 @@ import { useArt, sceneArtIds } from '../art.js'
 const STAT = [['health', '健康', '💪'], ['study', '學業', '📚'], ['social', '人緣', '🤝'], ['finance', '財商', '💰']] // i18n-ignore 顯示時用 t(n)
 
 // 成長篇:0 ~ 21 歲。每個階段一張事件卡,像「選擇人生」一樣一路做選擇。
-export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose, onContinue, careerOptions, onPickCareer, length, setLength, opponents, setOpponents }) {
+export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose, onContinue, careerOptions, onPickCareer, length, setLength, opponents, setOpponents, histStart = 0, setHistStart }) {
   const [shown, setShown] = useState(false)
   const [journey, setJourney] = useState(null)
   const prevAge = useRef(0)
@@ -93,6 +94,14 @@ export default function PrologueScreen({ life, phase, aiTag, loadingAi, onChoose
                 <option value={0}>{t('不要(單人)')}</option><option value={1}>{t('1 位')}</option><option value={2}>{t('2 位')}</option><option value={3}>{t('3 位')}</option>
               </select>
             </label>
+            {setHistStart && (
+              <label>{t('股市行情')}
+                <select id="hist" value={histStart} onChange={(e) => setHistStart(Number(e.target.value))}>
+                  <option value={0}>{t('模擬行情(每局不同)')}</option>
+                  {HIST_STARTS.map((h) => <option key={h.year} value={h.year}>{t('台股真實歷史:{label}', { label: t(h.label) })}</option>)}
+                </select>
+              </label>
+            )}
           </div>
         </div>
       )}

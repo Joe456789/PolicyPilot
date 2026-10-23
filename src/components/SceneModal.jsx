@@ -48,7 +48,7 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
         {(() => {
           // 真實數據卡:這件事在真實世界的台灣有多常見(政府公開統計)
           const f = factFor(scene)
-          return f && <div className="real-fact"><b>{f.icon} {t('真實世界的台灣')}</b><span>{t(f.text)}</span><small>{t('資料來源:{src}', { src: t(f.source) })}</small></div>
+          return f && <div className="real-fact"><b>{f.icon} {t('真實世界的台灣')}</b><span>{t(f.text, f.vars)}</span><small>{t('資料來源:{src}', { src: t(f.source) })}</small></div>
         })()}
 
         {scene.kind === 'advisor' && scene.base?.analysis?.gaps?.length > 0 && phase === 'scene' && (
@@ -117,7 +117,7 @@ export function YearModal({ s, onNext, last }) {
           {h.houseCost > 0 && <li className="line out"><span>{t('房貸還款')}</span><b>{signed(-h.houseCost)}</b></li>}
           <li className="line out"><span>{cap(t('保費'))}</span><b>{signed(-h.premiums)}</b></li>
           {h.recurring > 0 && <li className="line out"><span>{t('長期照護等支出')}</span><b>{signed(-h.recurring)}</b></li>}
-          <li className={`line ${h.ret < 0 ? 'out' : 'in'}`}><span>{t('股市年報酬')}</span><b>{(h.ret * 100).toFixed(1)}%</b></li>
+          <li className={`line ${h.ret < 0 ? 'out' : 'in'}`}><span>{h.calYear ? t('股市年報酬(台股 {year} 年實際)', { year: h.calYear }) : t('股市年報酬')}</span><b>{(h.ret * 100).toFixed(1)}%</b></li>
           {h.rent > 0 && <li className="line in"><span>{t('地產租金收入')}</span><b>{signed(h.rent)}</b></li>}
           {h.tolls > 0 && <li className="line in"><span>{t('收到的過路費')}</span><b>{signed(h.tolls)}</b></li>}
           {h.propLoan > 0 && <li className="line out"><span>{t('地產貸款還款')}</span><b>{signed(-h.propLoan)}</b></li>}

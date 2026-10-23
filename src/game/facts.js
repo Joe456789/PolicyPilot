@@ -38,6 +38,12 @@ const BY_ID = {
 // 這個場景要顯示哪一條真實數據(沒有就回傳 null)
 export function factFor(scene) {
   if (!scene) return null
+  // 歷史行情模式:直接用那一年的真實收盤
+  const h = scene.base?.hist
+  if (h) {
+    const pct = Math.round((h.close / h.prev - 1) * 1000) / 10
+    return { icon: pct < 0 ? '📉' : '📈', text: '台股加權指數 {year} 年底收在 {close} 點,較前一年底 {pct}%。', vars: { year: h.year, close: h.close.toLocaleString('en-US', { minimumFractionDigits: 2 }), pct: `${pct >= 0 ? '+' : ''}${pct}` }, source: '臺灣證券交易所' }
+  }
   const id = BY_ID[scene.defId]
   if (id) return FACTS[id]
   if (scene.kind === 'market' && (scene.base?.ret ?? 0) < 0) return FACTS.tw_stock

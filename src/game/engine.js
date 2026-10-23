@@ -13,6 +13,7 @@ import { dueStages } from './lifestages.js'
 import { buildScene, buildHospitalRest, buildMinorScene, resolveScene, acquireProperty, upgradeProp, insureProp, sellProp } from './scenes.js'
 import { propById, rentOf, propPremium, upgradeCost, RISK_NAME, areaMult } from './properties.js'
 import { updateQuests } from './quests.js'
+import { histReturn, histYearOf } from './history.js'
 import { t, trDeep, getLang } from '../i18n.js'
 
 export * from './core.js'
@@ -358,7 +359,8 @@ export function endYear(state) {
     s.year.recurringCost = recurring
 
     // 各類資產報酬:一場市場行情會同時影響股票、個股、債券。
-    const m = (s.year.marketReturn ?? clamp(rng.normal(0.065, 0.15), -0.4, 0.4)) + s.carryBonus
+    // 歷史行情模式:沒有踩到行情格的年份,也照台股當年的真實漲跌走
+    const m = (s.year.marketReturn ?? histReturn(s) ?? clamp(rng.normal(0.065, 0.15), -0.4, 0.4)) + s.carryBonus
     const returns = {
       deposit: 0.015,
       bond: clamp(0.028 + 0.2 * m + rng.normal(0, 0.015), -0.1, 0.2),
@@ -445,6 +447,7 @@ function snapshot(s, f) {
     recurring: f.recurring,
     ret: f.ret,
     returns: f.returns || null,
+    calYear: histYearOf(s)?.year ?? null,
     savingsIn: f.savingsIn,
     shockCost: s.year.shockCost,
     payout: s.year.payout,
