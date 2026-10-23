@@ -24,7 +24,11 @@ npm run record        # 另開一個終端機,會自動讀 .env 的 PORT;想看�
 
 輸出在 `video/`:
 - `保險大富翁_展示影片.webm`:原速完整版(約 3 分 30 秒)
-- `保險大富翁_展示影片_3分鐘版.mp4`:電腦託管那段加速 3 倍(約 2 分 50 秒),**上傳 YouTube 用這個**。需要電腦裡有 ffmpeg(Windows:`winget install ffmpeg`,裝完重開終端機)
+- `保險大富翁_展示影片_3分鐘版.mp4`:電腦託管那段加速 3 倍(約 2 分 50 秒),沒有聲音。需要電腦裡有 ffmpeg(Windows:`winget install ffmpeg`,裝完重開終端機)
+- `保險大富翁_展示影片_3分鐘版_配音版.mp4`:自動把字幕念成旁白,**上傳 YouTube 用這個**。
+  - 聲音最好的是微軟自然語音:先裝 Python,再執行 `pip install edge-tts`(要連網)
+  - 沒有 edge-tts 就用 Windows 內建語音(要有中文語音,沒有的話到「設定 → 時間與語言 → 語音」新增)
+  - 只想重新配音、不重錄:`npm run narrate`;換男聲:`$env:VOICE="zh-TW-YunJheNeural"; npm run narrate`
 - 兩個對應的 `.srt` 字幕:匯入剪映 / CapCut 可以直接「文字轉語音」產生旁白
 - `學習報告範例.pdf`:錄影時下載的學習報告
 

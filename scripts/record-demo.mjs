@@ -4,12 +4,14 @@
 // 程式會開一個瀏覽器,照腳本自動操作遊戲並錄影,完成後輸出:
 //   video/保險大富翁_展示影片.webm(或 .mp4)  影片
 //   video/保險大富翁_展示影片.srt               字幕(可匯入剪映/CapCut 產生旁白,或上傳到 YouTube)
+//   有 ffmpeg 時另外輸出 _3分鐘版.mp4(電腦託管加速)與 _3分鐘版_配音版.mp4(自動旁白,見 scripts/narrate.mjs)
 // 環境變數:BASE(遊戲網址,預設讀 .env 的 PORT,沒有就是 http://localhost:8080)、HEADED=1(看得到瀏覽器視窗)、BOARD=2d(用 2D 棋盤)
 // 沒有 Playwright 的 Chromium 就改用 Windows 內建的 Edge;Playwright 的 FFmpeg 下載失敗時,改用電腦裡的 ffmpeg 錄影。
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { narrate } from './narrate.mjs'
 
 let chromium
 try {
@@ -311,10 +313,12 @@ async function main() {
   const fast = path.join(OUT, '保險大富翁_展示影片_3分鐘版.mp4')
   const filter = `[0:v]trim=0:${a},setpts=PTS-STARTPTS[v0];[0:v]trim=${a}:${b},setpts=(PTS-STARTPTS)/${k}[v1];[0:v]trim=${b},setpts=PTS-STARTPTS[v2];[v0][v1][v2]concat=n=3:v=1[v]`
   const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', dest, '-filter_complex', filter, '-map', '[v]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', '30', '-crf', '20', fast], { stdio: 'inherit' })
-  if (r.status !== 0) return console.log('⚠ 加速版轉檔失敗,請直接使用 webm 檔。')
+  if (r.status !== 0) return console.log('⚠ 加速版轉檔失敗,請直接使用原速影片。')
   const shift = (t) => (t <= a ? t : t <= b ? a + (t - a) / k : t - (b - a) * (1 - 1 / k))
   fs.writeFileSync(fast.replace(/\.mp4$/, '.srt'), srt(subs.map((x) => ({ ...x, start: shift(x.start), end: shift(x.end) }))))
-  console.log(`  ${fast}(約 ${mmss(shift(total))},上傳 YouTube 用這個)`)
+  console.log(`  ${fast}(約 ${mmss(shift(total))})`)
+  // 配上旁白(可以之後單獨重跑:npm run narrate)
+  try { narrate(fast, fast.replace(/\.mp4$/, '.srt'), fast.replace(/\.mp4$/, '_配音版.mp4')) } catch (e) { console.log('⚠ ' + e.message) }
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
