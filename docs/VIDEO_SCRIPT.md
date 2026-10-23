@@ -10,6 +10,25 @@
 
 ---
 
+## 懶人做法:自動錄影(`npm run record`)
+
+不想自己操作的話,腳本會照下面的分鏡自動操作遊戲、錄成 1920×1080 影片,畫面下方附字幕:
+
+```bash
+npm install
+npm install --no-save playwright
+npx playwright install chromium
+npm run build
+npm run server        # 先開著(要讀 .env 的 GEMINI_API_KEY)
+npm run record        # 另開一個終端機;想看到瀏覽器操作就用 HEADED=1(PowerShell:$env:HEADED=1; npm run record)
+```
+
+輸出在 `video/`:
+- `保險大富翁_展示影片.webm`:原速完整版(約 3 分 30 秒)
+- `保險大富翁_展示影片_3分鐘版.mp4`:電腦託管那段加速 3 倍(約 2 分 50 秒),**上傳 YouTube 用這個**。需要電腦裡有 ffmpeg(Windows:`winget install ffmpeg`,裝完重開終端機)
+- 兩個對應的 `.srt` 字幕:匯入剪映 / CapCut 可以直接「文字轉語音」產生旁白
+- `學習報告範例.pdf`:錄影時下載的學習報告
+
 ## 錄影前準備(一次就好)
 
 1. **一定要用接上 Gemini 的本機版**,不要用 GitHub Pages 網頁版(網頁版不呼叫 AI,畫面上看不到 AI 互動)。

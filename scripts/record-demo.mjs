@@ -8,6 +8,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 
 let chromium
 try {
@@ -64,7 +65,7 @@ async function caption(key) {
   const text = CAP[key]
   const now = (Date.now() - t0) / 1000
   if (subs.length) subs[subs.length - 1].end = now
-  subs.push({ start: now, end: now + 8, text })
+  subs.push({ id: key, start: now, end: now + 8, text })
   await page.evaluate((x) => window.__cap?.(x), text).catch(() => {})
   console.log(`[${now.toFixed(1)}s] ${key}`)
 }
@@ -201,6 +202,8 @@ async function main() {
   for (let i = 0; i < 400; i++) {
     await sleep(500)
     if (await visible(page.getByRole('button', { name: /PDF/ }))) break
+    const end = page.getByRole('button', { name: /查看人生結算/ })
+    if (await visible(end)) { await sleep(1500); await tap(end); continue }
     const stage = page.getByRole('button', { name: '繼續人生' })
     if (await stage.isEnabled().catch(() => false) && await visible(stage)) { await sleep(3500); await tap(stage) }
   }
@@ -232,12 +235,28 @@ async function main() {
   fs.renameSync(await video.path(), dest)
   // 字幕時間從影片開始算(與錄影起點差不到一秒)
   const ts = (s) => { const ms = Math.max(0, Math.round(s * 1000)); const p = (n, l = 2) => String(n).padStart(l, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}` }
-  fs.writeFileSync(path.join(OUT, '保險大富翁_展示影片.srt'), subs.map((x, i) => `${i + 1}\n${ts(x.start)} --> ${ts(x.end)}\n${x.text}\n`).join('\n'))
+  const srt = (list) => list.map((x, i) => `${i + 1}\n${ts(x.start)} --> ${ts(x.end)}\n${x.text}\n`).join('\n')
+  fs.writeFileSync(path.join(OUT, '保險大富翁_展示影片.srt'), srt(subs))
   const total = subs[subs.length - 1].end
-  console.log(`\n完成!影片長度約 ${Math.floor(total / 60)} 分 ${Math.round(total % 60)} 秒`)
+  const mmss = (s) => `${Math.floor(s / 60)} 分 ${Math.round(s % 60)} 秒`
+  console.log(`\n完成!影片長度約 ${mmss(total)}`)
   console.log('  ' + dest)
   console.log('  ' + path.join(OUT, '保險大富翁_展示影片.srt'))
-  if (total > 180) console.log('⚠ 超過 3 分鐘:剪輯時把等待 AI 與電腦託管的片段加速即可。')
+
+  // 有裝 ffmpeg 的話,另外輸出「電腦託管」那段加速 3 倍的 mp4,讓總長落在 3 分鐘內
+  const auto = subs.find((x) => x.id === 'auto')
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) {
+    if (total > 180) console.log('⚠ 超過 3 分鐘。裝好 ffmpeg(Windows:winget install ffmpeg)再跑一次,會自動輸出加速版;或在剪映把「電腦託管」那段加速。')
+    return
+  }
+  const a = auto.start, b = auto.end, k = 3
+  const fast = path.join(OUT, '保險大富翁_展示影片_3分鐘版.mp4')
+  const filter = `[0:v]trim=0:${a},setpts=PTS-STARTPTS[v0];[0:v]trim=${a}:${b},setpts=(PTS-STARTPTS)/${k}[v1];[0:v]trim=${b},setpts=PTS-STARTPTS[v2];[v0][v1][v2]concat=n=3:v=1[v]`
+  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', dest, '-filter_complex', filter, '-map', '[v]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', '30', '-crf', '20', fast], { stdio: 'inherit' })
+  if (r.status !== 0) return console.log('⚠ 加速版轉檔失敗,請直接使用 webm 檔。')
+  const shift = (t) => (t <= a ? t : t <= b ? a + (t - a) / k : t - (b - a) * (1 - 1 / k))
+  fs.writeFileSync(fast.replace(/\.mp4$/, '.srt'), srt(subs.map((x) => ({ ...x, start: shift(x.start), end: shift(x.end) }))))
+  console.log(`  ${fast}(約 ${mmss(shift(total))},上傳 YouTube 用這個)`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
