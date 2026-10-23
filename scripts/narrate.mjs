@@ -39,7 +39,7 @@ function pickEngine() {
   const want = process.env.TTS
   if (want === 'beep') return { name: '測試音', say: beep }
   const edge = want !== 'windows' && edgeCmd()
-  if (edge) return { name: 'edge-tts 微軟自然語音', say: (text, out) => sayEdge(edge, text, out) }
+  if (edge) return { name: 'edge-tts 微軟自然語音', say: (text, out) => sayEdge(edge, text, out), fallback: want !== 'edge' && process.platform === 'win32' }
   if (want !== 'edge' && process.platform === 'win32') return { name: 'Windows 內建語音', say: sayWindows }
   return null
 }
@@ -47,8 +47,10 @@ function pickEngine() {
 function sayEdge([cmd, pre], text, out) {
   const txt = out + '.txt'
   fs.writeFileSync(txt, text, 'utf8')
-  const r = run(cmd, [...pre, '--voice', process.env.VOICE || 'zh-TW-HsiaoChenNeural', '--rate=+8%', '-f', txt, '--write-media', out])
-  return r.status === 0 && fs.existsSync(out) && fs.statSync(out).size > 0
+  const r = run(cmd, [...pre, '--voice', process.env.VOICE || 'zh-TW-HsiaoChenNeural', '--rate=+8%', '-f', txt, '--write-media', out], { env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' } })
+  if (r.status === 0 && fs.existsSync(out) && fs.statSync(out).size > 0) return true
+  const err = `${r.error?.message || ''}${r.stderr || ''}${r.stdout || ''}`.trim().split('\n').slice(-6).join('\n')
+  throw Object.assign(new Error(err || `edge-tts 結束代碼 ${r.status}`), { edge: true })
 }
 
 function sayWindows(text, out) {
@@ -77,7 +79,7 @@ function beep(text, out) {
 
 export function narrate(video, srt, out) {
   if (!ok('ffmpeg', ['-version'])) { console.log('⚠ 找不到 ffmpeg,沒辦法配音(Windows:winget install ffmpeg,裝完重開終端機)。'); return null }
-  const engine = pickEngine()
+  let engine = pickEngine()
   if (!engine) { console.log('⚠ 找不到語音引擎:請安裝 Python 後執行 pip install edge-tts,再跑 npm run narrate。'); return null }
   console.log(`配音中(${engine.name})…`)
   const subs = parseSrt(fs.readFileSync(srt, 'utf8'))
@@ -85,8 +87,20 @@ export function narrate(video, srt, out) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-narrate-'))
   const clips = []
   subs.forEach((s, i) => {
-    const file = path.join(tmp, `${i}.${engine.say === sayWindows ? 'wav' : 'mp3'}`)
-    if (!engine.say(s.text, file)) { console.log(`  ⚠ 第 ${i + 1} 段配音失敗,跳過`); return }
+    let file = path.join(tmp, `${i}.${engine.say === sayWindows ? 'wav' : 'mp3'}`)
+    let said
+    try { said = engine.say(s.text, file) } catch (e) {
+      if (!e.edge) throw e
+      if (!engine.warned) console.log(`  ⚠ edge-tts 失敗:\n${e.message.replace(/^/gm, '    ')}`)
+      engine.warned = true
+      if (!engine.fallback) { said = false } else {
+        console.log('  改用 Windows 內建語音。')
+        engine = { name: 'Windows 內建語音', say: sayWindows }
+        file = path.join(tmp, `${i}.wav`)
+        said = engine.say(s.text, file)
+      }
+    }
+    if (!said) { console.log(`  ⚠ 第 ${i + 1} 段配音失敗,跳過`); return }
     // 旁白比這段畫面長的話,稍微加快(最多 1.6 倍),避免蓋到下一段
     const slot = (subs[i + 1]?.start ?? total) - s.start - 0.4
     const len = duration(file)
