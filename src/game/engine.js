@@ -3,7 +3,7 @@
 import { settleDue } from './claims.js'
 import { flashDue, settleFlash } from './flash.js'
 import { CARDS, useCard } from './cards.js'
-import { PRODUCTS, totalPremium } from './products.js'
+import { PRODUCTS, totalPremium, premCtx } from './products.js'
 import {
   BOARD, ASSET_ORDER, run, cover, clamp, blankYear, netWorth, holdingsTotal, recommended,
   canIncrease, householdIncome, round1k,
@@ -27,7 +27,7 @@ export function setCoverage(state, id, tier) {
   return run(state, (s) => {
     const cur = s.coverage[id] || 0
     if (tier > cur && !canIncrease(s, id)) {
-      s.flash = id === 'home' ? t('需要先擁有房子才能投保。') : id === 'auto' ? t('需要先有車才能投保汽車險。') : t('你已有相關傷病紀錄,這項保障已無法加保(核保限制)。')
+      s.flash = id === 'home' ? t('需要先擁有房子才能投保。') : id === 'auto' ? t('需要先有車才能投保汽車險。') : id === 'mortgage' ? t('需要先有房貸才能投保房貸壽險。') : t('你已有相關傷病紀錄,這項保障已無法加保(核保限制)。')
       return
     }
     s.coverage[id] = tier
@@ -267,7 +267,7 @@ export function endYear(state) {
     s.recurring.forEach((r) => (r.yearsLeft -= 1))
     s.recurring = s.recurring.filter((r) => r.yearsLeft > 0)
 
-    const premiums = totalPremium(s.coverage, s.age)
+    const premiums = totalPremium(s.coverage, s.age, premCtx(s))
     const annuityTier = PRODUCTS.annuity.tiers[s.coverage.annuity || 0]
     const savingsIn = annuityTier.saving ? annuityTier.premium : 0
     s.savings = Math.round(s.savings * 1.02 + savingsIn * 0.9)
@@ -290,6 +290,10 @@ export function endYear(state) {
         const interest = Math.round(h.balance * h.rate)
         h.balance = Math.max(0, h.balance + interest - houseCost)
         h.yearsLeft -= 1
+        if (h.balance <= 0 && s.coverage.mortgage) {
+          s.coverage.mortgage = 0
+          s.year.events.push({ title: t('房貸繳清了!房貸壽險也跟著期滿'), kind: 'milestone', cat: null, icon: '🔑' })
+        }
       }
       const g = s.year.houseChange ?? clamp(rng.normal(0.03, 0.04), -0.1, 0.12)
       h.value = Math.round(h.value * (1 + g))
@@ -448,6 +452,7 @@ function snapshot(s, f) {
     ret: f.ret,
     returns: f.returns || null,
     calYear: histYearOf(s)?.year ?? null,
+    mortgageBal: s.house ? s.house.balance : 0,
     savingsIn: f.savingsIn,
     shockCost: s.year.shockCost,
     payout: s.year.payout,

@@ -7,7 +7,7 @@ import { SHOP, shopBlock, shopLeft, SHOP_PER_YEAR, CARS, homeOffer, homeBlock, b
 import { CARDS, MAX_CARDS } from '../game/cards.js'
 import { coachInvest, coachLoan } from '../game/coach.js'
 import { useState } from 'react'
-import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium } from '../game/products.js'
+import { PRODUCTS, PRODUCT_ORDER, PRODUCT_GROUPS, OPTIONAL_PRODUCTS, premiumFor, totalPremium, premCtx } from '../game/products.js'
 import { ASSETS, ASSET_ORDER, canIncrease, recommended, analyzeGaps, householdIncome, holdingsTotal } from '../game/engine.js'
 import { wan } from '../game/format.js'
 import { PROPERTIES, LEVELS, rentOf, baseRent, upgradeCost, propPremium, tollOf, RISK_NAME } from '../game/properties.js'
@@ -22,7 +22,8 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
   const [tab, setTab] = useState(initialTab)
   const [step, setStep] = useState(100000)
   const rec = recommended(s)
-  const premium = totalPremium(s.coverage, s.age)
+  const ctx = premCtx(s)
+  const premium = totalPremium(s.coverage, s.age, ctx)
   const hi = householdIncome(s)
   const ratio = (premium / hi) * 100
   const months = s.cash / (s.expense / 12)
@@ -54,7 +55,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
               <>
                 {s.flash && <div className="flash">{s.flash}</div>}
                 {PRODUCT_GROUPS.map(([gid, gname]) => {
-                  const ids = PRODUCT_ORDER.filter((id) => PRODUCTS[id].group === gid && !(PRODUCTS[id].needsHouse && !s.house) && !(PRODUCTS[id].needsCar && !s.car))
+                  const ids = PRODUCT_ORDER.filter((id) => PRODUCTS[id].group === gid && !(PRODUCTS[id].needsHouse && !s.house) && !(PRODUCTS[id].needsCar && !s.car) && !(PRODUCTS[id].needsMortgage && !(s.house && s.house.balance > 0)))
                   if (!ids.length) return null
                   return (
                     <div key={gid} className="prod-group">
@@ -80,7 +81,7 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
                                   return (
                                     <button key={i} role="radio" aria-checked={cur === i} className={`seg-b ${cur === i ? 'on' : ''} ${isRec ? 'rec' : ''}`} disabled={disabled} onClick={() => onCoverage(id, i)}>
                                       <span>{t(tier.label)}</span>
-                                      <small>{i === 0 ? '$0' : t('{amt}/年', { amt: wan(premiumFor(id, i, s.age), 1) })}</small>
+                                      <small>{i === 0 ? '$0' : t('{amt}/年', { amt: wan(premiumFor(id, i, s.age, ctx), 1) })}</small>
                                       {isRec && <i className="rec-tag">{t('建議')}</i>}
                                     </button>
                                   )
@@ -213,7 +214,22 @@ export default function PlanModal({ s, world, onCoverage, onTrade, onBorrow, onR
                     <div><b>{t('你的房子')}</b><small>{t('市值 {v} · 房貸餘額 {b} · 每年房貸 {p}', { v: wan(s.house.value), b: wan(s.house.balance), p: wan(s.house.payment) })}</small></div>
                     <button className="btn" onClick={() => { if (window.confirm(t('確定要賣掉房子嗎?之後要重新租屋。'))) onAct(sellHome) }}>{t('賣掉')}</button>
                   </div>
-                ) : ['small', 'family'].map((size) => {
+                ) : null}
+                {s.house && s.house.balance > 0 && (() => {
+                  const on = (s.coverage.mortgage || 0) > 0
+                  return (
+                    <div className="life-card mortgage-card">
+                      <div>
+                        <b>🔑 {t('房貸壽險')}{on ? ` · ${t('已投保')}` : ''}</b>
+                        <small>{on
+                          ? t('保額 = 剩餘房貸 {b},今年保費約 {p}。萬一身故,保險金直接清償房貸。', { b: wan(s.house.balance), p: wan(premiumFor('mortgage', 1, s.age, ctx), 1) })
+                          : t('未投保:萬一身故,剩下 {b} 的房貸要由家人繼續繳。投保的話今年保費約 {p}。', { b: wan(s.house.balance), p: wan(premiumFor('mortgage', 1, s.age, ctx), 1) })}</small>
+                      </div>
+                      <button className={`btn ${on ? '' : 'primary'}`} onClick={() => onCoverage('mortgage', on ? 0 : 1)}>{on ? t('解約') : t('投保')}</button>
+                    </div>
+                  )
+                })()}
+                {!s.house && ['small', 'family'].map((size) => {
                   const o = homeOffer(s, size)
                   const why = homeBlock(s, o)
                   return (

@@ -1,6 +1,6 @@
 // 遊戲核心:狀態、資產、保障建議等共用的「確定性」計算。
 import { Rng } from './rng.js'
-import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremium } from './products.js'
+import { PRODUCTS, PRODUCT_ORDER, OPTIONAL_PRODUCTS, EMPTY_COVERAGE, totalPremium, premCtx } from './products.js'
 import { CAREERS, BACKGROUNDS, STYLES, LENGTHS, defaultLook } from './careers.js'
 import { drawQuests } from './quests.js'
 import { applyTagsAtStart } from './tags.js'
@@ -233,6 +233,7 @@ export function cover(s) {
     s.cash += Math.round(h.value * FORCED_SALE) - h.balance
     s.house = null
     s.coverage.home = 0
+    s.coverage.mortgage = 0
     s.year.events.push({ title: t('現金見底,被迫賣掉自己的房子'), kind: 'event', cat: 'forced', icon: '🏚️' })
     s.year.forced = (s.year.forced || 0) + 1
   }
@@ -246,6 +247,7 @@ export function isOwner(s) {
 
 const SEVERITY = (s) => ({
   life: s.dependents > 0 ? 5 : s.partner || s.house ? 3.5 : 2,
+  mortgage: s.dependents > 0 ? 4 : 3,
   disability: s.partner || !s.career.laborIns ? 4.5 : 3.5,
   critical: 3.8,
   medical: 3,
@@ -260,7 +262,7 @@ const SEVERITY = (s) => ({
 export function recommended(s) {
   const dep = s.dependents
   const hi = householdIncome(s)
-  const rec = { medical: 1, critical: 1, disability: 1, accident: 0, life: 0, home: 0, annuity: 0, ltc: 0, auto: 0, cancer: 0, daily: 0, travel: 0, invlinked: 0 }
+  const rec = { medical: 1, critical: 1, disability: 1, accident: 0, life: 0, mortgage: 0, home: 0, annuity: 0, ltc: 0, auto: 0, cancer: 0, daily: 0, travel: 0, invlinked: 0 }
   if (hi > 1400000 || dep > 0) rec.critical = 2
   if (dep > 0 || (s.house && !s.partner) || !s.career.laborIns) rec.disability = 2
   let lifeNeed = 0
@@ -271,13 +273,15 @@ export function recommended(s) {
   rec.life = clamp(lifeNeed, 0, 3)
   if (s.career.risk === 'mid' || dep > 0) rec.accident = 1
   if (s.house) rec.home = 1
+  // 有房貸又有家人要照顧:萬一身故,房貸不該留給家人
+  if (s.house && s.house.balance > 0 && (s.partner || dep > 0)) rec.mortgage = 1
   if (s.car) rec.auto = 1
   if (s.age >= 30 && hi > 1200000) rec.annuity = hi > 2200000 ? 2 : 1
   if (s.age >= 45) rec.ltc = 1
 
   // 負擔能力:保費占收入超過 15% 時,從最不重要的項目往下調。
   const sev = SEVERITY(s)
-  const ratio = () => totalPremium(rec, s.age) / hi
+  const ratio = () => totalPremium(rec, s.age, premCtx(s)) / hi
   const order = PRODUCT_ORDER.filter((id) => rec[id] > 0).sort((a, b) => sev[a] - sev[b])
   for (const id of order) {
     while (ratio() > 0.15 && rec[id] > 0) rec[id] -= 1
@@ -288,6 +292,7 @@ export function recommended(s) {
 export function canIncrease(s, id) {
   if (['medical', 'critical', 'disability', 'cancer', 'daily'].includes(id)) return !s.blocked[id]
   if (id === 'home') return !!s.house
+  if (id === 'mortgage') return !!(s.house && s.house.balance > 0)
   if (id === 'auto') return !!s.car
   return true
 }
@@ -312,7 +317,7 @@ export function analyzeGaps(s) {
     }
   }
   gaps.sort((a, b) => b.severity - a.severity)
-  const premium = totalPremium(s.coverage, s.age)
+  const premium = totalPremium(s.coverage, s.age, premCtx(s))
   return {
     gaps,
     emergencyMonths: Math.round((s.cash / (s.expense / 12)) * 10) / 10,

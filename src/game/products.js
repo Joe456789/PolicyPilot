@@ -53,6 +53,20 @@ export const PRODUCTS = {
       { label: '2,000 萬', premium: 34000, lump: 20000000 },
     ],
   },
+  // 房貸壽險(信用保障):銀行保險通路最常見的商品之一。保額 = 剩餘房貸,隨還款遞減。
+  mortgage: {
+    id: 'mortgage',
+    group: 'family',
+    name: '房貸壽險',
+    sub: '保額隨房貸遞減',
+    icon: '🔑',
+    blurb: '辦房貸時可以一起投保:保額跟著房貸餘額遞減,萬一身故,保險金直接清償剩餘房貸,家人不必賣房。保費依房貸餘額與年齡計算。',
+    needsMortgage: true,
+    tiers: [
+      { label: '未投保', premium: 0 },
+      { label: '保障全部房貸餘額', premium: 0, payoff: true, rate: 0.002 },
+    ],
+  },
   annuity: {
     id: 'annuity',
     group: 'savings',
@@ -179,19 +193,23 @@ export const PRODUCT_GROUPS = [
   ['property', '🏠 財產與生活'],
   ['savings', '🌱 儲蓄與投資'],
 ]
-export const PRODUCT_ORDER = ['medical', 'critical', 'cancer', 'daily', 'disability', 'accident', 'life', 'ltc', 'home', 'auto', 'travel', 'annuity', 'invlinked']
+export const PRODUCT_ORDER = ['medical', 'critical', 'cancer', 'daily', 'disability', 'accident', 'life', 'mortgage', 'ltc', 'home', 'auto', 'travel', 'annuity', 'invlinked']
 // 「選配」商品:不計入建議配置與缺口,是進階的學習與取捨
 export const OPTIONAL_PRODUCTS = ['cancer', 'daily', 'travel', 'invlinked']
 
-export function premiumFor(productId, tierIdx, age) {
+// ctx:跟著狀態變動的保費基礎(目前只有房貸壽險要用剩餘房貸),由 premCtx(s) 產生
+export const premCtx = (s) => ({ mortgage: s?.house ? s.house.balance : 0 })
+
+export function premiumFor(productId, tierIdx, age, ctx = {}) {
   const t = PRODUCTS[productId].tiers[tierIdx]
+  if (t?.payoff) return Math.round(((ctx.mortgage || 0) * t.rate * (1 + Math.max(0, age - 30) * 0.03)) / 100) * 100
   if (!t || !t.premium) return 0
   if (t.saving || t.invest) return t.premium
   return Math.round(t.premium * (1 + Math.max(0, age - 30) * 0.03))
 }
 
-export function totalPremium(coverage, age) {
-  return PRODUCT_ORDER.reduce((s, id) => s + premiumFor(id, coverage[id] || 0, age), 0)
+export function totalPremium(coverage, age, ctx = {}) {
+  return PRODUCT_ORDER.reduce((s, id) => s + premiumFor(id, coverage[id] || 0, age, ctx), 0)
 }
 
 export const EMPTY_COVERAGE = Object.freeze({
@@ -199,6 +217,7 @@ export const EMPTY_COVERAGE = Object.freeze({
   critical: 0,
   disability: 0,
   life: 0,
+  mortgage: 0,
   annuity: 0,
   ltc: 0,
   accident: 0,
@@ -216,7 +235,7 @@ export const EMPTY_COVERAGE = Object.freeze({
 export const hospitalDays = (medicalCost) => Math.min(60, Math.max(2, Math.round((medicalCost || 0) / 25000)))
 
 export function payoutFor(coverage, shock) {
-  const out = { medical: 0, lump: 0, disability: 0, life: 0, ltc: 0, accident: 0, home: 0, cancer: 0, daily: 0, auto: 0, invlinked: 0, travel: 0 }
+  const out = { medical: 0, lump: 0, disability: 0, life: 0, mortgage: 0, ltc: 0, accident: 0, home: 0, cancer: 0, daily: 0, auto: 0, invlinked: 0, travel: 0 }
   const T = (id) => PRODUCTS[id].tiers[coverage[id] || 0]
   const m = T('medical'), c = T('critical'), d = T('disability'), l = T('life'), g = T('ltc')
   const a = T('accident'), h = T('home'), ca = T('cancer'), da = T('daily'), au = T('auto'), il = T('invlinked'), tr = T('travel')
@@ -233,6 +252,8 @@ export function payoutFor(coverage, shock) {
   if (shock.cat === 'death') {
     if (l.lump) out.life = l.lump
     if (il.face) out.invlinked = il.face
+    // 房貸壽險:身故時清償當下剩餘的房貸
+    if (T('mortgage').payoff) out.mortgage = Math.round(shock.mortgage || 0)
   }
   if (shock.cat === 'ltc' && g.perYear) out.ltc = g.perYear * g.years
   if (shock.accident) {

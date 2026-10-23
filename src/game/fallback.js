@@ -95,6 +95,13 @@ export function coachFallback(report) {
         : t('保費的目標是控制在年收入的合理比例內。我們先排出風險優先順序,只買真正需要的,不必一次到位。'),
     },
   ]
+  // 有房貸:銀行通路最常見的對話
+  if (coverage.some((c) => c.product === t('房貸壽險'))) {
+    scripts.push({
+      scenario: t('客戶剛辦好房貸'),
+      say: t('房貸是家裡最大的負債。萬一發生不幸,房貸壽險(或足額的定期壽險)可以直接清償房貸,讓家人保住房子。要不要投保由你決定,銀行也不能把它當成核貸的條件。'),
+    })
+  }
   return {
     headline, summary, lessons, gaps, scripts,
     compliance: t('提醒:實際商品需依條款、核保與費率為準,說明時應如實揭露,避免保證收益或誇大保障。'),

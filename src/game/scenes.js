@@ -472,21 +472,24 @@ function resolveEvent(s, sc, choice, add) {
 }
 
 function resolveDeath(s, add) {
-  const payout = payoutFor(s.coverage, { cat: 'death' })
-  const yearsSupport = s.dependents > 0 ? 12 : s.partner ? 8 : 5
   const mortgage = s.house ? s.house.balance : 0
+  const payout = payoutFor(s.coverage, { cat: 'death', mortgage })
+  const yearsSupport = s.dependents > 0 ? 12 : s.partner ? 8 : 5
   const need = s.expense * yearsSupport + mortgage + s.loan
-  const funds = s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + (s.house ? s.house.value : 0) + payout.life + payout.invlinked
-  s.year.payout += payout.life + payout.invlinked
-  s.year.shocks.push({ cat: 'death', medicalCost: 0, otherCost: 0, income: s.income, years: 0 })
+  const insured = payout.life + payout.invlinked + payout.mortgage
+  const funds = s.cash + holdingsTotal(s) + s.savings + (s.ilv || 0) + (s.house ? s.house.value : 0) + insured
+  s.year.payout += insured
+  s.year.shocks.push({ cat: 'death', medicalCost: 0, otherCost: 0, income: s.income, years: 0, mortgage })
   add(t('壽險身故給付'), payout.life, 'cover')
+  if (payout.mortgage) add(t('房貸壽險:直接清償剩餘房貸,家人保住房子'), payout.mortgage, 'cover')
+  else if (mortgage > 0) add(t('沒有房貸壽險:剩下 {amt} 的房貸要由家人繼續繳', { amt: wan(mortgage) }), 0, 'warn')
   if (payout.invlinked) add(t('投資型保單身故保障'), payout.invlinked, 'cover')
   if (s.ilv) add(t('投資型保單帳戶價值'), s.ilv, 'cover')
   add(t('家人未來生活所需(生活費+房貸+負債)'), -Math.round(need), 'out')
   add(t('家人可動用資金(含保險金與房產)'), Math.round(funds), 'in')
   s.ended = {
     reason: 'death', need: Math.round(need), funds: Math.round(funds),
-    ratio: Math.round((funds / need) * 100) / 100, payout: payout.life + payout.invlinked, yearsSupport,
+    ratio: Math.round((funds / need) * 100) / 100, payout: insured, yearsSupport,
   }
 }
 

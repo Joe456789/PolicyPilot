@@ -106,7 +106,7 @@ export function buyHome(state, size) {
     s.house = { price: o.price, value: o.price, balance: o.balance, rate: RATE, payment: o.payment, yearsLeft: YEARS, rentSaved: o.rentSaved }
     s.expense = Math.max(Math.round(s.expense * 0.5), s.expense - o.rentSaved)
     s.seen.house_buy = (s.seen.house_buy || 0) + 1
-    s.flash = t('買下自住房!不用再付房租,但每年房貸約 {amt},也記得投保住宅火險與檢視壽險。', { amt: wan(o.payment) })
+    s.flash = t('買下自住房!不用再付房租,但每年房貸約 {amt}。記得投保住宅火險,也可以考慮房貸壽險:萬一身故,保險金直接清償房貸。', { amt: wan(o.payment) })
     s.year.events.push({ title: t('買下自住房(房價 {amt})', { amt: wan(o.price) }), kind: 'milestone', icon: '🏠' })
   })
 }
@@ -120,6 +120,7 @@ export function sellHome(state) {
     s.expense += h.rentSaved || round1k(h.price * 0.02)
     s.house = null
     s.coverage.home = 0
+    s.coverage.mortgage = 0
     s.flash = t('賣掉房子,扣掉房貸與費用拿回 {amt};之後要重新租屋,住宅火險也一併解約。', { amt: wan(net) })
     s.year.events.push({ title: t('賣掉自住房'), kind: 'milestone', icon: '🔑' })
   })

@@ -8,6 +8,7 @@ export const CODEX_THEMES = [
   { id: 'risk', name: '風險管理', icon: '🧯' },
   { id: 'allocation', name: '資產配置', icon: '🧺' },
   { id: 'market', name: '市場波動', icon: '📈' },
+  { id: 'bank', name: '銀行通路', icon: '🏦' },
 ]
 
 // 沒有標主題的舊題目,依種類歸類

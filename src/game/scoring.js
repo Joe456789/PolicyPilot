@@ -1,5 +1,5 @@
 // 評分、平行人生對照與給 AI 的事實摘要。
-import { PRODUCTS, PRODUCT_ORDER, payoutFor, totalPremium } from './products.js'
+import { PRODUCTS, PRODUCT_ORDER, payoutFor, totalPremium, premCtx } from './products.js'
 import { clamp, netWorth, recommended, householdIncome } from './core.js'
 import { questScore } from './quests.js'
 import { t } from '../i18n.js'
@@ -17,7 +17,7 @@ export function counterfactual(s) {
     const none = cov({})
     const rec = cov(h.rec)
     const pay = (c) => h.shocks.reduce((a, sh) => a + payoutFor(c, sh).total, 0)
-    const prem = (c) => totalPremium(c, h.age)
+    const prem = (c) => totalPremium(c, h.age, { mortgage: h.mortgageBal || 0 })
     // 資產格的財產險與天災,三條線沿用實際結果(另在結算頁單獨說明)
     dNone += (pay(none) - h.payout) - (prem(none) - h.premiums)
     dRec += (pay(rec) - h.payout) - (prem(rec) - h.premiums)
@@ -102,7 +102,7 @@ function lifeSummary(s) {
 
 function coverageTable(s) {
   const rec = recommended(s)
-  return PRODUCT_ORDER.filter((id) => id !== 'home' || s.house).map((id) => ({
+  return PRODUCT_ORDER.filter((id) => (id !== 'home' || s.house) && (id !== 'mortgage' || (s.house && s.house.balance > 0))).map((id) => ({
     product: t(PRODUCTS[id].name),
     yours: t(PRODUCTS[id].tiers[s.coverage[id] || 0].label),
     recommended: t(PRODUCTS[id].tiers[rec[id] || 0].label),
@@ -146,7 +146,7 @@ export function buildStageReport(s) {
     loan: Math.round(s.loan),
     houseEquity: s.house ? Math.round(s.house.value - s.house.balance) : 0,
     householdIncome: Math.round(householdIncome(s)),
-    premiumPct: Math.round((totalPremium(s.coverage, s.age) / householdIncome(s)) * 1000) / 10,
+    premiumPct: Math.round((totalPremium(s.coverage, s.age, premCtx(s)) / householdIncome(s)) * 1000) / 10,
     coverage: coverageTable(s),
     recommendedNow: rec,
     recentEvents: recent.flatMap((x) => x.events.filter((e) => ['event', 'chance', 'milestone'].includes(e.kind)).map((e) => ({ age: x.age, title: e.title }))),

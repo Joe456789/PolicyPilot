@@ -1,7 +1,7 @@
 // 機器學習用的特徵:把一個玩家「這一年開始時」的財務狀態轉成一串數字。
 // 訓練(scripts/ml/*.mjs)與遊戲裡的即時預測共用這一份,確保兩邊算法一模一樣。
 import { recommended, householdIncome, holdingsTotal, netWorth } from '../engine.js'
-import { PRODUCT_ORDER, OPTIONAL_PRODUCTS, totalPremium } from '../products.js'
+import { PRODUCT_ORDER, OPTIONAL_PRODUCTS, totalPremium, premCtx } from '../products.js'
 
 const clip = (x, a, b) => Math.max(a, Math.min(b, x))
 
@@ -10,12 +10,13 @@ export const FEATURES = [
   ['cashMonths', (s) => clip(s.cash / (s.expense / 12), -6, 24) / 12],
   ['liquidMonths', (s) => clip((s.cash + s.hold.deposit + s.hold.bond) / (s.expense / 12), -6, 36) / 12],
   ['debtRatio', (s) => clip((s.loan + (s.house ? s.house.balance : 0) + Object.values(s.props || {}).reduce((a, p) => a + (p.mortgage ? p.mortgage.balance : 0), 0)) / householdIncome(s), 0, 15) / 5],
-  ['fixedCost', (s) => clip((s.expense + (s.house ? s.house.payment : 0) + totalPremium(s.coverage, s.age)) / householdIncome(s), 0, 3)],
+  ['fixedCost', (s) => clip((s.expense + (s.house ? s.house.payment : 0) + totalPremium(s.coverage, s.age, premCtx(s))) / householdIncome(s), 0, 3)],
   ['coverGap', (s) => {
     const rec = recommended(s)
     let need = 0, have = 0
     for (const id of PRODUCT_ORDER) {
-      if (OPTIONAL_PRODUCTS.includes(id)) continue
+      // 房貸壽險是模型訓練之後才加入的商品:不列入,讓這個特徵的意義和訓練時一致
+      if (OPTIONAL_PRODUCTS.includes(id) || id === 'mortgage') continue
       need += rec[id] || 0
       have += Math.min(rec[id] || 0, s.coverage[id] || 0)
     }

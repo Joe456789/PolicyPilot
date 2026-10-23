@@ -7,7 +7,7 @@ import {
   createGame, setCoverage, trade, borrow, repay, roll, choose, endYear, recommended, canIncrease, propAction, hasMinor, nextMinor, canRollAgain, rollAgain,
   analyzeGaps, householdIncome, ASSET_ORDER, clamp,
 } from './engine.js'
-import { PRODUCT_ORDER, PRODUCTS, totalPremium } from './products.js'
+import { PRODUCT_ORDER, PRODUCTS, totalPremium, premCtx } from './products.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './prologue.js'
 import { propById, upgradeCost } from './properties.js'
 import { t } from '../i18n.js'
@@ -100,7 +100,7 @@ function applyCoverage(s, p, keep = false) {
     if (want > cur && !canIncrease(s, id)) continue
     // 保費上限:避免買到破產
     const trial = { ...s.coverage, [id]: want }
-    if (want > cur && totalPremium(trial, s.age) / hi > (p.premiumCap || 0.17)) continue
+    if (want > cur && totalPremium(trial, s.age, premCtx(s)) / hi > (p.premiumCap || 0.17)) continue
     if (want !== cur && !(keep && want < cur)) s = setCoverage(s, id, want)
   }
   return s

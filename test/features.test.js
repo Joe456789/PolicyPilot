@@ -102,6 +102,6 @@ test('觀念圖鑑:每張卡都有主題與文字;玩過的場景會被收集', 
   const got = collectedIn(s)
   assert.ok(got.length >= 2)
   const prog = codexProgress(got)
-  assert.equal(prog.length, 4)
+  assert.equal(prog.length, 5) // 保險保障、風險管理、資產配置、市場波動、銀行通路
   assert.equal(prog.reduce((a, p) => a + p.got, 0), got.length)
 })

@@ -20,7 +20,7 @@ test('新保險商品:癌症險、日額險、汽車險、投資型保單的給�
   assert.equal(payoutFor(c, { cat: 'death' }).invlinked, 1200000)
   assert.equal(payoutFor(c, { cat: 'trip', otherCost: 100000 }).travel, 90000)
   assert.equal(payoutFor(EMPTY_COVERAGE, { cat: 'critical', cancer: true, medicalCost: 1e6, income: 1e6, years: 2 }).total, 0)
-  assert.equal(PRODUCT_ORDER.length, 13)
+  assert.equal(PRODUCT_ORDER.length, 14) // 含房貸壽險
   for (const id of PRODUCT_ORDER) assert.ok(PRODUCTS[id].group && PRODUCTS[id].tiers.length >= 2)
 })
 
