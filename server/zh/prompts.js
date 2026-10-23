@@ -102,3 +102,30 @@ ${JSON.stringify(recent)}
 - 每位對手的 4 句要涵蓋不同情境(例如:領先時、落後時、遇到意外時、買到資產時)。
 輸出 JSON:{"lines": {"<對手 id>": [string, string, string, string]}}`
 }
+
+// AI 客戶對練:AI 扮演客戶。這一句「要表達什麼」由遊戲規則決定(plan),AI 只負責用客戶的口吻說出來。
+const chat = (history) => history.map((m) => `${m.role === 'advisor' ? '理專' : '客戶'}:${m.text}`).join('\n')
+export function roleplayPrompt({ client, history, advisor, plan, trust }) {
+  return `你在訓練遊戲的「客戶對練」裡,扮演一位來銀行分行的客戶,讓理專(使用者)練習溝通。
+客戶設定:${client.name},${client.age} 歲,${client.title}。${client.brief} 來分行的目的:${client.goal} 風險屬性:${client.risk}。
+你心裡知道、但只有被問到才會說的事:
+${client.facts.map((f) => '- ' + f).join('\n')}
+對話紀錄:
+${chat(history)}
+理專剛剛說:「${advisor}」
+這一句你要表達的意思(遊戲規則已經決定,請照演,不要提到規則):「${plan}」
+你目前對理專的信任度:${trust}/100(${trust < 40 ? '有戒心、語氣保留' : trust < 70 ? '願意聽聽看' : '覺得對方很可靠'})。
+要求:繁體中文口語,1~3 句、70 字以內;用你自己的口吻說出上面的意思,可以加一點情緒或生活細節,但不要加入新的數字或新的事實;你是客戶,不要給理財建議,不要替理專回答。
+輸出 JSON:{"reply": string}`
+}
+
+export function roleplayReviewPrompt({ client, history, score }) {
+  return `以下是一段理專與客戶的「對練」紀錄,以及遊戲規則算出的評分(分數不可更動,只能引用)。請用資深理專教練的口吻給回饋。
+客戶:${client.name}(${client.title},風險屬性 ${client.risk});真正的需要:${client.needs.join('、')}
+對話:
+${chat(history)}
+評分:總分 ${score.total}/100;${score.parts.map((p) => `${p.label} ${p.score}/${p.max}`).join('、')}
+規則註記:${score.notes.join(';') || '無'}
+要求:具體、友善,指出哪一句可以怎麼改;不可保證收益、不可施壓成交、不可推薦真實存在的保險公司或商品名稱。
+輸出 JSON:{"strengths": [string, string](各 30 字內), "improve": [string, string](各 45 字內), "betterLine": string(示範一句更好的說法,60~100 字)}`
+}

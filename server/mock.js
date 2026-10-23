@@ -104,3 +104,12 @@ export function mockBanter(bots, lang = 'zh') {
   for (const b of bots) lines[b.id] = [`【AI】${b.name}:這局我不會輸你的!`, `【AI】${b.name}:看我的配置!`, `【AI】${b.name}:運氣也是實力的一部分。`, `【AI】${b.name}:你的保單夠全嗎?`] // i18n-ignore
   return { lines }
 }
+
+// 對練:模擬模式直接用遊戲規則決定的那一句(前面加標記,方便看出是模擬)
+export function mockRoleplay(plan, lang = 'zh') {
+  return { reply: lang === 'en' ? `[mock] ${plan}` : `【模擬】${plan}` } // i18n-ignore
+}
+export function mockRoleplayReview(score, lang = 'zh') {
+  if (lang === 'en') return { strengths: [`Scored ${score.total} (mock)`, 'Kept a friendly tone'], improve: ['Ask one more open question before recommending', 'Explain the main limit of each product'], betterLine: 'Before we talk about products, may I ask what worries you most if your income stopped for a while?' }
+  return { strengths: [`這次得到 ${score.total} 分(mock)`, '語氣親切'], improve: ['推薦商品前,再多問一個開放式問題', '每項商品都說明一個重要的限制'], betterLine: '在談商品之前,我想先了解:如果收入中斷一段時間,您最擔心的是什麼?' } // i18n-ignore
+}

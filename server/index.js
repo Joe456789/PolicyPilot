@@ -3,10 +3,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import { aiStatus, generateJson } from './gemini.js'
-import { systemFor, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt, banterPrompt } from './prompts.js'
+import { systemFor, narratePrompt, directorPrompt, askPrompt, advisorPrompt, stagePrompt, coachPrompt, banterPrompt, roleplayPrompt, roleplayReviewPrompt } from './prompts.js'
 import { lookupGlossary } from '../src/game/glossary.js'
 import { normLang, strFor } from './lang.js'
-import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach, mockBanter } from './mock.js'
+import { mockNarrate, mockDirector, mockAsk, mockAdvisor, mockStage, mockCoach, mockBanter, mockRoleplay, mockRoleplayReview } from './mock.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -43,6 +43,7 @@ app.use('/api/advisor', limiter)
 app.use('/api/stage', limiter)
 app.use('/api/coach', limiter)
 app.use('/api/banter', limiter)
+app.use('/api/roleplay', limiter)
 
 const str = (v, n = 400) => String(v ?? '').slice(0, n)
 const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d)
@@ -120,6 +121,50 @@ app.post('/api/director', (req, res) => {
       }
     },
     () => mockDirector(inf, ch, lang),
+  )
+})
+
+// AI 客戶對練:mode = 'reply'(客戶回話)或 'review'(教練回饋)。分數與「這一句要說什麼」都由前端的規則決定。
+const cleanClient = (c = {}, S = str) => ({
+  name: S(c.name, 12), age: num(c.age, 30), title: S(c.title, 30), brief: S(c.brief, 120), goal: S(c.goal, 80), risk: S(c.risk, 10),
+  facts: (Array.isArray(c.facts) ? c.facts : []).slice(0, 6).map((f) => S(f, 120)),
+  needs: (Array.isArray(c.needs) ? c.needs : []).slice(0, 5).map((f) => S(f, 30)),
+})
+const cleanHistory = (h, S = str) => (Array.isArray(h) ? h : []).slice(-14).map((m) => ({ role: m?.role === 'advisor' ? 'advisor' : 'client', text: S(m?.text, 240) }))
+app.post('/api/roleplay', (req, res) => {
+  const lang = normLang(req.body?.lang)
+  const S = strFor(lang)
+  const b = req.body || {}
+  const client = cleanClient(b.client, S)
+  const history = cleanHistory(b.history, S)
+  if (b.mode === 'review') {
+    const sc = b.score || {}
+    const score = {
+      total: num(sc.total),
+      parts: (Array.isArray(sc.parts) ? sc.parts : []).slice(0, 4).map((p) => ({ label: S(p?.label, 16), score: num(p?.score), max: num(p?.max, 25) })),
+      notes: (Array.isArray(sc.notes) ? sc.notes : []).slice(0, 8).map((n) => S(n, 120)),
+    }
+    return handle(
+      res,
+      async () => {
+        const out = await generateJson({ system: systemFor(lang), prompt: roleplayReviewPrompt({ client, history, score, lang }), maxTokens: 700, temperature: 0.6 })
+        if (!out?.betterLine) throw Object.assign(new Error('bad review shape'), { code: 'bad_shape' })
+        return { strengths: (out.strengths || []).slice(0, 2).map((x) => S(x, 60)), improve: (out.improve || []).slice(0, 2).map((x) => S(x, 90)), betterLine: S(out.betterLine, 200) }
+      },
+      () => mockRoleplayReview(score, lang),
+    )
+  }
+  const advisor = S(b.advisor, 300).trim()
+  const plan = S(b.plan, 200)
+  if (advisor.length < 1 || !plan) return res.status(400).json({ ok: false, error: 'bad_request' })
+  handle(
+    res,
+    async () => {
+      const out = await generateJson({ system: systemFor(lang), prompt: roleplayPrompt({ client, history, advisor, plan, trust: num(b.trust, 50), lang }), maxTokens: 300, temperature: 0.8 })
+      if (!out?.reply) throw Object.assign(new Error('bad roleplay shape'), { code: 'bad_shape' })
+      return { reply: S(out.reply, 160) }
+    },
+    () => mockRoleplay(plan, lang),
   )
 })
 

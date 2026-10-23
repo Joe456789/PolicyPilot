@@ -103,3 +103,30 @@ Rules:
 - The 4 lines of each opponent should cover different situations (e.g. when ahead, when behind, when something bad happens, when buying a property).
 Output JSON: {"lines": {"<opponent id>": [string, string, string, string]}}${DIRECTIVE}`
 }
+
+// AI client role-play: the AI plays the client. What to express this turn (plan) is decided by the game rules; the AI only voices it.
+const chat = (history) => history.map((m) => `${m.role === 'advisor' ? 'Advisor' : 'Client'}: ${m.text}`).join('\n')
+export function roleplayPrompt({ client, history, advisor, plan, trust }) {
+  return `In the "client practice" mode of a training game you play a client visiting a bank branch, so the advisor (the user) can practise.
+Client: ${client.name}, age ${client.age}, ${client.title}. ${client.brief} Reason for the visit: ${client.goal} Risk profile: ${client.risk}.
+Things you know but only share when asked:
+${client.facts.map((f) => '- ' + f).join('\n')}
+Conversation so far:
+${chat(history)}
+The advisor just said: "${advisor}"
+What you must express this turn (decided by the game rules; act it out and never mention the rules): "${plan}"
+Your trust in the advisor: ${trust}/100 (${trust < 40 ? 'wary and guarded' : trust < 70 ? 'willing to listen' : 'finds the advisor reliable'}).
+Requirements: casual spoken English, 1~3 sentences, at most 45 words; say the same thing in your own voice, you may add a little emotion or daily-life detail but no new numbers or new facts; you are the client, so give no financial advice and never answer for the advisor.
+Output JSON: {"reply": string}${DIRECTIVE}`
+}
+
+export function roleplayReviewPrompt({ client, history, score }) {
+  return `Below is an advisor-client practice conversation and the score computed by the game rules (never change the scores; only quote them). Give feedback as a senior advisor coach.
+Client: ${client.name} (${client.title}, risk profile ${client.risk}); real needs: ${client.needs.join(', ')}
+Conversation:
+${chat(history)}
+Score: ${score.total}/100; ${score.parts.map((p) => `${p.label} ${p.score}/${p.max}`).join(', ')}
+Rule notes: ${score.notes.join('; ') || 'none'}
+Requirements: specific and friendly, point to which line could be improved and how; never promise returns, never pressure a sale, never name real insurers or products.
+Output JSON: {"strengths": [string, string] (each at most 18 words), "improve": [string, string] (each at most 28 words), "betterLine": string (an example of a better line, 40~70 words)}${DIRECTIVE}`
+}

@@ -80,4 +80,7 @@ export const ai = {
     post('/api/advisor', { character: who(s.player), analysis: { gaps: analysis.gaps.map((g) => ({ text: g.text })), emergencyMonths: analysis.emergencyMonths, premiumRatio: analysis.premiumRatio }, brief: brief(s) }, 9000),
   stage: (report) => post('/api/stage', { report }, 15000),
   coach: (report) => post('/api/coach', { report }, 20000),
+  // 對練:client 只送顯示用的文字(不送關鍵字),plan 是規則決定的「這一句要表達什麼」
+  roleplay: (payload) => post('/api/roleplay', { mode: 'reply', ...payload }, 12000),
+  roleplayReview: (payload) => post('/api/roleplay', { mode: 'review', ...payload }, 15000),
 }

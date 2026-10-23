@@ -16,7 +16,7 @@ const only = fi >= 0 ? args.slice(fi + 1).filter((a) => !a.startsWith('--')).map
 const CJK = /[㐀-鿿]/
 
 // 這些檔案是「靜態資料」:每個中文字串字面值都必須是英文字典的 key(顯示時由 t(資料字串) 翻譯)
-const DATA_FILES = ['src/game/content.js', 'src/game/products.js', 'src/game/careers.js', 'src/game/glossary.js', 'src/game/quests.js', 'src/game/records.js', 'src/game/endings.js', 'src/game/tags.js', 'src/game/cards.js', 'src/game/properties.js', 'src/game/minigames.js', 'src/game/banter.js', 'src/game/prologueCards.js', 'src/game/minor.js', 'src/game/lifestages.js', 'src/game/db/market.js', 'src/game/db/allocation.js', 'src/game/db/risk.js', 'src/game/db/insurance.js', 'src/game/db/bank.js', 'src/game/ml/features.js', 'src/game/ml/index.js', 'src/game/claims.js', 'src/game/codex.js', 'src/game/facts.js', 'src/game/history.js']
+const DATA_FILES = ['src/game/content.js', 'src/game/products.js', 'src/game/careers.js', 'src/game/glossary.js', 'src/game/quests.js', 'src/game/records.js', 'src/game/endings.js', 'src/game/tags.js', 'src/game/cards.js', 'src/game/properties.js', 'src/game/minigames.js', 'src/game/banter.js', 'src/game/prologueCards.js', 'src/game/minor.js', 'src/game/lifestages.js', 'src/game/db/market.js', 'src/game/db/allocation.js', 'src/game/db/risk.js', 'src/game/db/insurance.js', 'src/game/db/bank.js', 'src/game/ml/features.js', 'src/game/ml/index.js', 'src/game/claims.js', 'src/game/codex.js', 'src/game/facts.js', 'src/game/history.js', 'src/game/clients.js', 'src/game/assess.js', 'src/game/cases.js', 'src/game/team.js']
 
 function walk(dir, out = []) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -52,7 +52,8 @@ for (const file of files) {
       const key = unesc(m[2])
       if (!CJK.test(key)) continue
       const line = body.slice(0, m.index).split('\n').length
-      if (body.split('\n')[line - 1].includes('i18n-ignore')) continue
+      // 註解已經從 body 拿掉了,所以要看原始那一行有沒有 i18n-ignore
+      if (src.split('\n')[line - 1].includes('i18n-ignore')) continue
       if (EN[key] === undefined) problems.push(`${rel}:${line} 資料字串缺英文:${key.slice(0, 60)}`)
     }
   }

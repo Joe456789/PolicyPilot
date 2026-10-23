@@ -21,7 +21,7 @@ import { Leaderboard, QuestPanel, Feed, Popups, Toast, Confetti, Drawer, useMedi
 import { defaultLook, LOOKS } from './game/careers.js'
 import {
   createGame, roll, choose, endYear, hasMinor, nextMinor, canRollAgain, rollAgain, setCoverage, trade, borrow, repay, ackStage, buildStageReport,
-  computeScore, evalQuests, directorInfo, applyAiScene, propAction,
+  computeScore, evalQuests, directorInfo, applyAiScene, propAction, analyzeGaps,
 } from './game/engine.js'
 import { histYearOf } from './game/history.js'
 import { createLife, beginLife, chooseLife, advanceLife, careerOptions, lifeToSetup, skipLife } from './game/prologue.js'
@@ -37,6 +37,7 @@ import DemoBar from './components/DemoBar.jsx'
 import TileInfo from './components/TileInfo.jsx'
 import { demoCaption, DEMO_SEED, DEMO_YEARS } from './game/demoScript.js'
 import SettingsLayer from './components/SettingsLayer.jsx'
+import TrainingLayer from './components/TrainingLayer.jsx'
 import { useArt } from './art.js'
 import { adultStart } from './game/starts.js'
 import { PROPERTIES } from './game/properties.js'
@@ -712,6 +713,11 @@ function GameApp() {
       questsDone: evalQuests(h).filter((q) => q.done).length,
       hadCritical: cats.includes('critical'), hadDisability: cats.includes('disability'),
       ending: computeEnding(h, score),
+      // 主管後台的「常見錯誤」:恐慌賣出、預備金不足、結束時最大的兩個保障缺口
+      mistakes: [
+        ...(h.panicSells > 0 ? ['panic'] : []), ...(score.shortfallYears > 0 ? ['shortfall'] : []),
+        ...analyzeGaps(h).gaps.filter((g) => !g.blocked).slice(0, 2).map((g) => 'gap:' + g.id),
+      ],
     }
     const fr = demo ? [] : recordGame(ctx).fresh // 展示模式的對局不計入成就與戰績
     if (!demo) saveRecent(Object.keys(h.seen))
@@ -931,6 +937,13 @@ function Title({ aiInfo, onStart, onRecords, save, onResume, onDemo }) {
           <button className="btn huge2" onClick={() => window.dispatchEvent(new Event('pp-help'))}>📖 {t('玩法說明')}</button>
           <button className="btn huge2" onClick={() => window.dispatchEvent(new Event('pp-codex'))}>📚 {t('觀念圖鑑')}</button>
         </div>
+        <div className="train-row" role="group" aria-label={t('訓練中心')}>
+          <b>{t('訓練中心')}</b>
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-roleplay'))}>🎭 {t('AI 客戶對練')}</button>
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-case'))}>⏱️ {t('10 分鐘情境挑戰')}</button>
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-test', { detail: { phase: 'pre' } }))}>📝 {t('觀念前測')}</button>
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-manager'))}>📊 {t('主管後台')}</button>
+        </div>
         <ol className="how">
           <li><b>{t('1 創角')}</b>{t('可從出生開始,或直接進棋盤')}</li>
           <li><b>{t('2 規劃')}</b>{t('配置保障、投資與貸款')}</li>
@@ -949,6 +962,7 @@ export default function App() {
     <>
       <GameApp />
       <SettingsLayer />
+      <TrainingLayer />
     </>
   )
 }

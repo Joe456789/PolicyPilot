@@ -290,6 +290,8 @@ export default function ResultScreen({ s, aiOn, onAgain, ranks, fresh, newCards 
       </p>
       <div className="res-actions">
         <button className="btn primary" onClick={onAgain}>{t('重新開始,創造新的人生')}</button>
+        <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-test', { detail: { phase: 'post' } }))}>📝 {t('做後測:看看學到多少')}</button>
+        <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('pp-roleplay', { detail: { game: s } }))}>🎭 {t('換你當理專:AI 客戶對練')}</button>
         <button className="btn" onClick={onRecords}>{t('🏅 成就與戰績')}</button>
       </div>
     </div>

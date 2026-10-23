@@ -28,6 +28,7 @@ export default function CharacterCreator({ onStart, onBack }) {
         <button className="btn ghost" onClick={onBack}>{t('← 返回')}</button>
         <h1>{t('創造你的角色')}</h1>
         <p className="muted">{t('先取個名字、選個外型與個性。你可以從出生開始體驗成長篇,也可以直接進入大富翁棋盤。')}</p>
+        <button type="button" className="btn ghost small pretest-link" onClick={() => window.dispatchEvent(new CustomEvent('pp-test', { detail: { phase: 'pre' } }))}>📝 {t('教育訓練用:先做 1 分鐘觀念前測')}</button>
       </header>
 
       <div className="creator-grid">

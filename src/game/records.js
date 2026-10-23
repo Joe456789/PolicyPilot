@@ -49,6 +49,7 @@ export function recordGame(ctx) {
     ending: ctx.ending?.title || null,
     players: ctx.opponents + 1,
     years: ctx.s.history.length,
+    mistakes: ctx.mistakes || [], // 給主管後台統計「常見錯誤」
   }
   rec.games = [row, ...rec.games].slice(0, 30)
   if (ctx.ending) rec.endings = { ...(rec.endings || {}), [ctx.ending.id]: rec.endings?.[ctx.ending.id] || Date.now() }
