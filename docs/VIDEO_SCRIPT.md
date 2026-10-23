@@ -16,11 +16,10 @@
 
 ```bash
 npm install
-npm install --no-save playwright
-npx playwright install chromium
+npx playwright install chromium   # 下載失敗也沒關係:會改用 Edge 瀏覽器和電腦裡的 ffmpeg
 npm run build
 npm run server        # 先開著(要讀 .env 的 GEMINI_API_KEY)
-npm run record        # 另開一個終端機;想看到瀏覽器操作就用 HEADED=1(PowerShell:$env:HEADED=1; npm run record)
+npm run record        # 另開一個終端機,會自動讀 .env 的 PORT;想看到瀏覽器操作就用 HEADED=1(PowerShell:$env:HEADED=1; npm run record)
 ```
 
 輸出在 `video/`:

@@ -2,9 +2,10 @@
 // 在自己的電腦上執行:先用 `npm run server` 開好接上 Gemini 的遊戲,再開另一個視窗執行
 //   npm run record
 // 程式會開一個瀏覽器,照腳本自動操作遊戲並錄影,完成後輸出:
-//   video/保險大富翁_展示影片.webm   影片(YouTube 可直接上傳)
-//   video/保險大富翁_展示影片.srt    字幕(可匯入剪映/CapCut 產生旁白,或上傳到 YouTube)
-// 環境變數:BASE(遊戲網址,預設 http://localhost:8080)、HEADED=1(看得到瀏覽器視窗)、BOARD=2d(用 2D 棋盤)
+//   video/保險大富翁_展示影片.webm(或 .mp4)  影片
+//   video/保險大富翁_展示影片.srt               字幕(可匯入剪映/CapCut 產生旁白,或上傳到 YouTube)
+// 環境變數:BASE(遊戲網址,預設讀 .env 的 PORT,沒有就是 http://localhost:8080)、HEADED=1(看得到瀏覽器視窗)、BOARD=2d(用 2D 棋盤)
+// 沒有 Playwright 的 Chromium 就改用 Windows 內建的 Edge;Playwright 的 FFmpeg 下載失敗時,改用電腦裡的 ffmpeg 錄影。
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -14,11 +15,12 @@ let chromium
 try {
   ({ chromium } = await import('playwright'))
 } catch {
-  console.error('找不到 playwright。請先執行:\n  npm install --no-save playwright\n  npx playwright install chromium')
+  console.error('找不到 playwright。請先執行:\n  npm install\n  npx playwright install chromium')
   process.exit(1)
 }
 
-const BASE = (process.env.BASE || 'http://localhost:8080').replace(/\/$/, '')
+const envPort = (() => { try { return fs.readFileSync('.env', 'utf8').match(/^\s*PORT\s*=\s*(\d+)/m)?.[1] } catch { return null } })()
+const BASE = (process.env.BASE || `http://localhost:${process.env.PORT || envPort || 8080}`).replace(/\/$/, '')
 const OUT = path.resolve('video')
 const W = 1920, H = 1080
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -117,13 +119,63 @@ async function finishYear(maxSteps = 20) {
   }
 }
 
+// 備用錄影:用 Chrome DevTools 的畫面串流,每秒 25 張送進電腦裡的 ffmpeg(畫面沒變就重複上一張)
+async function screencast(ctx, pg, file) {
+  const FPS = 25
+  const cdp = await ctx.newCDPSession(pg)
+  const { spawn } = await import('node:child_process')
+  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
+    '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p`, '-c:v', 'libx264', '-crf', '20', '-r', String(FPS), file], { stdio: ['pipe', 'inherit', 'inherit'] })
+  const done = new Promise((r) => ff.on('close', r))
+  let last = null, written = 0
+  const start = Date.now()
+  cdp.on('Page.screencastFrame', ({ data, sessionId }) => {
+    last = Buffer.from(data, 'base64')
+    cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {})
+  })
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 85, maxWidth: W, maxHeight: H })
+  const tick = setInterval(() => {
+    if (!last) return
+    const due = Math.floor(((Date.now() - start) / 1000) * FPS)
+    while (written < due) { ff.stdin.write(last); written++ }
+  }, 1000 / FPS)
+  return {
+    async stop() {
+      clearInterval(tick)
+      await cdp.send('Page.stopScreencast').catch(() => {})
+      ff.stdin.end()
+      await done
+      return file
+    },
+  }
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true })
-  const browser = await chromium.launch({ headless: !process.env.HEADED, args: ['--autoplay-policy=no-user-gesture-required'] })
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: OUT, size: { width: W, height: H } }, acceptDownloads: true, locale: 'zh-TW', colorScheme: 'light' })
+  const opts = { headless: !process.env.HEADED, args: ['--autoplay-policy=no-user-gesture-required'] }
+  const browser = await chromium.launch(opts).catch(async (e) => {
+    console.log('找不到 Playwright 的 Chromium,改用 Edge 瀏覽器。')
+    return chromium.launch({ ...opts, channel: 'msedge' }).catch(() => { throw e })
+  })
+  const base = { viewport: { width: W, height: H }, acceptDownloads: true, locale: 'zh-TW', colorScheme: 'light' }
+  let ctx, rec = null
+  try {
+    if (process.env.REC === 'ffmpeg') throw new Error('REC=ffmpeg')
+    ctx = await browser.newContext({ ...base, recordVideo: { dir: OUT, size: { width: W, height: H } } })
+    page = await ctx.newPage()
+  } catch (e) {
+    await ctx?.close().catch(() => {})
+    if (spawnSync('ffmpeg', ['-version']).status !== 0) {
+      console.error('Playwright 沒辦法錄影(' + String(e.message).split('\n')[0] + '),電腦裡也找不到 ffmpeg。\n請執行 npx playwright install ffmpeg,或安裝 ffmpeg(winget install ffmpeg,裝完重開終端機)。')
+      process.exit(1)
+    }
+    console.log('改用電腦裡的 ffmpeg 錄影。')
+    ctx = await browser.newContext(base)
+    page = await ctx.newPage()
+    rec = await screencast(ctx, page, path.join(OUT, '保險大富翁_展示影片.mp4'))
+  }
   await ctx.addInitScript(OVERLAY)
   if (process.env.BOARD === '2d') await ctx.addInitScript(() => localStorage.setItem('policypilot.2d', '1'))
-  page = await ctx.newPage()
 
   // 1. 開場
   await page.goto(BASE + '/')
@@ -228,11 +280,17 @@ async function main() {
   await sleep(6500)
 
   subs[subs.length - 1].end = (Date.now() - t0) / 1000
-  const video = page.video()
-  await ctx.close()
+  let dest
+  if (rec) {
+    dest = await rec.stop()
+    await ctx.close()
+  } else {
+    const video = page.video()
+    await ctx.close()
+    dest = path.join(OUT, '保險大富翁_展示影片.webm')
+    fs.renameSync(await video.path(), dest)
+  }
   await browser.close()
-  const dest = path.join(OUT, '保險大富翁_展示影片.webm')
-  fs.renameSync(await video.path(), dest)
   // 字幕時間從影片開始算(與錄影起點差不到一秒)
   const ts = (s) => { const ms = Math.max(0, Math.round(s * 1000)); const p = (n, l = 2) => String(n).padStart(l, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}` }
   const srt = (list) => list.map((x, i) => `${i + 1}\n${ts(x.start)} --> ${ts(x.end)}\n${x.text}\n`).join('\n')
