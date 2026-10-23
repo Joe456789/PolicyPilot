@@ -1,6 +1,7 @@
 // AI 客戶對練的客戶設定:都是銀行分行理專每天會遇到的典型客戶。
 // facts:客戶不會主動說,要理專「問到」才會透露(需求探詢);keys 是判斷有沒有問到的關鍵字(中英都收)。
 // needs:這位客戶真正需要的保障(任一項就算照顧到);avoid:推給他不適合的商品。
+// concerns:就算理專已經解釋過,客戶還是會提出的擔心(其他疑慮只要理專講清楚了,客戶就不會再問)。
 // 客戶名字與情境是虛構的教學案例。
 export const CLIENTS = [
   {
@@ -25,6 +26,7 @@ export const CLIENTS = [
       { id: 'medical', label: '離職後的醫療保障', any: ['medical'] },
     ],
     avoid: ['invlinked'],
+    concerns: ['mortgage', 'life'],
     objections: {
       mortgage: '銀行是不是規定一定要買房貸壽險,才能核貸?',
       life: '我才 32 歲,壽險會不會太早?',
@@ -56,6 +58,7 @@ export const CLIENTS = [
       { id: 'cash', label: '穩定、不虧本的現金流', any: ['emergency', 'annuity', 'deposit'] },
     ],
     avoid: ['invlinked'],
+    concerns: ['ltc', 'annuity'],
     objections: {
       invlinked: '每個月撥回 6%,那我的本金會不會越領越少?',
       ltc: '不是有政府的長照 2.0 嗎?還需要自己準備?',
@@ -86,6 +89,7 @@ export const CLIENTS = [
       { id: 'income', label: '收入中斷', any: ['disability'] },
     ],
     avoid: ['annuity', 'invlinked'],
+    concerns: ['medical', 'emergency'],
     objections: {
       medical: '我還年輕,很少生病耶。',
       accident: '意外險要買多少才夠?',
@@ -117,6 +121,7 @@ export const CLIENTS = [
       { id: 'critical', label: '重大傷病', any: ['critical'] },
     ],
     avoid: ['invlinked'],
+    concerns: ['life', 'disability'],
     objections: {
       life: '我已經有投資型保單了,保額 240 萬不夠嗎?',
       mortgage: '房貸壽險跟一般壽險要選哪一個?',

@@ -492,4 +492,6 @@ export default {
   "把保單比成定存": "Comparing a policy to a deposit",
   "保險不是存款,不能把保單說成定存或比定存安全。": "Insurance isn't a deposit; never describe a policy as a time deposit or as safer than one.",
   "教育訓練用:先做 1 分鐘觀念前測": "For training: take the 1-minute pre-test first",
+  "嗯,你這樣解釋我聽得懂。": "OK, the way you explain it makes sense to me.",
+  "表現很好!下次挑戰需求更複雜的客戶,例如風險屬性保守的退休族": "Great job! Next time try a client with more complex needs, such as a conservative retiree",
 }

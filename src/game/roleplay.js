@@ -187,10 +187,15 @@ export function clientTurn(session, text) {
       trust -= 10
       parts.push(t(objectionFor(c, p)))
     }
-    if (!s.pending && parts.length < 2) {
-      const next = pushes.find((p) => needSet.has(p) && !avoidPushed.includes(p) && !s.raised[p])
-      if (next) { s.raised[next] = true; s.pending = next; parts.push(t(objectionFor(c, next))) }
+    // 理專在同一句裡已經解釋清楚的商品,客戶就不再問「那是什麼」(真正的擔心 concerns 例外)
+    const fresh = pushes.filter((p) => needSet.has(p) && !avoidPushed.includes(p) && !s.raised[p])
+    let understood = false
+    for (const p of fresh) {
+      if (sig.explained.includes(p) && !(c.concerns || []).includes(p)) { s.raised[p] = true; s.accepted[p] = true; understood = true }
     }
+    const next = fresh.find((p) => !s.raised[p])
+    if (!s.pending && parts.length < 2 && next) { s.raised[next] = true; s.pending = next; parts.push(t(objectionFor(c, next))) }
+    else if (understood && !parts.length) { trust += 4; parts.push(t('嗯,你這樣解釋我聽得懂。')) }
   }
   // 5. 收尾:有照顧到真正的需要,客戶願意回去考慮
   if (!parts.length && sig.closing) {
@@ -307,7 +312,7 @@ export function offlineFeedback(session, score) {
   const key = target ? target.any.find((p) => BETTER[p]) : null
   return {
     strengths: strengths.slice(0, 3),
-    improve: improve.length ? improve : [t('試著用更多開放式問題,讓客戶說出真正的擔心')],
+    improve: improve.length ? improve : [score.total >= 90 ? t('表現很好!下次挑戰需求更複雜的客戶,例如風險屬性保守的退休族') : t('試著用更多開放式問題,讓客戶說出真正的擔心')],
     betterLine: key ? t(BETTER[key]) : t(BETTER.emergency),
   }
 }
