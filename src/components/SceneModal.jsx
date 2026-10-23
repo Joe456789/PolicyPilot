@@ -4,6 +4,7 @@ import { t, getLang } from '../i18n.js'
 import { TIP_DEFS } from '../game/content.js'
 import { THEME_NAME } from '../game/db/index.js'
 import ClaimPanel from './ClaimPanel.jsx'
+import { factFor } from '../game/facts.js'
 
 // 英文字典裡有些詞是小寫術語(句中用),當成標題/按鈕時首字母大寫;中文不受影響
 const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
@@ -44,6 +45,11 @@ export default function SceneModal({ scene, phase, onChoose, onContinue, aiTag, 
         <h2 className="card-title">{scene.title}</h2>
         <p className="card-story">{scene.story}</p>
         {scene.lesson && phase === 'scene' && <div className="scene-lesson">💡 {scene.lesson}</div>}
+        {(() => {
+          // 真實數據卡:這件事在真實世界的台灣有多常見(政府公開統計)
+          const f = factFor(scene)
+          return f && <div className="real-fact"><b>{f.icon} {t('真實世界的台灣')}</b><span>{t(f.text)}</span><small>{t('資料來源:{src}', { src: t(f.source) })}</small></div>
+        })()}
 
         {scene.kind === 'advisor' && scene.base?.analysis?.gaps?.length > 0 && phase === 'scene' && (
           <ul className="gap-list">

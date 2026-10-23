@@ -1127,3 +1127,8 @@ body[data-demo="1"] .toast { top: 100px; }
 @keyframes fx-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes fx-spark { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } to { transform: rotate(var(--a)) translateX(140px); opacity: 0; } }
 [data-motion='reduce'] .fx-layer, [data-motion='reduce'] .fx-layer * { animation: none !important; }
+
+/* 真實數據卡 */
+.real-fact { display: grid; gap: 2px; text-align: left; margin: -4px 0 12px; padding: 8px 12px; border-radius: 12px; border: 1.5px dashed var(--line); background: var(--surface-2, transparent); font-size: 13.5px; line-height: 1.55; }
+.real-fact b { font-size: 12.5px; color: var(--muted); letter-spacing: .03em; }
+.real-fact small { font-size: 11.5px; color: var(--muted); }
